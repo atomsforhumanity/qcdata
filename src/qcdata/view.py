@@ -10,7 +10,7 @@ Design Decisions:
         after importing `from IPython.display import HTML, display`.
     - The basic layout for viewing outputs (all ProgramOutput objects) is a table of
         basic parameters followed by a structure viewer and results table or plot.
-        DualProgramInputs add details for the subprogram.
+        Nested program specifications add recursive subprogram details.
         ----------------------------------------------------------------------------
         | Structure      | Success | Calculation Type | Program | Model | Keywords |
         ----------------------------------------------------------------------------
@@ -34,12 +34,13 @@ from qcconst import constants
 from qcdata import (
     ConformerSearchData,
     Data,
-    DualProgramInput,
-    Files,
+    FileData,
+    Inputs,
     LengthUnit,
     OptimizationData,
     ProgramInput,
     ProgramOutput,
+    ProgramSpec,
     SinglePointData,
     Structure,
 )
@@ -49,7 +50,7 @@ try:
     import matplotlib.pyplot as plt
     import py3Dmol as p3d
     from IPython.display import HTML, display
-    from qcinf import filter_conformers_indices
+    from qcinf import filter_conformers_indices, structure_to_smiles
     from rdkit import Chem
     from rdkit.Chem import Draw
 except ImportError as e:
@@ -170,7 +171,7 @@ def generate_structure_viewer_html(
                     "unpack your list with *my_list_of_structures."
                 )
             adjusted_width, adjusted_height = int(width * 0.75), int(height * 0.75)
-            mol = Chem.MolFromSmiles(struct.ids.smiles or struct.to_smiles())  # type: ignore
+            mol = Chem.MolFromSmiles(struct.ids.smiles or structure_to_smiles(struct))
             img = Draw.MolToImage(mol, size=(adjusted_width, adjusted_height))
             buf = io.BytesIO()
             img.save(buf, format="PNG")
@@ -331,6 +332,33 @@ def generate_files_string(files: dict[str, str | bytes]) -> str:
     return generate_dictionary_string(viewer_dict)
 
 
+def generate_subprograms_string(subprograms: list[ProgramSpec]) -> str:
+    """Display recursive program details as nested lists, without file contents."""
+    if not subprograms:
+        return ""
+    items = []
+    for spec in subprograms:
+        details = {
+            "Model": str(spec.model) if spec.model is not None else "",
+            "Keywords": str(spec.keywords),
+            "Command line arguments": str(spec.cmdline_args),
+            "Extras": str(spec.extras),
+        }
+        items.append(
+            f"<li><strong>{html.escape(spec.program)} "
+            f"({spec.calctype.value})</strong>"
+            + generate_dictionary_string(
+                {key: html.escape(value) for key, value in details.items()}
+            )
+            + generate_files_string(
+                {html.escape(name): value for name, value in spec.files.items()}
+            )
+            + generate_subprograms_string(spec.subprograms)
+            + "</li>"
+        )
+    return "<ul>" + "".join(items) + "</ul>"
+
+
 def generate_output_table(*results: ProgramOutput) -> str:
     """
     Generate an HTML table displaying the basic parameters for ProgramOutput objects.
@@ -374,23 +402,28 @@ def generate_output_table(*results: ProgramOutput) -> str:
             <th>Success</th>
             <th>Wall Time</th>
             <th>Calculation Type</th>
-            <th>Program</th>
+            <th>Requested Program</th>
+            <th>Result Program</th>
             <th>Model</th>
             <th>Keywords</th>
     """
-    if any(res.input_data.files for res in results):
+    has_files = any(res.input_data.files for res in results)
+    has_subprograms = any(
+        isinstance(res.input_data, ProgramInput) and res.input_data.subprograms
+        for res in results
+    )
+    if has_files:
         table_header += "<th>Input Files</th>"
 
-    if any(isinstance(res.input_data, DualProgramInput) for res in results):
-        table_header += """
-            <th>Subprogram</th>
-            <th>Subprogram Model</th>
-            <th>Subprogram Keywords</th>
-        """
+    if has_subprograms:
+        table_header += "<th>Subprograms</th>"
     table_header += "</tr>"
 
     table_rows = []
     for res in results:
+        structured = (
+            res.input_data if isinstance(res.input_data, ProgramInput) else None
+        )
         success_style = (
             'style="color: green; font-weight: bold;"'
             if res.success
@@ -401,38 +434,39 @@ def generate_output_table(*results: ProgramOutput) -> str:
             <td>{
             generate_dictionary_string(
                 {
-                    "charge": res.input_data.structure.charge,
-                    "multiplicity": res.input_data.structure.multiplicity,
-                    "name": res.input_data.structure.ids.name or "",
+                    "charge": structured.structure.charge,
+                    "multiplicity": structured.structure.multiplicity,
+                    "name": structured.structure.ids.name or "",
                 }
             )
+            if structured
+            else ""
         }</td>
             <td {success_style}>{res.success}</td>
             <td> {
-            _format_time(res.provenance.wall_time)
-            if res.provenance.wall_time
+            _format_time(res.execution.wall_time)
+            if res.execution.wall_time is not None
             else "No timing data"
         }</td>
-            <td>{res.input_data.calctype.name}</td>
-            <td>{f"{res.provenance.program} {res.provenance.program_version or ''}"}</td>
+            <td>{structured.calctype.name if structured else ""}</td>
+            <td>{html.escape(res.input_data.program)}</td>
             <td>{
-            generate_dictionary_string(
-                res.input_data.model.model_dump(exclude=["extras"])
-            )
-            if res.input_data.model
+            f"{res.results.provenance.program} {res.results.provenance.program_version or ''}"
+        }</td>
+            <td>{
+            generate_dictionary_string(structured.model.model_dump(exclude={"extras", "qcdata_version"}))
+            if structured and structured.model
             else ""
         }</td>
-            <td>{generate_dictionary_string(res.input_data.keywords)}</td>
+            <td>{
+            generate_dictionary_string(structured.keywords) if structured else ""
+        }</td>
         """
-        if res.input_data.files:
+        if has_files:
             base_row += f"<td>{generate_files_string(res.input_data.files)}</td>"
 
-        if isinstance(res.input_data, DualProgramInput):
-            base_row += f"""
-            <td>{res.input_data.subprogram}</td>
-            <td>{res.input_data.subprogram_args.model}</td>
-            <td>{generate_dictionary_string(res.input_data.subprogram_args.keywords)}</td>
-            """
+        if has_subprograms:
+            base_row += f"<td>{generate_subprograms_string(structured.subprograms) if structured else ''}</td>"
         base_row += "</tr>"
         table_rows.append(base_row)
 
@@ -454,7 +488,9 @@ def generate_optimization_plot(
     Returns:
         str: A string of HTML displaying the plot as a png image encoded in base64.
     """
-    energies = prog_output.data.energies * constants.HARTREE_TO_KCAL_PER_MOL
+    energies = prog_output.results.energies * constants.HARTREE_TO_KCAL_PER_MOL
+    if not energies.size or not np.isfinite(energies).any():
+        return "<p>No optimization energies available.</p>"
     baseline_energy = energies[0]
     relative_energies = energies - baseline_energy
     last_is_nan = np.isnan(relative_energies[-1])
@@ -549,12 +585,12 @@ def _format_time(seconds_float: float) -> str:
     return formatted_time
 
 
-def generate_data_table(data: Files) -> str:
+def generate_data_table(data: FileData) -> str:
     """
     Generate an HTML table displaying the results.
 
     Args:
-        results: The Data object to display.
+        data: The Data object to display.
 
     Returns:
         str: A string of HTML displaying the results in a table.
@@ -572,9 +608,7 @@ def generate_data_table(data: Files) -> str:
 
     # Add the files to the bottom table
     if _not_empty(data.files):
-        rows += (
-            f"<tr><td>Files</td><td>{generate_files_string(data.files)}</td></tr>"
-        )
+        rows += f"<tr><td>Files</td><td>{generate_files_string(data.files)}</td></tr>"
 
     return f"""
     <table style="width: 100%; border-collapse: collapse; text-align: left;">
@@ -610,11 +644,11 @@ def structures(
 
 
 def program_outputs(
-    *results: ProgramOutput[ProgramInput | DualProgramInput, Data],
+    *results: ProgramOutput[Inputs, Data],
     animate: bool = True,
     struct_viewer: bool = True,
     conformer_rmsd_threshold: float | None = None,
-    conformer_rmsd_backend: str = "qcinf",
+    conformer_rmsd_backend: str = "rdkit",
     conformer_rmsd_kwargs: dict | None = None,
     **kwargs,
 ) -> None:
@@ -642,21 +676,25 @@ def program_outputs(
         final_html = []
         final_html.append(generate_output_table(result))
 
-        if isinstance(result.data, ConformerSearchData):
+        if isinstance(result.results, ConformerSearchData) and isinstance(
+            result.input_data, ProgramInput
+        ):
             structures = [result.input_data.structure]
 
             if conformer_rmsd_threshold is not None:
                 keep_indices = filter_conformers_indices(
-                    result.data.conformers,
+                    result.results.conformers,
                     backend=conformer_rmsd_backend,
                     threshold=conformer_rmsd_threshold,
                     **(conformer_rmsd_kwargs or {}),
                 )
-                conformers = [result.data.conformers[i] for i in keep_indices]
-                energies_rel = result.data.conformer_energies_relative[keep_indices]
+                conformers = [result.results.conformers[i] for i in keep_indices]
+                energies_rel = result.results.conformer_energies_relative
+                if energies_rel.size:
+                    energies_rel = energies_rel[keep_indices]
             else:
-                conformers = result.data.conformers
-                energies_rel = result.data.conformer_energies_relative
+                conformers = result.results.conformers
+                energies_rel = result.results.conformer_energies_relative
 
             structures += conformers
             titles_extra = ["Initial Structure"] + [
@@ -676,7 +714,8 @@ def program_outputs(
             # Create structure viewer
             if not struct_viewer:
                 structure_html = "struct_viewer = False"
-
+            elif not isinstance(result.input_data, ProgramInput):
+                structure_html = "No structure available."
             else:
                 titles_extra = kwargs.pop("titles_extra", [])
                 try:
@@ -685,22 +724,25 @@ def program_outputs(
                     title_extra = ""
 
                 # Determine the Structure to use
-                if isinstance(result.data, OptimizationData):
+                if isinstance(result.results, OptimizationData):
                     for_viewer: Structure | list[Structure]
-                    if animate:
-                        for_viewer = result.data.structures
+                    if not result.results.trajectory:
+                        for_viewer = result.input_data.structure
+                        title_extra += " (Initial Structure; no optimization steps)"
+                    elif animate:
+                        for_viewer = result.results.structures
                     else:
-                        for_viewer = result.data.final_structure
-                        title_extra += " (Final Structure)"
+                        for_viewer = result.results.structures[-1]
+                        title_extra += " (Last Evaluated Structure)"
 
-                elif isinstance(result.data, SinglePointData):
+                elif isinstance(result.results, SinglePointData):
                     for_viewer = result.input_data.structure
 
-                elif isinstance(result.data, Files):
+                elif isinstance(result.results, FileData):
                     for_viewer = result.input_data.structure
                 else:
                     raise NotImplementedError(
-                        f"Viewing of {type(result.data)} is not yet implemented."
+                        f"Viewing of {type(result.results)} is not yet implemented."
                     )
 
                 structure_html = generate_structure_viewer_html(
@@ -710,12 +752,12 @@ def program_outputs(
                 )
 
             # Create data table or plot
-            if isinstance(result.data, OptimizationData):
+            if isinstance(result.results, OptimizationData):
                 data_html = generate_optimization_plot(
                     result, figsize=(width / 100, height / 100)
                 )
             else:
-                data_html = generate_data_table(result.data)
+                data_html = generate_data_table(result.results)
 
             final_html.append(
                 f"""

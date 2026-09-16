@@ -10,16 +10,23 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import toml
 import yaml
-from pydantic import BaseModel, field_serializer, field_validator
+from pydantic import (
+    BaseModel,
+    computed_field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 from typing_extensions import Self
 
+from .. import _version
 from ..helper_types import StrOrPath
 
 if TYPE_CHECKING:  # pragma: no cover
     from pydantic.typing import ReprArgs
 
 
-__all__ = ["Files", "Provenance", "Model", "CalcType", "LengthUnit"]
+__all__ = ["Files", "Provenance", "ExecutionInfo", "Model", "CalcType", "LengthUnit"]
 
 
 class LengthUnit(str, Enum):
@@ -43,15 +50,28 @@ class QCDataBaseModel(BaseModel, ABC):
     """Base model for all QCData objects.
 
     Attributes:
-        version: The version of the schema.
+        qcdata_version: Installed qcdata version writing this representation.
+            Automatically refreshed on serialization; not a schema version.
         extras: Additional information to bundle with the object. Use for schema
             development and scratch space.
     """
 
-    # NOTE: No version for now until we have a stable schema
-    # Or maybe have version be version of qcdata that generated the object?
-    # version: ClassVar[Literal["v1"]] = "v1"
     extras: dict[str, Any] = {}
+
+    @computed_field(repr=False)  # type: ignore[prop-decorator]
+    @property
+    def qcdata_version(self) -> str:
+        """The package version serializing the object, not its original creator."""
+        return _version.__version__
+
+    @model_validator(mode="before")
+    @classmethod
+    def _discard_saved_version(cls, values: Any) -> Any:
+        """Accept saved version stamps; the computed field supplies the current one."""
+        if isinstance(values, dict) and "qcdata_version" in values:
+            values = dict(values)
+            values.pop("qcdata_version")
+        return values
 
     model_config = {
         # Raises an error if extra fields are passed to model.
@@ -60,7 +80,8 @@ class QCDataBaseModel(BaseModel, ABC):
         # types it doesn't recognize.
         # https://docs.pydantic.dev/latest/usage/types/#arbitrary-types-allowed
         "arbitrary_types_allowed": True,
-        # Don't allow mutation of objects
+        # Freeze attribute assignment. Contained dicts, lists, and arrays must be
+        # treated as read-only by callers; this is not deep immutability.
         # https://docs.pydantic.dev/2.3/api/config/#pydantic.config.ConfigDict.frozen
         "frozen": True,
     }
@@ -127,14 +148,14 @@ class QCDataBaseModel(BaseModel, ABC):
     ) -> None:
         """
         Save an object to disk as `json`, `yaml`, or `toml`. Objects such as `Structure`
-        and `OptimizationResults` can additionally be saved as `xyz` files.
+        and `OptimizationData` can additionally be saved as `xyz` files.
 
         Note:
             By default the object will be saved as a `json` file. If the file extension
             is `.yaml` or `.yml`, the object will be saved as a `yaml` file. If the file
             extension is `.toml`, the object will be saved as a `toml` file. If the file
             extension is `.xyz`, the object will be saved as an `xyz` file (for objects
-            that support this format such as a `Structure` or an `OptimizationResults`
+            that support this format such as a `Structure` or an `OptimizationData`
             which contains `.trajectory: list[Structure]`).
 
             Additionally, padding will be added to the file by default to make it more
@@ -145,8 +166,9 @@ class QCDataBaseModel(BaseModel, ABC):
             filepath: The path to write the object to.
             exclude_none: If True, attributes with a value of None will not be written.
                 Changing default behavior from pydantic.model_dump() to True.
-            exclude_unset: If True, attributes that have not been set will not be
-                written (i.e., values set to their default value).
+            exclude_unset: If True, fields omitted during construction are excluded,
+                even if their containers were later modified. Defaults to True for
+                compact files; pass False to include unset/default-valued fields.
             indent: The number of spaces to use for indentation in the JSON file. 0
                 creates a more compact JSON file, 4 is more human-readable.
             **kwargs: Additional keyword arguments to pass to the serialization method.
@@ -170,10 +192,6 @@ class QCDataBaseModel(BaseModel, ABC):
         """
         filepath = Path(filepath)
         filepath.parent.mkdir(exist_ok=True, parents=True)
-
-        if self.extras:
-            # Ensure pydantic knows the field has been set
-            self.__pydantic_fields_set__.add("extras")
 
         model_dict = self.model_dump(
             mode="json",
@@ -337,28 +355,38 @@ class Files(QCDataBaseModel):
 
 
 class Provenance(QCDataBaseModel):
-    """Provenance information for a QC program.
+    """Identity of the program that produced a result payload.
 
     Attributes:
-        program: The name of the program that created the output.
-        version: The version of the program that created the output.
-        scratch_dir: The working directory used by the program.
-        wall_time: The wall time used by the program.
-        hostname: The hostname of the machine the program was run on.
-        hostcpus: The number of logical CPUs on the host machine where the program ran.
-        hostmem: The amount of memory on the host machine where the program ran in GiB.
-        extras: Additional information to bundle with the object. Use for schema
-            development and scratch space.
-
+        program: The scientific program associated with the data. For empty failure
+            results, this identifies the intended producer even if execution never began.
+        program_version: The program version, if known.
+        extras: Additional information about the origin of the data.
     """
 
     program: str
     program_version: str | None = None
+
+
+class ExecutionInfo(QCDataBaseModel):
+    """Runtime information about a program execution.
+
+    All fields may be unknown. Pass `ExecutionInfo()` when no details are available.
+
+    Attributes:
+        scratch_dir: The working directory used by the program.
+        wall_time: Elapsed execution time in seconds.
+        hostname: The hostname of the machine where the program ran.
+        host_cpu: The number of logical CPUs on the host, not the allocated CPU count.
+        host_mem_gib: The host's total memory in GiB, not the allocated memory.
+        extras: Additional execution information.
+    """
+
     scratch_dir: Path | None = None
     wall_time: float | None = None
     hostname: str | None = None
-    hostcpus: int | None = None
-    hostmem: int | None = None
+    host_cpu: int | None = None
+    host_mem_gib: float | None = None
 
 
 class CalcType(str, Enum):

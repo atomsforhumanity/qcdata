@@ -1,26 +1,31 @@
-"""Structured output data objects."""
+"""General-purpose scientific data models."""
 
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar, Union
 
 import numpy as np
-from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 from typing_extensions import Self
 
-from qcdata.helper_types import SerializableNDArray
+from qcdata.helper_types import (
+    SerializableMatrix,
+    SerializableNDArray,
+    SerializableTensor3D,
+    SerializableVector,
+)
 
-from .base_models import CalcType, Files, QCDataBaseModel
+from .base_models import CalcType, Files, Provenance, QCDataBaseModel
 from .inputs import ProgramInput
 from .structure import Structure
-from .utils import deprecated_class, to_multi_xyz
+from .utils import to_multi_xyz
 
 if TYPE_CHECKING:
     from .outputs import ProgramOutput
 
 __all__ = [
+    "FileData",
     "Wavefunction",
     "SinglePointData",
     "OptimizationData",
@@ -30,10 +35,20 @@ __all__ = [
     "StructuredDataType",
     "Data",
     "DataType",
-    "SinglePointResults",
-    "OptimizationResults",
-    "ConformerSearchResults",
+    "get_data_type",
 ]
+
+
+class FileData(Files):
+    """File-only results and the common base for structured calculation data.
+
+    Attributes:
+        provenance: Required identity of the program that produced the data.
+        files: Output files, with binary content encoded as base64 during serialization.
+        extras: Additional result information.
+    """
+
+    provenance: Provenance
 
 
 class Wavefunction(QCDataBaseModel):
@@ -46,10 +61,10 @@ class Wavefunction(QCDataBaseModel):
         scf_occupations_b: The SCF beta-spin orbital occupations.
     """
 
-    scf_eigenvalues_a: SerializableNDArray | None = None
-    scf_eigenvalues_b: SerializableNDArray | None = None
-    scf_occupations_a: SerializableNDArray | None = None
-    scf_occupations_b: SerializableNDArray | None = None
+    scf_eigenvalues_a: SerializableVector | None = None
+    scf_eigenvalues_b: SerializableVector | None = None
+    scf_occupations_a: SerializableVector | None = None
+    scf_occupations_b: SerializableVector | None = None
 
     @field_validator(
         "scf_eigenvalues_a",
@@ -80,7 +95,7 @@ class CalcInfoData(BaseModel):
     calcinfo_nmo: int | None = None
 
 
-class SinglePointData(Files, CalcInfoData):
+class SinglePointData(FileData, CalcInfoData):
     """The computed data from a single point calculation.
 
     Attributes:
@@ -105,14 +120,14 @@ class SinglePointData(Files, CalcInfoData):
     """
 
     energy: float | None = None
-    gradient: SerializableNDArray | None = None
-    hessian: SerializableNDArray | None = None
+    gradient: SerializableMatrix | None = None
+    hessian: SerializableMatrix | None = None
     nuclear_repulsion_energy: float | None = None
 
     wavefunction: Wavefunction | None = None
 
     freqs_wavenumber: list[float] = []
-    normal_modes_cartesian: SerializableNDArray | None = None
+    normal_modes_cartesian: SerializableTensor3D | None = None
     gibbs_free_energy: float | None = None
 
     scf_dipole_moment: list[float] | None = None
@@ -144,11 +159,12 @@ class SinglePointData(Files, CalcInfoData):
             n = int(np.sqrt(v.size))
             return v.reshape((n, n))
 
-    def return_result(self, calctype: CalcType) -> float | SerializableNDArray:
+    def return_result(self, calctype: CalcType) -> float | SerializableNDArray | None:
         """Return the primary result of the calculation."""
         return getattr(self, calctype.value)
 
-class OptimizationData(Files, CalcInfoData):
+
+class OptimizationData(FileData, CalcInfoData):
     """Computed data for an optimization (may be for a minimum or transition state).
 
     Attributes:
@@ -158,38 +174,26 @@ class OptimizationData(Files, CalcInfoData):
         trajectory: The ProgramOutput objects for each step of the optimization.
     """
 
-    trajectory: list[
-        "ProgramOutput[ProgramInput, SinglePointData] | ProgramOutput[ProgramInput, Files]"
-    ] = []
+    trajectory: list[ProgramOutput[ProgramInput, SinglePointData]] = []
 
     @property
-    def final_structure(self) -> Structure:
-        """The final Structure in the optimization."""
-        return self.structures[-1]
-
-    @property
-    def final_molecule(self) -> Structure:
-        warnings.warn(
-            ".final_molecule is being deprecated and will be removed in a future. "
-            "Please use .final_structure instead.",
-            category=FutureWarning,
-            stacklevel=2,
-        )
-        return self.final_structure
+    def final_structure(self) -> Structure | None:
+        """The last evaluated structure, or None when there are no steps."""
+        return self.structures[-1] if self.trajectory else None
 
     @property
     def final_energy(self) -> float | None:
         """
-        The final energy in the optimization. Is `np.nan` if final calculation failed.
+        The final step's energy, None for no steps, or `np.nan` if unavailable.
         """
-        return self.energies[-1]
+        return self.energies[-1] if self.trajectory else None
 
     @property
     def energies(self) -> np.ndarray:
         """The energies for each step of the optimization."""
         return np.array(
             [
-                output.data.energy if output.success else np.nan  # type: ignore
+                output.results.energy if output.results.energy is not None else np.nan
                 for output in self.trajectory
             ],
             dtype=float,
@@ -233,7 +237,7 @@ class OptimizationData(Files, CalcInfoData):
             exclude_none: If True, attributes with a value of None will not be written
                 to the file.
             exclude_unset: If True, attributes that have not been set will not be
-                written to the file.
+                written to the file. Defaults to True for compact files.
             **kwargs: Additional keyword arguments to pass to the json serializer.
 
         Note:
@@ -247,7 +251,7 @@ class OptimizationData(Files, CalcInfoData):
         super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)
 
 
-class ConformerSearchData(Files):
+class ConformerSearchData(FileData):
     """Data from a conformer search calculation.
 
     Conformers and rotamers are sorted by energy.
@@ -260,9 +264,9 @@ class ConformerSearchData(Files):
     """
 
     conformers: list[Structure] = []
-    conformer_energies: SerializableNDArray = np.array([])
+    conformer_energies: SerializableVector = Field(default_factory=lambda: np.array([]))
     rotamers: list[Structure] = []
-    rotamer_energies: SerializableNDArray = np.array([])
+    rotamer_energies: SerializableVector = Field(default_factory=lambda: np.array([]))
 
     @model_validator(mode="after")
     def _energies_size(self) -> Self:
@@ -310,47 +314,8 @@ class ConformerSearchData(Files):
             return np.array([])
         return self.rotamer_energies - self.rotamer_energies.min()
 
-    def conformers_filtered(
-        self,
-        threshold: float = 1.0,
-        **rmsd_kwargs,
-    ) -> tuple[list[Structure], SerializableNDArray]:
-        """
-        !!! warning "Moved since *qcdata* 0.15.0"
-            This convenience method has moved to
-            [`qcinf.filter_conformers`][qcinf.filter_conformers]
-            and this stub will be **removed** from *qcdata* in a future release.
 
-            ```python
-            from qcinf import filter_conformers
-
-            filtered_csr = filter_conformers(
-                conformers=csr
-                threshold=1.0,          # Bohr
-                backend="qcinf",      # or "rdkit",
-                **rmsd_kwargs,
-            )
-            ```
-        """
-        warnings.warn(
-            "`ConformerSearchResults.conformers_filtered()` is deprecated. "
-            "Install *qcinf* and use `qcinf.filter_conformers` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        raise NotImplementedError(
-            "Method removed.  Replace with:\n\n"
-            "    from qcinf import filter_conformers\n\n"
-            "    filtered_csr = filter_conformers(\n"
-            "        prog_output.results,\n"
-            "        threshold=1.0,\n"
-            "        backend='qcinf',\n"
-            "        **rmsd_kwargs\n"
-            "    )"
-        )
-
-
-class ScanData(Files, CalcInfoData):
+class ScanData(FileData, CalcInfoData):
     """Computed data for a scan (may be for a relaxed or frozen).
 
     Attributes
@@ -360,23 +325,25 @@ class ScanData(Files, CalcInfoData):
         trajectory: The ProgramOutput objects for each step of the scan.
     """
 
-    trajectory: list[ProgramOutput[ProgramInput, OptimizationData]]
+    trajectory: list[ProgramOutput[ProgramInput, OptimizationData]] = []
 
     @property
     def energies(self) -> np.ndarray:
         """The energies for each step of the scan."""
         return np.array(
             [
-                output.data.final_energy if output.success else np.nan
+                output.results.final_energy
+                if output.results.final_energy is not None
+                else np.nan
                 for output in self.trajectory
             ],
             dtype=float,
         )
 
     @property
-    def structures(self) -> list[Structure]:
-        """The Structure objects for each step of the optimization."""
-        return [output.data.final_structure for output in self.trajectory]
+    def structures(self) -> list[Structure | None]:
+        """The final structure at each scan point, or None for an empty point."""
+        return [output.results.final_structure for output in self.trajectory]
 
     def __repr_args__(self) -> list[tuple[str, str]]:
         """Avoid printing the entire collection of objects in representation."""
@@ -388,7 +355,12 @@ class ScanData(Files, CalcInfoData):
 
     def to_xyz(self) -> str:
         """Return the trajectory as an `xyz` string."""
-        return to_multi_xyz(self.structures)
+        structures = self.structures
+        if any(structure is None for structure in structures):
+            raise ValueError("Cannot export XYZ: a scan point has no final structure.")
+        return to_multi_xyz(
+            structure for structure in structures if structure is not None
+        )
 
     def save(
         self,
@@ -405,7 +377,7 @@ class ScanData(Files, CalcInfoData):
             exclude_none: If True, attributes with a value of None will not be written
                 to the file.
             exclude_unset: If True, attributes that have not been set will not be
-                written to the file.
+                written to the file. Defaults to True for compact files.
             **kwargs: Additional keyword arguments to pass to the json serializer.
 
         Note:
@@ -421,22 +393,25 @@ class ScanData(Files, CalcInfoData):
 
 StructuredData = Union[SinglePointData, OptimizationData, ConformerSearchData, ScanData]
 StructuredDataType = TypeVar("StructuredDataType", bound=StructuredData)
-Data = Union[Files, StructuredData]
+Data = Union[FileData, StructuredData]
 DataType = TypeVar("DataType", bound=Data)
 
-@deprecated_class("SinglePointData")
-class SinglePointResults(SinglePointData):
-    """This class is deprecated and will be removed in a future release. Please use
-    `SinglePointData` instead."""
+
+_DATA_TYPES: dict[CalcType, type[StructuredData]] = {
+    CalcType.energy: SinglePointData,
+    CalcType.gradient: SinglePointData,
+    CalcType.hessian: SinglePointData,
+    CalcType.optimization: OptimizationData,
+    CalcType.transition_state: OptimizationData,
+    CalcType.conformer_search: ConformerSearchData,
+    CalcType.scan: ScanData,
+}
 
 
-@deprecated_class("OptimizationData")
-class OptimizationResults(OptimizationData):
-    """This class is deprecated and will be removed in a future release. Please use
-    `OptimizationData` instead."""
+def get_data_type(calctype: CalcType | str) -> type[StructuredData]:
+    """Return the scientific data class required by a calculation type.
 
-
-@deprecated_class("ConformerSearchData")
-class ConformerSearchResults(ConformerSearchData):
-    """This class is deprecated and will be removed in a future release. Please use
-    `ConformerSearchData` instead."""
+    Accepts CalcType members or their string values. Unknown values raise ValueError.
+    File-only execution uses FileData and has no calculation type.
+    """
+    return _DATA_TYPES[CalcType(calctype)]

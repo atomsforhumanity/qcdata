@@ -1,10 +1,9 @@
 """Input models for quantum chemistry calculations."""
 
-import warnings
 from pathlib import Path
-from typing import Any, TypeVar, Union
+from typing import Any, TypeVar
 
-from pydantic import BaseModel, field_serializer, model_validator
+from pydantic import field_serializer, field_validator
 from typing_extensions import Self
 
 from .base_models import CalcType, Files, Model
@@ -13,12 +12,9 @@ from .structure import Structure
 __all__ = [
     "FileInput",
     "ProgramInput",
-    "DualProgramInput",
-    "ProgramArgs",
-    "ProgramArgsSub",
+    "ProgramSpec",
     "Inputs",
     "InputType",
-    "StructuredInputs",
 ]
 
 
@@ -26,209 +22,133 @@ class FileInput(Files):
     """File and command line argument inputs for a calculation.
 
     Attributes:
+        program: The requested executor for the calculation.
         files Files: A dict mapping filename to str or bytes data.
         cmdline_args: A list of command line arguments to be passed to the program.
         extras Dict[str, Any]: Additional information to bundle with the object. Use for
             schema development and scratch space.
     """
 
+    program: str
     cmdline_args: list[str] = []
 
     @classmethod
     def from_directory(cls, directory: Path | str, **kwargs) -> Self:
-        """Create a new FileInput and collect all files in the directory."""
+        """Collect directory files, passing required `program` and other fields as kwargs."""
         obj = cls(**kwargs)
         directory = Path(directory)
         obj.add_files(directory)
         return obj
 
 
-class _KeywordsMixin(BaseModel):
-    """Mixin for keywords attribute.
+class ProgramSpec(FileInput):
+    """A recursive program specification, independent of structures.
+
+    Each child describes its own calculation. Siblings must have distinct calculation
+    types; the same calculation type may appear at different levels of the tree.
 
     Attributes:
-        Keywords: dict[str, Any]: A dict of keywords to be passed to the program
-            excluding model and calctype. Defaults to an empty dict.
+        program: The requested executor (distinct from result data provenance).
+        calctype: The type of calculation to perform.
+        model: The scientific model, or None for programs without one.
+        keywords: Program keywords, excluding model and calculation type.
+        subprograms: Child specifications, with one child per calculation type.
+        files: Native input files for this program.
+        cmdline_args: Command line arguments for this program.
+        extras: Additional information to bundle with this specification.
     """
 
+    calctype: CalcType
+    model: Model | None = None
     keywords: dict[str, Any] = {}
+    subprograms: list["ProgramSpec"] = []
+
+    @field_validator("subprograms")
+    @classmethod
+    def _unique_subprogram_calctypes(
+        cls, subprograms: list["ProgramSpec"]
+    ) -> list["ProgramSpec"]:
+        seen: set[CalcType] = set()
+        for child in subprograms:
+            if child.calctype in seen:
+                raise ValueError(
+                    f"Duplicate subprogram calculation type '{child.calctype.value}': "
+                    "each sibling must have a unique calctype."
+                )
+            seen.add(child.calctype)
+        return subprograms
+
+    @field_serializer("calctype")
+    def _serialize_calctype(self, calctype: CalcType, _info) -> str:
+        """Serialize CalcType to string."""
+        return calctype.value
+
+    def get_subprogram(self, calctype: CalcType | str) -> "ProgramSpec":
+        """Return an immediate child by CalcType or string value.
+
+        Raises ValueError if no matching immediate child exists.
+        """
+        for child in self.subprograms:
+            if child.calctype == calctype:
+                return child
+        raise ValueError(
+            f"No immediate subprogram with calculation type {calctype!r} "
+            f"for program '{self.program}'."
+        )
 
 
-class _StructureKeywordsMixin(_KeywordsMixin):
-    """
+class ProgramInput(ProgramSpec):
+    """A program specification bound to structures.
+
     Attributes:
-        structure: The structure to be used in the calculation.
-        structures: Additional named structures required by the calculation. The
-            primary/start/reference structure should remain in `structure`; this field
-            is for other complete structures such as a product endpoint in NEB.
+        structure: The required primary/start/reference structure.
+        structures: Additional complete structures identified by role, such as the
+            product endpoint of a nudged elastic band calculation.
+
+    Example:
+        ```python
+        from qcdata import ProgramInput, ProgramSpec, Structure
+
+        prog_input = ProgramInput(
+            program="geometric",
+            calctype="optimization",
+            structure=Structure.open("structure.xyz"),
+            keywords={"maxiter": 250},
+            subprograms=[
+                ProgramSpec(
+                    program="terachem",
+                    calctype="gradient",
+                    model={"method": "wb97x-d3", "basis": "def2-svp"},
+                ),
+            ],
+        )
+        ```
     """
 
     structure: Structure
     structures: dict[str, Structure] = {}
 
-    def __init__(self, **data: Any):
-        """Backwards compatibility for 'molecule' attribute."""
-
-        # TODO: Remove in future versions.
-        if "molecule" in data:
-            warnings.warn(
-                "Use of 'molecule' attribute is deprecated. Use 'structure' instead.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            data["structure"] = data.pop("molecule")
-        super().__init__(**data)
-
-    @property
-    def molecule(self) -> Structure:
-        """Backwards compatibility for 'molecule' attribute."""
-        warnings.warn(
-            "Use of 'molecule' attribute is deprecated. Use 'structure' instead.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        return self.structure
-
-
-class ProgramArgs(FileInput, _KeywordsMixin):
-    """Core arguments for a calculation without a calctype or structure.
-
-    This class is used by `DualProgramInput` or multi-step calculations to
-    specify `subprogram_args` or basic program arguments for a multistep algorithm in
-    BigChem. It is not intended to be used directly for single-step calculations since
-    it lacks a `calctype` and `structure`.
-
-
-    Attributes:
-        model Model: The model for the quantum chemistry calculation.
-        keywords Dict[str, Any]: A dict of keywords to be passed to the program
-            excluding model and calctype. Defaults to an empty dict.
-        files Files: Files to be passed to the QC program.
-        extras Dict[str, Any]: Additional information to bundle with the object. Use
-            for schema development and scratch space.
-    """
-
-    model: Model
-
-
-class ProgramArgsSub(FileInput, _KeywordsMixin):
-    """Generic arguments for a calculation that also calls a sub-calculation.
-
-    This class is needed for multi-step calculations where the calctype and structure
-    are specified only once for the entire calculation, e.g., multistep_opt in BigChem.
-
-    Attributes:
-        model: The model for the quantum chemistry calculation
-        keywords: A dict of keywords to be passed to the program excluding model and
-            calctype. Defaults to an empty dict.
-        files: Files to be passed to the QC program.
-        subprogram: The name of the subprogram to use.
-        subprogram_args: The ProgramArgs for the subprogram.
-        extras: Additional information to bundle with the object. Use for schema
-            development and scratch space.
-    """
-
-    model: Model | None = None
-    subprogram: str
-    subprogram_args: ProgramArgs
-
-    @model_validator(mode="before")
     @classmethod
-    def _backcompat(cls, payload: dict[str, Any]) -> dict[str, Any]:
-        """Backwards compatibility for 'subprogram_args' attribute."""
-        if (
-            isinstance(payload, dict)
-            and "subprogram_args" in payload
-            and "subprogram_args" not in payload
-        ):
-            payload = dict(payload)
-            payload["subprogram_args"] = payload.pop("subprogram_args")
-            warnings.warn(
-                "'subprogram_args' has been renamed to 'subprogram_args' (ProgramArgs).",
-                FutureWarning,
-                stacklevel=2,
-            )
-        return payload
+    def from_spec(
+        cls,
+        spec: ProgramSpec,
+        structure: Structure,
+        *,
+        structures: dict[str, Structure] | None = None,
+    ) -> Self:
+        """Bind a specification to primary and additional role-named structures.
 
-
-class ProgramInput(ProgramArgs, _StructureKeywordsMixin):
-    """Core input for a quantum chemistry calculation. This is the most common input type.
-
-    Attributes:
-        calctype CalcType: The type of calculation to perform.
-        model Model: The model for the quantum chemistry calculation.
-        keywords Dict[str, Any]: A dict of keywords to be passed to the program
-            excluding model and calctype. Defaults to an empty dict.
-        structure Structure: The structure to be used in the calculation.
-        structures Dict[str, Structure]: Additional named structures required by the
-            calculation. Defaults to an empty dict.
-        files Files: Files to be passed to the QC program.
-        extras Dict[str, Any]: Additional information to bundle with the object. Use
-            for schema development and scratch space.
-
-    Example:
-        ```python
-        from qcdata.models import ProgramInput, Structure
-
-        struct = Structure.open("path/to/structure.xyz")
-        product_struct = Structure.open("path/to/product_structure.xyz")
-
-        prog_inp = ProgramInput(
-            calctype = "energy",
-            structure = struct,
-            model = {"method": "hf", "basis": "6-31G"},
-            keywords = {"maxsteps": "250"},  # Optional
-            structures = {"product": product_struct},  # Optional
-            files = {"file1": b"binary data"}  # Optional
+        Preserve all specification fields, including recursive children, and validate
+        the new input. The specification is not modified.
+        """
+        values = spec.model_dump(
+            include=set(ProgramSpec.model_fields), exclude_unset=True
         )
-        ```
-    """
-
-    calctype: CalcType
-
-    @field_serializer("calctype")
-    def _serialize_calctype(self, calctype: CalcType, _info) -> str:
-        """Serialize CalcType to string"""
-        return calctype.value
+        values["structure"] = structure
+        if structures is not None:
+            values["structures"] = structures
+        return cls.model_validate(values)
 
 
-class DualProgramInput(ProgramArgsSub, ProgramInput):
-    """Input for a two program calculation.
-
-    Attributes:
-        calctype CalcType: The type of calculation to perform.
-        model Model: The model for the quantum chemistry calculation.
-        keywords Dict[str, Any]: A dict of keywords to be passed to the program
-            excluding model and calctype. Defaults to an empty dict.
-        structure Structure: The structure to be used in the calculation.
-        structures Dict[str, Structure]: Additional named structures required by the
-            calculation. Defaults to an empty dict.
-        files Files: Files to be passed to the QC program.
-        subprogram: The name of the subprogram to use.
-        subprogram_args ProgramArgs: The ProgramArgs for the subprogram.
-        extras Dict[str, Any]: Additional information to bundle with the object. Use
-            for schema development and scratch space.
-
-    Example:
-        ```python
-        from qcdata.models import DualProgramInput, ProgramArgs, Structure
-
-        struct = Structure.open("path/to/structure.xyz")
-
-        prog_inp = DualProgramInput(
-            calctype = "optimization",
-            structure = struct,
-            keywords = {"maxiter": "250"},  # Optional
-            subprogram = "orca",
-            subprogram_args = ProgramArgs(
-                model = {"method": "wb97x-d3", "basis": "def2-SVP"},
-                keywords = {"convthre": "1e-6"},  # Optional
-            )
-        )
-        ```
-    """
-
-
-Inputs = Union[FileInput, ProgramInput, DualProgramInput]
+Inputs = FileInput | ProgramInput
 InputType = TypeVar("InputType", bound=Inputs)
-StructuredInputs = Union[ProgramInput, DualProgramInput]

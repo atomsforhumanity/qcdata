@@ -1,19 +1,9 @@
 """Compatibility layer for QCElemental (QCSchema)."""
 
+from copy import deepcopy
 from typing import Any
 
-import numpy as np
-
-from qcdata import ProgramInput, SinglePointData, Wavefunction
-
-# ---------------------------------------------------------------------------
-# Compatibility shim: NumPy 2.0 removed `np.core.defchararray`; everything
-# now lives under `np.char`.  qcelemental still imports from the old path.
-# ---------------------------------------------------------------------------
-# True on NumPy 2.0+
-if not hasattr(np.core, "defchararray"):  # type: ignore
-    # simple one-line alias
-    np.core.defchararray = np.char  # type: ignore
+from qcdata import ProgramInput, Provenance, SinglePointData, Wavefunction
 
 
 def to_qcel_input(prog_input: ProgramInput) -> dict[str, Any]:
@@ -25,7 +15,13 @@ def to_qcel_input(prog_input: ProgramInput) -> dict[str, Any]:
 
     Returns:
         The QCElemental v1 dict representation of an AtomicInput object.
+
+    Raises:
+        ValueError: If the program specification has no model.
     """
+    if prog_input.model is None:
+        raise ValueError("QCSchema AtomicInput conversion requires a non-None model.")
+
     return {
         "molecule": {
             "symbols": prog_input.structure.symbols,
@@ -39,11 +35,17 @@ def to_qcel_input(prog_input: ProgramInput) -> dict[str, Any]:
             "fix_com": True,
             "fix_orientation": True,
             "identifiers": prog_input.structure.identifiers.model_dump(
-                exclude={"name_IUPAC", "name", "extras", "canonical_smiles_program"}
+                exclude={
+                    "name_IUPAC",
+                    "name",
+                    "extras",
+                    "canonical_smiles_program",
+                    "qcdata_version",
+                }
             ),  # not on qcel model
         },
         "driver": prog_input.calctype,
-        "model": prog_input.model.model_dump(exclude={"extras"}),
+        "model": prog_input.model.model_dump(exclude={"extras", "qcdata_version"}),
         "keywords": prog_input.keywords,
         "extras": prog_input.extras,
     }
@@ -52,13 +54,19 @@ def to_qcel_input(prog_input: ProgramInput) -> dict[str, Any]:
 def from_qcel_output_results(
     qcel_output: dict[str, Any],
 ) -> SinglePointData:
-    """Create a SinglePointSuccessfulOutput or SinglePointFailedOutput from the
-    QCElemental v1 output schema representation of the output (AtomicResult dict).
+    """Create SinglePointData from a QCElemental v1 AtomicResult dictionary.
 
     Args:
         qcel_output: The QCElemental v1 output schema representation of the output.
-            May be a dict representing an AtomicResult or FailedOperation.
+            Must identify the producing program in provenance.creator.
+
+    Raises:
+        ValueError: If producer identity is unavailable.
     """
+    provenance = qcel_output.get("provenance")
+    if not isinstance(provenance, dict) or not provenance.get("creator"):
+        raise ValueError("QCSchema result conversion requires provenance.creator.")
+
     # Collect values from keys that exist in qcdata
     qcdata_to_qcel = {
         "calcinfo_natoms": "calcinfo_natom",
@@ -80,12 +88,23 @@ def from_qcel_output_results(
     # Override with return_result as qcel may not have save the key value to .properties
     results[qcel_output["driver"]] = qcel_output["return_result"]
 
-    if qcel_output["wavefunction"]:
+    if qcel_output.get("wavefunction"):
         results["wavefunction"] = {
             key: value
             for key, value in qcel_output["wavefunction"].items()
             if key in Wavefunction.__annotations__
         }
 
-    results["extras"] = {"extras": {"NOTE": "Results computed using QCEngine"}}
+    results["provenance"] = Provenance(
+        program=provenance["creator"],
+        program_version=provenance.get("version"),
+        extras=deepcopy(
+            {
+                key: value
+                for key, value in provenance.items()
+                if key not in {"creator", "version"}
+            }
+        ),
+    )
+    results["extras"] = deepcopy(qcel_output.get("extras") or {})
     return SinglePointData(**results)

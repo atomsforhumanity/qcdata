@@ -1,4 +1,3 @@
-import warnings
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -9,17 +8,14 @@ from qcconst import periodic_table as pt
 from qcconst.constants import BOHR_TO_ANGSTROM
 from typing_extensions import Self
 
-from qcdata.helper_types import SerializableNDArray
+from qcdata.helper_types import SerializableMatrix
 
 from .base_models import LengthUnit, QCDataBaseModel
-
-# from qcinf.algorithms import smiles_to_structure, structure_to_smiles
-from .utils import renamed_class
 
 if TYPE_CHECKING:
     from pydantic.typing import ReprArgs
 
-__all__ = ["Structure", "Identifiers", "Molecule"]
+__all__ = ["Structure", "Identifiers"]
 
 
 class Identifiers(QCDataBaseModel):
@@ -89,41 +85,12 @@ class Structure(QCDataBaseModel):
     """
 
     symbols: list[str]
-    geometry: SerializableNDArray  # Coerced to 2D array
+    geometry: SerializableMatrix  # Coerced to 2D array
     charge: int = 0
     multiplicity: int = 1
     identifiers: Identifiers = Identifiers()
     connectivity: list[tuple[int, int, float]] = []
     _xyz_comment_key: ClassVar[str] = "xyz_comments"
-
-    def __init__(self, **data: Any):
-        """Create a new Structure object.
-
-        Example:
-            ```python
-            from qcdata import Structure
-
-            structure = Structure(
-                symbols=["H", "O", "H"],
-                geometry=[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, 2.0]],
-                charge=0,  # optional; defaults to 0
-                multiplicity=1,  # optional; defaults to 1
-                identifiers={"smiles": "O"},  # optional
-            )
-
-            ```
-        """
-        # Backwards compatibility for 'ids' attribute.
-        if identifiers := data.pop("ids", None):
-            warnings.warn(
-                "Passing 'ids' is deprecated and will be removed in a future "
-                "release. Please use 'identifiers' instead. Once instantiated, "
-                "you can use structure.ids to access the identifiers as a shortcut.",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            data["identifiers"] = identifiers
-        super().__init__(**data)
 
     @classmethod
     def open(
@@ -239,7 +206,7 @@ class Structure(QCDataBaseModel):
             exclude_none: If True, attributes with a value of None will not be written
                 to the file.
             exclude_unset: If True, attributes that have not been set will not be
-                written to the file.
+                written to the file. Defaults to True for compact files.
             indent: The number of spaces to use for indentation in the JSON file. 0
                 creates a more compact JSON file, 4 is more human-readable.
             **kwargs: Additional keyword arguments to pass to the json serializer.
@@ -326,7 +293,9 @@ class Structure(QCDataBaseModel):
         other_comments: list[str] = []
 
         for item in lines[1].strip().split():
-            if item.startswith("qcdata__identifiers_"):
+            if item.startswith("qcdata_version="):
+                continue  # The current writer's version is supplied on export.
+            elif item.startswith("qcdata__identifiers_"):
                 key = item.split("=")[0].replace("qcdata__identifiers_", "")
                 value = item.split("=")[1]
                 identifier_kwargs[key] = value
@@ -359,7 +328,7 @@ class Structure(QCDataBaseModel):
 
         return cls(
             symbols=symbols,
-            geometry=geometry,
+            geometry=np.asarray(geometry),
             **structure_kwargs,
             identifiers=Identifiers(**identifier_kwargs),
             extras={cls._xyz_comment_key: other_comments},
@@ -434,6 +403,7 @@ class Structure(QCDataBaseModel):
         qcdata_data = {  # These get added to comments line (line 2) in xyz file
             "qcdata_charge": self.charge,
             "qcdata_multiplicity": self.multiplicity,
+            "qcdata_version": self.qcdata_version,
         }
 
         # Add identifiers to qcdata_data
@@ -469,33 +439,6 @@ class Structure(QCDataBaseModel):
             ("formula", self.formula),
         ]
 
-    def add_smiles(
-        self: "Structure",
-        *,
-        program: str = "rdkit",
-        hydrogens: bool = False,
-    ) -> None:
-        """
-        !! DEPRECATED !!
-
-        This helper has been removed to **qcinf** (see `qcinf.structure_to_smiles`).
-        It will be removed from qcdata in a future release.
-        """
-        warnings.warn(
-            "`Structure.add_smiles()` has moved to `qcinf` and is no longer "
-            "implemented here.\n\n"
-            "Install qcinf and replace your call with:\n\n"
-            "    from qcinf import structure_to_smiles\n"
-            "    smiles = structure_to_smiles(struct, backend='rdkit|openbabel')\n"
-            "    struct.add_identifiers(smiles=smiles)\n\n",
-            DeprecationWarning,  # use FutureWarning if you want it visible by default
-            stacklevel=2,
-        )
-        raise NotImplementedError(
-            "Structure.add_smiles() is removed. "
-            "Use qcinf.structure_to_smiles and struct.add_identifiers instead."
-        )
-
     def add_identifiers(self, **identifiers) -> None:
         """Add an identifier to the structure.
 
@@ -529,6 +472,7 @@ class Structure(QCDataBaseModel):
     @model_validator(mode="before")
     def _validate_symbols_and_geometry(cls, values):
         """Ensure symbols are valid atomic symbols and geometry is correct."""
+        values = dict(values)
         symbols = [symbol.capitalize() for symbol in values.get("symbols", [])]
         for symbol in symbols:
             if not hasattr(pt, symbol):
@@ -548,7 +492,7 @@ class Structure(QCDataBaseModel):
         cls, connectivity: list[tuple[int, int, float]]
     ) -> list[tuple[int, int, float]]:
         """Coerce bonds use ascending atom indices and ensure no duplicates.
-        
+
         Example:
             Input: [(2, 0, 1.0), (1, 2, 2.0)]
             Output: [(0, 2, 1.0), (1, 2, 2.0)]
@@ -617,49 +561,3 @@ class Structure(QCDataBaseModel):
                 [float(val) for val in bond] for bond in connectivity
             ]
         return as_dict
-
-    def swap_indices(self, indices: list[tuple[int, int]]) -> None:
-        """Swap the indices in the symbols and geometry list.
-
-        Args:
-            indices: A list of tuples containing the indices to swap. E.g.,
-                [(0, 1), (2, 3)] will swap the first and second atoms and the third
-                and fourth atoms.
-        """
-        # Validate indices
-        old_set = set()
-        new_set = set()
-        for old, new in indices:
-            error = False
-            error_message = ""
-            if old in old_set:
-                error_message += (
-                    f"Duplicated old index: {old}. You cannot move an atom twice. "
-                )
-                error = True
-            if new in new_set:
-                error_message += (
-                    f"Duplicated new index: {new}. You cannot move two atoms to the "
-                    "same index."
-                )
-                error = True
-            if error:
-                raise ValueError(error_message)
-
-            old_set.add(old)
-            new_set.add(new)
-
-        # Perform reordering
-        new_symbols = [s for s in self.symbols]
-        new_geometry = np.array([g for g in self.geometry])
-        for old, new in indices:
-            new_symbols[new] = self.symbols[old]
-            new_geometry[new] = self.geometry[old]
-
-        object.__setattr__(self, "symbols", new_symbols)
-        object.__setattr__(self, "geometry", new_geometry)
-
-
-@renamed_class(Structure)
-class Molecule(Structure):
-    pass

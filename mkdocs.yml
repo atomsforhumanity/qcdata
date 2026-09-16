@@ -106,7 +106,6 @@ nav:
       - Inputs: api/inputs.md
       - Outputs: api/outputs.md
       - Data: api/data.md
-      - Deprecated Results Alias: api/results.md
       - Utilities: api/utils.md
       - Visualizations:
           - View: api/view.md
@@ -115,6 +114,7 @@ nav:
           - CalcType: api/calctype.md
           - Model: api/model.md
           - Provenance: api/provenance.md
+          - ExecutionInfo: api/execution.md
           - QCDataBaseModel: api/qcdatabasemodel.md
           - LengthUnit: api/lengthunit.md
   - ✨Visualizations✨:

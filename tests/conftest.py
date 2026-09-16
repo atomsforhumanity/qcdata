@@ -4,13 +4,11 @@ import numpy as np
 import pytest
 
 from qcdata import (
-    DualProgramInput,
     FileInput,
-    Files,
     OptimizationData,
-    ProgramArgs,
     ProgramInput,
     ProgramOutput,
+    ProgramSpec,
     SinglePointData,
 )
 from qcdata.utils import water as water_struct
@@ -31,20 +29,21 @@ def water():
 @pytest.fixture
 def file_input():
     return FileInput(
+        program="terachem",
         files={"binary": b"binary data", "text": "text data"},
         cmdline_args=["-i", "input.dat", "-o", "output.dat"],
     )
 
 
 @pytest.fixture
-def input_data(request, file_input, prog_input_factory, dprog_input_factory):
+def input_data(request, file_input, prog_input_factory, nested_input_factory):
     """Input data fixture"""
     if request.param == "file_input":
         return file_input
     elif request.param == "calc_input":
         return prog_input_factory("energy")
-    elif request.param == "ccalc_input":  # DualProgramInput
-        return dprog_input_factory
+    elif request.param == "nested_input":
+        return nested_input_factory("optimization")
     else:
         raise ValueError(f"Unknown input data type: {request.param}")
 
@@ -55,6 +54,7 @@ def prog_input_factory(water):
 
     def _create_prog_inp(calctype):
         return ProgramInput(
+            program="terachem",
             structure=water,
             calctype=calctype,
             model={"method": "hf", "basis": "sto-3g"},
@@ -71,11 +71,12 @@ def prog_input_factory(water):
 
 
 @pytest.fixture
-def dprog_input_factory(water):
-    """Function that returns DualProgramInput of calctype."""
+def nested_input_factory(water):
+    """Function that returns a nested ProgramInput of calctype."""
 
     def _create_prog_inp(calctype):
-        return DualProgramInput(
+        return ProgramInput(
+            program="geometric",
             structure=water,
             calctype=calctype,
             keywords={
@@ -83,8 +84,13 @@ def dprog_input_factory(water):
                 "purify": "no",
                 "some-bool": False,
             },
-            subprogram="fake subprogram",
-            subprogram_args=ProgramArgs(model={"method": "hf", "basis": "sto-3g"}),
+            subprograms=[
+                ProgramSpec(
+                    program="terachem",
+                    calctype="gradient",
+                    model={"method": "hf", "basis": "sto-3g"},
+                ),
+            ],
         )
 
     return _create_prog_inp
@@ -101,6 +107,7 @@ def sp_data():
             n_atoms * 3, n_atoms * 3
         )
         return SinglePointData(
+            provenance={"program": "qcdata-test-suite"},
             energy=1.0,
             gradient=gradient,
             hessian=hessian,
@@ -120,8 +127,8 @@ def prog_output(prog_input_factory, sp_data):
         input_data=pi_energy,
         success=True,
         logs="program standard out...",
-        data=sp_data,
-        provenance={"program": "qcdata-test-suite", "scratch_dir": "/tmp/qcdata"},
+        results=sp_data,
+        execution={"scratch_dir": "/tmp/qcdata"},
         extras={"some_extra": 1},
     )
 
@@ -131,19 +138,21 @@ def results_failure(prog_input_factory, sp_data):
     """Failed ProgramOutput object"""
     pi_energy = prog_input_factory("energy")
 
-    return ProgramOutput[ProgramInput, Files](
+    return ProgramOutput[ProgramInput, SinglePointData](
         input_data=pi_energy,
         success=False,
         traceback="Traceback...",
-        data=Files(),
-        provenance={"program": "qcdata-test-suite", "scratch_dir": "/tmp/qcdata"},
+        results=SinglePointData(provenance={"program": "qcdata-test-suite"}),
+        execution={"scratch_dir": "/tmp/qcdata"},
         extras={"some_extra": 1},
     )
 
 
 @pytest.fixture
 def opt_data(prog_output):
-    return OptimizationData(trajectory=[prog_output])
+    return OptimizationData(
+        provenance={"program": "qcdata-test-suite"}, trajectory=[prog_output]
+    )
 
 
 @pytest.fixture
@@ -155,7 +164,7 @@ def opt_output(prog_input_factory, opt_data):
         input_data=input_data,
         success=True,
         logs="program standard out...",
-        data=opt_data,
-        provenance={"program": "qcdata-test-suite", "scratch_dir": "/tmp/qcdata"},
+        results=opt_data,
+        execution={"scratch_dir": "/tmp/qcdata"},
         extras={"some_extra": 1},
     )
