@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Added
+
+- Add public `get_data_type(calctype)` and `ProgramInput.from_spec()` helpers for parsers and execution packages.
+
+### Changed
+
+- Every model now writes the installed `qcdata_version` to JSON/YAML/TOML; nested models are stamped too. Loading accepts an existing stamp, and resaving replaces it with the current package version. XYZ structures include a version comment; QCSchema exports exclude qcdata-specific stamps.
+- Default `save()` and `json_dumps()` use `exclude_unset=True` for compact files, retaining explicitly supplied values and computed version stamps. Pass `exclude_unset=False` to include unset/default-valued fields. The JSON helper handles individual models and lists consistently, including paths. Models retain shallow freezing; direct container mutation is unsupported and the supported update workflow is dump/edit/validate.
+- JSON schemas describe scientific array dimensions correctly. NumPy energy defaults use factories, eliminating non-serializable-default schema warnings.
+- QCSchema conversion preserves source extras and additional producer metadata without claiming QCEngine produced every result. Completed public data/identifier exports and corrected viewer documentation.
+- The temporary `.data` compatibility property and legacy input key are scheduled for removal in the next major release after this one.
+
+- Breaking: result types now follow the input contract on both success and failure. `FileInput` requires `FileData`; structured inputs require their corresponding scientific data type even for empty failures. Empty payloads deserialize using the input calculation type, including in nested trajectories.
+- Empty optimization final values return `None`; empty scan trajectories are supported. Scan structures preserve missing points as `None`, and XYZ export rejects points without a final structure. Visualization handles empty failed outputs.
+- Breaking: renamed execution fields to `host_cpu` and `host_mem_gib` (fractional GiB supported), without compatibility aliases. Removed the prototype `Structure.swap_indices` method.
+- Updated qcinf to >=0.4.1, removing the qcio dependency and obsolete structure-type workaround.
+
+- `ProgramOutput.results` is now the canonical scientific payload field and serialized key. Scientific models retain their `Data` names. `.data` and legacy `"data"` inputs remain temporarily supported with `FutureWarning`; providing both field names is invalid.
+- Breaking: removed the `Results`, `*Results`, and `Molecule` aliases, `qcdata.models.results` and `qcio` import shims, `molecule=` and `ids=` constructor compatibility, stdout/files forwarding, deprecated output convenience properties, and helpers moved to qcinf. Use canonical APIs directly.
+
+- Breaking: result payloads now inherit from `FileData` and require `Provenance` containing program identity and optional version. `ProgramOutput.provenance` is replaced by `execution: ExecutionInfo`, defaulting to `ExecutionInfo()` when runtime details are unknown. Migrate serialized outputs and each trajectory entry by moving producer identity into `results.provenance` and runtime fields into `execution`.
+
+- Breaking: all inputs now require `program`. Replaced `ProgramArgs`, `ProgramArgsSub`, and `DualProgramInput` with recursive `ProgramSpec` and structure-bound `ProgramInput`. Migrate `subprogram` / `subprogram_args` to `subprograms`, giving each child its own `program` and `calctype`; sibling calculation types must be unique. `model` is optional and remains a separate `Model` object. Existing serialized inputs require the same migration.
+- Added immediate-child lookup with `get_subprogram(calctype)`, recursive visualization details, and an explicit error when converting a model-free input to QCSchema AtomicInput.
+
 ## [0.18.1] - 2026-08-26
 
 ### Changed

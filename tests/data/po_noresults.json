@@ -1,7 +1,7 @@
 {
   "extras": {},
-  "files": {},
   "input_data": {
+    "program": "terachem",
     "keywords": {
       "purify": "no",
       "pcm": "cosmo",
@@ -108,16 +108,15 @@
     },
     "calctype": "gradient"
   },
-  "provenance": {
-    "extras": {},
-    "program": "terachem",
+  "execution": {
     "scratch_dir": "/tmp/tmpm15i2n9l",
     "wall_time": 940.47012,
     "hostname": "eleutheria",
-    "hostcpus": 16
+    "host_cpu": 16
   },
   "success": false,
   "results": {
+    "provenance": {"program": "terachem", "extras": {}},
     "extras": {}
   },
   "traceback": "Traceback (most recent call last):\n  File \"/home/cbh/.cache/pypoetry/virtualenvs/catalysis-lgslXXUy-py3.11/lib/python3.11/site-packages/qcop/adapters/base.py\", line 161, in compute\n    results, stdout = self.compute_results(\n                      ^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/cbh/.cache/pypoetry/virtualenvs/catalysis-lgslXXUy-py3.11/lib/python3.11/site-packages/qcop/adapters/terachem.py\", line 64, in compute_results\n    stdout = execute_subprocess(\n             ^^^^^^^^^^^^^^^^^^^\n  File \"/home/cbh/.cache/pypoetry/virtualenvs/catalysis-lgslXXUy-py3.11/lib/python3.11/site-packages/qcop/adapters/utils.py\", line 107, in execute_subprocess\n    raise ExternalSubprocessError(proc.returncode, \" \".join(cmd), stdout)\nqcop.exceptions.ExternalSubprocessError: External program failed with return code 1. Command: 'terachem tc.in'\n"

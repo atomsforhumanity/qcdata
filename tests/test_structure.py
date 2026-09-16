@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from qcdata import Structure
+from qcdata import Structure, __version__
 
 from .data import structures as qcdata_structures
 
@@ -10,7 +10,9 @@ def test_from_xyz(test_data_dir):
     xyz_str = (test_data_dir / "caffeine.xyz").read_text()
     caffeine = Structure.from_xyz(xyz_str)
     assert caffeine.symbols == qcdata_structures.caffeine.symbols
-    assert np.allclose(caffeine.geometry, qcdata_structures.caffeine.geometry, rtol=1e-9)
+    assert np.allclose(
+        caffeine.geometry, qcdata_structures.caffeine.geometry, rtol=1e-9
+    )
     assert caffeine.multiplicity == qcdata_structures.caffeine.multiplicity
     assert caffeine.charge == qcdata_structures.caffeine.charge
     assert caffeine.identifiers.name == "caffeine"
@@ -32,7 +34,9 @@ def test_to_file_xyz(test_data_dir, tmp_path):
     caffeine.save(tmp_path / "caffeine_copy.xyz")
     caffeine_copy = Structure.open(tmp_path / "caffeine_copy.xyz")
     assert caffeine_copy.symbols == caffeine.symbols
-    assert np.allclose(caffeine.geometry, qcdata_structures.caffeine.geometry, rtol=1e-9)
+    assert np.allclose(
+        caffeine.geometry, qcdata_structures.caffeine.geometry, rtol=1e-9
+    )
     assert caffeine_copy.multiplicity == caffeine.multiplicity
     assert caffeine_copy.charge == caffeine.charge
 
@@ -49,6 +53,11 @@ def test_to_xyz_comments(test_data_dir):
     assert "IUPAC" in comments
     assert "1,3,7-trimethylpurine-2,6-dione" in comments
     assert "qcdata__identifiers_name=caffeine" in comments
+    assert f"qcdata_version={__version__}" in comments
+    old_xyz = xyz_str.replace(f"qcdata_version={__version__}", "qcdata_version=0.0.0")
+    reopened = Structure.from_xyz(old_xyz)
+    assert f"qcdata_version={__version__}" in reopened.to_xyz().splitlines()[1]
+    assert reopened.extras == caffeine.extras
 
 
 def test_to_from_file_json(test_data_dir, tmp_path):
@@ -105,11 +114,12 @@ def test_atomic_symbols():
     assert structure.atomic_numbers == [11, 17]
 
 
-def test_ids_backwards_compatibility():
-    struct = Structure(symbols=["H"], geometry=[[0, 0, 0]], ids={"name": "fake"})
+def test_identifiers_and_ids_shortcut():
+    struct = Structure(
+        symbols=["H"], geometry=[[0, 0, 0]], identifiers={"name": "fake"}
+    )
     assert struct.identifiers.name == "fake"
-    # Test that ids is an alias for identifiers
-    assert struct.ids == struct.identifiers
+    assert struct.ids is struct.identifiers
 
 
 @pytest.mark.parametrize(
@@ -253,7 +263,9 @@ def test_multi_xyz(test_data_dir):
     # Make sure it works on a single structure
     caffeine = Structure.open(test_data_dir / "caffeine.xyz")
     assert caffeine.symbols == qcdata_structures.caffeine.symbols
-    assert np.allclose(caffeine.geometry, qcdata_structures.caffeine.geometry, rtol=1e-9)
+    assert np.allclose(
+        caffeine.geometry, qcdata_structures.caffeine.geometry, rtol=1e-9
+    )
     assert caffeine.multiplicity == qcdata_structures.caffeine.multiplicity
     assert caffeine.charge == qcdata_structures.caffeine.charge
     assert caffeine.identifiers.name == "caffeine"
@@ -269,16 +281,6 @@ def test_distance():
     struct = Structure(symbols=["H", "H"], geometry=[[0, 0, 0], [0, 1.4, -1.3]])
 
     assert struct.distance(0, 1) == pytest.approx(1.91049731, abs=1e-8)
-
-
-def test_reorder_indices():
-    struct = Structure(
-        symbols=["H", "O", "H"], geometry=[[1, 0, 0], [0, 0, 0], [0, 0, 1]]
-    )
-    struct.swap_indices([(0, 1), (1, 2), (2, 0)])
-
-    assert struct.symbols == ["H", "H", "O"]
-    assert np.array_equal(struct.geometry, [[0, 0, 1], [1, 0, 0], [0, 0, 0]])
 
 
 def test_connectivity_reordering():
