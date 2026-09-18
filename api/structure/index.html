@@ -614,9 +614,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#qcdata.Structure.add_smiles" class="md-nav__link">
+  <a href="#qcdata.Structure.add_identifiers" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;add_smiles
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;add_identifiers
     </span>
   </a>
   
@@ -721,29 +721,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../results/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Deprecated Results Alias
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../utils/" class="md-nav__link">
         
   
@@ -783,10 +760,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
         
           
-          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
             
   
   
@@ -799,8 +776,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_8">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
             <span class="md-nav__icon md-icon"></span>
             Visualizations
           </label>
@@ -860,10 +837,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
         
           
-          <label class="md-nav__link" for="__nav_2_9" id="__nav_2_9_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
             
   
   
@@ -876,8 +853,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_9">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             Additional Models
           </label>
@@ -965,6 +942,29 @@
   
   <span class="md-ellipsis">
     Provenance
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ExecutionInfo
     
   </span>
   
@@ -1266,9 +1266,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#qcdata.Structure.add_smiles" class="md-nav__link">
+  <a href="#qcdata.Structure.add_identifiers" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;add_smiles
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;add_identifiers
     </span>
   </a>
   
@@ -1308,7 +1308,7 @@
 
 
 <h1 id="structure-identifiers">Structure &amp; Identifiers<a class="headerlink" href="#structure-identifiers" title="Permanent link">&para;</a></h1>
-<p>A <code>Structure</code> is the core <code>qcdata</code> object for representing a molecule or molecular super structure in 3D space. <code>Structure</code> objects can be created directly from <code>symbol</code> and <code>geometry</code> information (geometry must be in <code>Bohr</code>), from SMILES strings, from <code>xyz</code> files, or opened from <code>Structure</code> objects previously saved to disk.</p>
+<p>A <code>Structure</code> is the core <code>qcdata</code> object for representing a molecule or molecular super structure in 3D space. <code>Structure</code> objects can be created directly from <code>symbol</code> and <code>geometry</code> information (geometry must be in <code>Bohr</code>), from <code>xyz</code> files, or opened from <code>Structure</code> objects previously saved to disk.</p>
 
 
 <div class="doc doc-object doc-class">
@@ -1320,8 +1320,7 @@
 
 
 <a href="#qcdata.Structure" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">Structure</span><span class="p">(</span><span class="o">**</span><span class="n">data</span><span class="p">:</span> <span class="n"><span title="typing.Any">Any</span></span><span class="p">)</span>
-</code></pre></div>
+
 
     <div class="doc doc-contents first">
 
@@ -1354,7 +1353,7 @@
           <tr class="doc-section-item">
             <td><code><span title="qcdata.Structure.geometry">geometry</span></code></td>
             <td>
-                  <code><span title="qcdata.helper_types.SerializableNDArray">SerializableNDArray</span></code>
+                  <code><span title="qcdata.helper_types.SerializableMatrix">SerializableMatrix</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1472,85 +1471,11 @@ System.</p>
 
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="language-python highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">qcdata</span><span class="w"> </span><span class="kn">import</span> <span class="n">Structure</span>
-
-<span class="n">structure</span> <span class="o">=</span> <span class="n">Structure</span><span class="p">(</span>
-    <span class="n">symbols</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;H&quot;</span><span class="p">,</span> <span class="s2">&quot;O&quot;</span><span class="p">,</span> <span class="s2">&quot;H&quot;</span><span class="p">],</span>
-    <span class="n">geometry</span><span class="o">=</span><span class="p">[[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">]],</span>
-    <span class="n">charge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>  <span class="c1"># optional; defaults to 0</span>
-    <span class="n">multiplicity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># optional; defaults to 1</span>
-    <span class="n">identifiers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;smiles&quot;</span><span class="p">:</span> <span class="s2">&quot;O&quot;</span><span class="p">},</span>  <span class="c1"># optional</span>
-<span class="p">)</span>
-</code></pre></div>
-</details>
 
 
 
 
 
-
-
-                  <details class="quote">
-                    <summary>Source code in <code>src/qcdata/models/structure.py</code></summary>
-                    <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 99</span>
-<span class="normal">100</span>
-<span class="normal">101</span>
-<span class="normal">102</span>
-<span class="normal">103</span>
-<span class="normal">104</span>
-<span class="normal">105</span>
-<span class="normal">106</span>
-<span class="normal">107</span>
-<span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
-<span class="normal">111</span>
-<span class="normal">112</span>
-<span class="normal">113</span>
-<span class="normal">114</span>
-<span class="normal">115</span>
-<span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a new Structure object.</span>
-
-<span class="sd">    Example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        from qcdata import Structure</span>
-
-<span class="sd">        structure = Structure(</span>
-<span class="sd">            symbols=[&quot;H&quot;, &quot;O&quot;, &quot;H&quot;],</span>
-<span class="sd">            geometry=[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, 2.0]],</span>
-<span class="sd">            charge=0,  # optional; defaults to 0</span>
-<span class="sd">            multiplicity=1,  # optional; defaults to 1</span>
-<span class="sd">            identifiers={&quot;smiles&quot;: &quot;O&quot;},  # optional</span>
-<span class="sd">        )</span>
-
-<span class="sd">        ```</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Backwards compatibility for &#39;ids&#39; attribute.</span>
-    <span class="k">if</span> <span class="n">identifiers</span> <span class="o">:=</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;ids&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="s2">&quot;Passing &#39;ids&#39; is deprecated and will be removed in a future &quot;</span>
-            <span class="s2">&quot;release. Please use &#39;identifiers&#39; instead. Once instantiated, &quot;</span>
-            <span class="s2">&quot;you can use structure.ids to access the identifiers as a shortcut.&quot;</span><span class="p">,</span>
-            <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">,</span>
-            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;identifiers&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">identifiers</span>
-    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">data</span><span class="p">)</span>
-</code></pre></div></td></tr></table></div>
-                  </details>
 
 
 
@@ -1670,7 +1595,40 @@ qcdata__identifiers_* keys and additional non-qcdata comments.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/qcdata/models/structure.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">291</span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
 <span class="normal">292</span>
 <span class="normal">293</span>
 <span class="normal">294</span>
@@ -1714,38 +1672,7 @@ qcdata__identifiers_* keys and additional non-qcdata comments.</p>
 <span class="normal">332</span>
 <span class="normal">333</span>
 <span class="normal">334</span>
-<span class="normal">335</span>
-<span class="normal">336</span>
-<span class="normal">337</span>
-<span class="normal">338</span>
-<span class="normal">339</span>
-<span class="normal">340</span>
-<span class="normal">341</span>
-<span class="normal">342</span>
-<span class="normal">343</span>
-<span class="normal">344</span>
-<span class="normal">345</span>
-<span class="normal">346</span>
-<span class="normal">347</span>
-<span class="normal">348</span>
-<span class="normal">349</span>
-<span class="normal">350</span>
-<span class="normal">351</span>
-<span class="normal">352</span>
-<span class="normal">353</span>
-<span class="normal">354</span>
-<span class="normal">355</span>
-<span class="normal">356</span>
-<span class="normal">357</span>
-<span class="normal">358</span>
-<span class="normal">359</span>
-<span class="normal">360</span>
-<span class="normal">361</span>
-<span class="normal">362</span>
-<span class="normal">363</span>
-<span class="normal">364</span>
-<span class="normal">365</span>
-<span class="normal">366</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">335</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">from_xyz</span><span class="p">(</span>
     <span class="bp">cls</span><span class="p">,</span>
     <span class="n">xyz_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -1783,7 +1710,9 @@ qcdata__identifiers_* keys and additional non-qcdata comments.</p>
     <span class="n">other_comments</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">():</span>
-        <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;qcdata__identifiers_&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;qcdata_version=&quot;</span><span class="p">):</span>
+            <span class="k">continue</span>  <span class="c1"># The current writer&#39;s version is supplied on export.</span>
+        <span class="k">elif</span> <span class="n">item</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;qcdata__identifiers_&quot;</span><span class="p">):</span>
             <span class="n">key</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;qcdata__identifiers_&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
             <span class="n">value</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
             <span class="n">identifier_kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
@@ -1816,7 +1745,7 @@ qcdata__identifiers_* keys and additional non-qcdata comments.</p>
 
     <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
         <span class="n">symbols</span><span class="o">=</span><span class="n">symbols</span><span class="p">,</span>
-        <span class="n">geometry</span><span class="o">=</span><span class="n">geometry</span><span class="p">,</span>
+        <span class="n">geometry</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">geometry</span><span class="p">),</span>
         <span class="o">**</span><span class="n">structure_kwargs</span><span class="p">,</span>
         <span class="n">identifiers</span><span class="o">=</span><span class="n">Identifiers</span><span class="p">(</span><span class="o">**</span><span class="n">identifier_kwargs</span><span class="p">),</span>
         <span class="n">extras</span><span class="o">=</span><span class="p">{</span><span class="bp">cls</span><span class="o">.</span><span class="n">_xyz_comment_key</span><span class="p">:</span> <span class="n">other_comments</span><span class="p">},</span>
@@ -1880,7 +1809,38 @@ qcdata__identifiers_* keys and additional non-qcdata comments.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/qcdata/models/structure.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">423</span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">392</span>
+<span class="normal">393</span>
+<span class="normal">394</span>
+<span class="normal">395</span>
+<span class="normal">396</span>
+<span class="normal">397</span>
+<span class="normal">398</span>
+<span class="normal">399</span>
+<span class="normal">400</span>
+<span class="normal">401</span>
+<span class="normal">402</span>
+<span class="normal">403</span>
+<span class="normal">404</span>
+<span class="normal">405</span>
+<span class="normal">406</span>
+<span class="normal">407</span>
+<span class="normal">408</span>
+<span class="normal">409</span>
+<span class="normal">410</span>
+<span class="normal">411</span>
+<span class="normal">412</span>
+<span class="normal">413</span>
+<span class="normal">414</span>
+<span class="normal">415</span>
+<span class="normal">416</span>
+<span class="normal">417</span>
+<span class="normal">418</span>
+<span class="normal">419</span>
+<span class="normal">420</span>
+<span class="normal">421</span>
+<span class="normal">422</span>
+<span class="normal">423</span>
 <span class="normal">424</span>
 <span class="normal">425</span>
 <span class="normal">426</span>
@@ -1889,37 +1849,7 @@ qcdata__identifiers_* keys and additional non-qcdata comments.</p>
 <span class="normal">429</span>
 <span class="normal">430</span>
 <span class="normal">431</span>
-<span class="normal">432</span>
-<span class="normal">433</span>
-<span class="normal">434</span>
-<span class="normal">435</span>
-<span class="normal">436</span>
-<span class="normal">437</span>
-<span class="normal">438</span>
-<span class="normal">439</span>
-<span class="normal">440</span>
-<span class="normal">441</span>
-<span class="normal">442</span>
-<span class="normal">443</span>
-<span class="normal">444</span>
-<span class="normal">445</span>
-<span class="normal">446</span>
-<span class="normal">447</span>
-<span class="normal">448</span>
-<span class="normal">449</span>
-<span class="normal">450</span>
-<span class="normal">451</span>
-<span class="normal">452</span>
-<span class="normal">453</span>
-<span class="normal">454</span>
-<span class="normal">455</span>
-<span class="normal">456</span>
-<span class="normal">457</span>
-<span class="normal">458</span>
-<span class="normal">459</span>
-<span class="normal">460</span>
-<span class="normal">461</span>
-<span class="normal">462</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">to_xyz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">precision</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">17</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="normal">432</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">to_xyz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">precision</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">17</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return an xyz string representation of the structure.</span>
 
 <span class="sd">    Args:</span>
@@ -1933,6 +1863,7 @@ qcdata__identifiers_* keys and additional non-qcdata comments.</p>
     <span class="n">qcdata_data</span> <span class="o">=</span> <span class="p">{</span>  <span class="c1"># These get added to comments line (line 2) in xyz file</span>
         <span class="s2">&quot;qcdata_charge&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">charge</span><span class="p">,</span>
         <span class="s2">&quot;qcdata_multiplicity&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiplicity</span><span class="p">,</span>
+        <span class="s2">&quot;qcdata_version&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">qcdata_version</span><span class="p">,</span>
     <span class="p">}</span>
 
     <span class="c1"># Add identifiers to qcdata_data</span>
@@ -2077,28 +2008,28 @@ May be "bohr" or "angstrom".</p>
 
             <details class="quote">
               <summary>Source code in <code>src/qcdata/models/structure.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">400</span>
-<span class="normal">401</span>
-<span class="normal">402</span>
-<span class="normal">403</span>
-<span class="normal">404</span>
-<span class="normal">405</span>
-<span class="normal">406</span>
-<span class="normal">407</span>
-<span class="normal">408</span>
-<span class="normal">409</span>
-<span class="normal">410</span>
-<span class="normal">411</span>
-<span class="normal">412</span>
-<span class="normal">413</span>
-<span class="normal">414</span>
-<span class="normal">415</span>
-<span class="normal">416</span>
-<span class="normal">417</span>
-<span class="normal">418</span>
-<span class="normal">419</span>
-<span class="normal">420</span>
-<span class="normal">421</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">distance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">j</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">units</span><span class="p">:</span> <span class="n">LengthUnit</span> <span class="o">=</span> <span class="n">LengthUnit</span><span class="o">.</span><span class="n">BOHR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">369</span>
+<span class="normal">370</span>
+<span class="normal">371</span>
+<span class="normal">372</span>
+<span class="normal">373</span>
+<span class="normal">374</span>
+<span class="normal">375</span>
+<span class="normal">376</span>
+<span class="normal">377</span>
+<span class="normal">378</span>
+<span class="normal">379</span>
+<span class="normal">380</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span>
+<span class="normal">387</span>
+<span class="normal">388</span>
+<span class="normal">389</span>
+<span class="normal">390</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">distance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">j</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">units</span><span class="p">:</span> <span class="n">LengthUnit</span> <span class="o">=</span> <span class="n">LengthUnit</span><span class="o">.</span><span class="n">BOHR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate the distance between two atoms.</span>
 
 <span class="sd">    Args:</span>
@@ -2129,76 +2060,120 @@ May be "bohr" or "angstrom".</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="qcdata.Structure.add_smiles" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">add_smiles</span>
+<h3 id="qcdata.Structure.add_identifiers" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">add_identifiers</span>
 
 
-<a href="#qcdata.Structure.add_smiles" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">add_smiles</span><span class="p">(</span>
-    <span class="o">*</span><span class="p">,</span> <span class="n">program</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">=</span> <span class="s2">&quot;rdkit&quot;</span><span class="p">,</span> <span class="n">hydrogens</span><span class="p">:</span> <span class="n"><span title="bool">bool</span></span> <span class="o">=</span> <span class="kc">False</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+<a href="#qcdata.Structure.add_identifiers" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">add_identifiers</span><span class="p">(</span><span class="o">**</span><span class="n">identifiers</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>!! DEPRECATED !!</p>
-<p>This helper has been removed to <strong>qcinf</strong> (see <code>qcinf.structure_to_smiles</code>).
-It will be removed from qcdata in a future release.</p>
+        <p>Add an identifier to the structure.</p>
 
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>identifiers</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The identifiers to add to the structure.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="language-python highlight"><pre><span></span><code><span class="n">struct</span><span class="o">.</span><span class="n">add_identifiers</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;water&quot;</span><span class="p">)</span>
+<span class="n">struct</span><span class="o">.</span><span class="n">ids</span><span class="o">.</span><span class="n">name</span>
+<span class="s1">&#39;water&#39;</span>
+</code></pre></div>
+<div class="language-python highlight"><pre><span></span><code><span class="n">struct</span><span class="o">.</span><span class="n">add_identifier</span><span class="p">(</span><span class="n">smiles</span><span class="o">=</span><span class="s2">&quot;CCO&quot;</span><span class="p">)</span>
+<span class="n">struct</span><span class="o">.</span><span class="n">ids</span><span class="o">.</span><span class="n">smiles</span>
+<span class="s1">&#39;CCO&#39;</span>
+</code></pre></div>
+</details>
 
             <details class="quote">
               <summary>Source code in <code>src/qcdata/models/structure.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">472</span>
-<span class="normal">473</span>
-<span class="normal">474</span>
-<span class="normal">475</span>
-<span class="normal">476</span>
-<span class="normal">477</span>
-<span class="normal">478</span>
-<span class="normal">479</span>
-<span class="normal">480</span>
-<span class="normal">481</span>
-<span class="normal">482</span>
-<span class="normal">483</span>
-<span class="normal">484</span>
-<span class="normal">485</span>
-<span class="normal">486</span>
-<span class="normal">487</span>
-<span class="normal">488</span>
-<span class="normal">489</span>
-<span class="normal">490</span>
-<span class="normal">491</span>
-<span class="normal">492</span>
-<span class="normal">493</span>
-<span class="normal">494</span>
-<span class="normal">495</span>
-<span class="normal">496</span>
-<span class="normal">497</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">add_smiles</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">:</span> <span class="s2">&quot;Structure&quot;</span><span class="p">,</span>
-    <span class="o">*</span><span class="p">,</span>
-    <span class="n">program</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;rdkit&quot;</span><span class="p">,</span>
-    <span class="n">hydrogens</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    !! DEPRECATED !!</span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">442</span>
+<span class="normal">443</span>
+<span class="normal">444</span>
+<span class="normal">445</span>
+<span class="normal">446</span>
+<span class="normal">447</span>
+<span class="normal">448</span>
+<span class="normal">449</span>
+<span class="normal">450</span>
+<span class="normal">451</span>
+<span class="normal">452</span>
+<span class="normal">453</span>
+<span class="normal">454</span>
+<span class="normal">455</span>
+<span class="normal">456</span>
+<span class="normal">457</span>
+<span class="normal">458</span>
+<span class="normal">459</span>
+<span class="normal">460</span>
+<span class="normal">461</span>
+<span class="normal">462</span>
+<span class="normal">463</span>
+<span class="normal">464</span>
+<span class="normal">465</span>
+<span class="normal">466</span>
+<span class="normal">467</span>
+<span class="normal">468</span>
+<span class="normal">469</span>
+<span class="normal">470</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">add_identifiers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">identifiers</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add an identifier to the structure.</span>
 
-<span class="sd">    This helper has been removed to **qcinf** (see `qcinf.structure_to_smiles`).</span>
-<span class="sd">    It will be removed from qcdata in a future release.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        identifiers: The identifiers to add to the structure.</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        ```python</span>
+<span class="sd">        struct.add_identifiers(name=&quot;water&quot;)</span>
+<span class="sd">        struct.ids.name</span>
+<span class="sd">        &#39;water&#39;</span>
+<span class="sd">        ```</span>
+
+<span class="sd">        ```python</span>
+<span class="sd">        struct.add_identifier(smiles=&quot;CCO&quot;)</span>
+<span class="sd">        struct.ids.smiles</span>
+<span class="sd">        &#39;CCO&#39;</span>
+<span class="sd">        ```</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-        <span class="s2">&quot;`Structure.add_smiles()` has moved to `qcinf` and is no longer &quot;</span>
-        <span class="s2">&quot;implemented here.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-        <span class="s2">&quot;Install qcinf and replace your call with:</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-        <span class="s2">&quot;    from qcinf import structure_to_smiles</span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="s2">&quot;    smiles = structure_to_smiles(struct, backend=&#39;rdkit|openbabel&#39;)</span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="s2">&quot;    struct.add_identifiers(smiles=smiles)</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">,</span>
-        <span class="ne">DeprecationWarning</span><span class="p">,</span>  <span class="c1"># use FutureWarning if you want it visible by default</span>
-        <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-        <span class="s2">&quot;Structure.add_smiles() is removed. &quot;</span>
-        <span class="s2">&quot;Use qcinf.structure_to_smiles and struct.add_identifiers instead.&quot;</span>
-    <span class="p">)</span>
+    <span class="c1"># Ensure the identifier is valid</span>
+    <span class="k">for</span> <span class="n">identifier</span> <span class="ow">in</span> <span class="n">identifiers</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">identifiers</span><span class="p">,</span> <span class="n">identifier</span><span class="p">),</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Invalid identifier: &#39;</span><span class="si">{</span><span class="n">identifier</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">new_identifiers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">identifiers</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span><span class="n">update</span><span class="o">=</span><span class="n">identifiers</span><span class="p">)</span>
+    <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;identifiers&quot;</span><span class="p">,</span> <span class="n">new_identifiers</span><span class="p">)</span>
+    <span class="c1"># Ensure pydantic knows the field has been set</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">__pydantic_fields_set__</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;identifiers&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -2440,7 +2415,7 @@ schema development and scratch space.</p>
 
     </div>
 
-</div>
+</div><p>Use <code>identifiers=</code> to set identifiers and <code>.ids</code> as a read-only shortcut. The former <code>ids=</code> constructor argument, <code>Molecule</code> alias, and deprecated SMILES helper have been removed. Use qcinf for SMILES conversion.</p>
 
 
 

@@ -670,29 +670,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../results/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Deprecated Results Alias
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../utils/" class="md-nav__link">
         
   
@@ -732,10 +709,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
         
           
-          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
             
   
   
@@ -748,8 +725,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_8">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
             <span class="md-nav__icon md-icon"></span>
             Visualizations
           </label>
@@ -809,10 +786,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
         
           
-          <label class="md-nav__link" for="__nav_2_9" id="__nav_2_9_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
             
   
   
@@ -825,8 +802,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_9">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             Additional Models
           </label>
@@ -914,6 +891,29 @@
   
   <span class="md-ellipsis">
     Provenance
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ExecutionInfo
     
   </span>
   
@@ -1210,9 +1210,9 @@
 <ul>
 <li><a href="../structure/"><code>Structure</code></a> objects represent a collection of atoms, a molecule, or any super molecular structure in 3D cartesian space.</li>
 <li><a href="../inputs/"><code>Input</code></a> objects define the parameters for a calculation.</li>
-<li><a href="../outputs/"><code>ProgramOutput</code></a> objects store computed values and output files, while <a href="../data/"><code>Data</code></a> objects represent the structured result payload for a calculation. <code>ProgramOutput</code> also stores the exact input data (<code>.input_data</code>) used for a calculation, logs, relevant metadata, and <a href="../provenance/"><code>Provenance</code></a> information so you have full visibility into how every result was generated.</li>
+<li><a href="../outputs/"><code>ProgramOutput</code></a> objects store computed values and output files, while <a href="../data/"><code>Data</code></a> objects represent the structured result payload for a calculation. <code>ProgramOutput</code> also stores the exact input data (<code>.input_data</code>) used for a calculation, logs and <a href="../execution/"><code>ExecutionInfo</code></a>. Each data payload holds its own <a href="../provenance/"><code>Provenance</code></a> so you have full visibility into how every result was generated.</li>
 <li>Other objects, such as <a href="../structure/"><code>Identifiers</code></a>, <a href="../files/"><code>Files</code></a>, <a href="../provenance/"><code>Provenance</code></a>, and <a href="../model/"><code>Model</code></a> support these core data structures by organizing relevant information in a user-friendly way.</li>
-<li>💾 Saving your data to disk and re-opening it again later for analysis is as simple as calling <a href="../qcdatabasemodel/#qcdata.models.base_models.QCDataBaseModel.save"><code>my_obj.save(/path/to/file.json)</code></a> or <a href="../qcdatabasemodel/#qcdata.models.base_models.QCDataBaseModel.open"><code>MyModel.open(/path/to/file.json)</code></a>. These methods are not shown in the documentation for individual classes to avoid redundancy. Files can be saved as <code>.json</code>, <code>.yaml</code>, or <code>.toml</code>. <code>Structure</code> and <code>OptimizationResults</code> (which contains a list of <code>Structures</code>) may additionally be saved as <code>.xyz</code> files for compatibility with external program.</li>
+<li>💾 Saving your data to disk and re-opening it again later for analysis is as simple as calling <a href="../qcdatabasemodel/#qcdata.models.base_models.QCDataBaseModel.save"><code>my_obj.save(/path/to/file.json)</code></a> or <a href="../qcdatabasemodel/#qcdata.models.base_models.QCDataBaseModel.open"><code>MyModel.open(/path/to/file.json)</code></a>. These methods are not shown in the documentation for individual classes to avoid redundancy. Files can be saved as <code>.json</code>, <code>.yaml</code>, or <code>.toml</code>. <code>Structure</code> and <code>OptimizationData</code> (which contains a list of <code>Structures</code>) may additionally be saved as <code>.xyz</code> files for compatibility with external program.</li>
 </ul>
 
 

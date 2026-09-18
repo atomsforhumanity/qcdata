@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://qcdata.docs.atomsforhumanity.org/api/utils/">
       
       
-        <link rel="prev" href="../results/">
+        <link rel="prev" href="../data/">
       
       
         <link rel="next" href="../view/">
@@ -614,29 +614,6 @@
                 
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../results/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Deprecated Results Alias
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -737,10 +714,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
         
           
-          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
             
   
   
@@ -753,8 +730,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_8">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
             <span class="md-nav__icon md-icon"></span>
             Visualizations
           </label>
@@ -814,10 +791,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
         
           
-          <label class="md-nav__link" for="__nav_2_9" id="__nav_2_9_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
             
   
   
@@ -830,8 +807,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_9">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             Additional Models
           </label>
@@ -919,6 +896,29 @@
   
   <span class="md-ellipsis">
     Provenance
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ExecutionInfo
     
   </span>
   
@@ -1219,6 +1219,9 @@
 
   <h1>Utilities</h1>
 
+<p><code>json_dumps()</code> uses JSON serialization for both individual models and lists, including paths, binary files, scientific arrays, and automatic qcdata version stamps. It defaults to <code>exclude_unset=True</code> for compact output; pass <code>False</code> to include unset/default-valued fields. It accepts <code>indent</code> for formatting. Additional model-dump options apply consistently to both forms; <code>mode</code>, if supplied, must be <code>"json"</code>.</p>
+
+
 <div class="doc doc-object doc-function">
 
 
@@ -1230,6 +1233,7 @@
 <div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">json_dumps</span><span class="p">(</span>
     <span class="n">obj</span><span class="p">:</span> <span class="n"><span title="pydantic.BaseModel">BaseModel</span></span> <span class="o">|</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="pydantic.BaseModel">BaseModel</span></span><span class="p">],</span>
     <span class="n">exclude_unset</span><span class="p">:</span> <span class="n"><span title="bool">bool</span></span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">indent</span><span class="p">:</span> <span class="n"><span title="int">int</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="o">**</span><span class="n">model_dump_kwargs</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="str">str</span></span>
 </code></pre></div>
@@ -1276,11 +1280,28 @@ objects.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Whether to exclude unset fields from the serialized output.</p>
+                <p>Whether to exclude fields omitted during construction.
+Defaults to True for compact output; pass False to include all fields.</p>
               </div>
             </td>
             <td>
                   <code>True</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>indent</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>JSON indentation, or None for compact output.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1291,7 +1312,8 @@ objects.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Additional keyword arguments to pass to model_dump.</p>
+                <p>Additional keyword arguments to pass to model_dump.
+Serialization always uses JSON mode.</p>
               </div>
             </td>
             <td>
@@ -1324,9 +1346,17 @@ objects.</p>
 <span class="normal">46</span>
 <span class="normal">47</span>
 <span class="normal">48</span>
-<span class="normal">49</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">json_dumps</span><span class="p">(</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">json_dumps</span><span class="p">(</span>
     <span class="n">obj</span><span class="p">:</span> <span class="n">BaseModel</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">],</span>
     <span class="n">exclude_unset</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">indent</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="o">**</span><span class="n">model_dump_kwargs</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Serialization helper for lists of pydantic objects.</span>
@@ -1334,17 +1364,23 @@ objects.</p>
 <span class="sd">    Args:</span>
 <span class="sd">        obj: The object to serialize. Either a single pydantic object or a list of pydantic</span>
 <span class="sd">            objects.</span>
-<span class="sd">        exclude_unset: Whether to exclude unset fields from the serialized output.</span>
+<span class="sd">        exclude_unset: Whether to exclude fields omitted during construction.</span>
+<span class="sd">            Defaults to True for compact output; pass False to include all fields.</span>
+<span class="sd">        indent: JSON indentation, or None for compact output.</span>
 <span class="sd">        **model_dump_kwargs: Additional keyword arguments to pass to model_dump.</span>
+<span class="sd">            Serialization always uses JSON mode.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
-            <span class="p">[</span>
-                <span class="n">o</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">exclude_unset</span><span class="o">=</span><span class="n">exclude_unset</span><span class="p">,</span> <span class="o">**</span><span class="n">model_dump_kwargs</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">obj</span>
-            <span class="p">]</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">model_dump_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="s2">&quot;json&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">!=</span> <span class="s2">&quot;json&quot;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;json_dumps requires JSON serialization mode.&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">dump</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span>
+            <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">,</span> <span class="n">exclude_unset</span><span class="o">=</span><span class="n">exclude_unset</span><span class="p">,</span> <span class="o">**</span><span class="n">model_dump_kwargs</span>
         <span class="p">)</span>
-    <span class="k">return</span> <span class="n">obj</span><span class="o">.</span><span class="n">model_dump_json</span><span class="p">(</span><span class="n">exclude_unset</span><span class="o">=</span><span class="n">exclude_unset</span><span class="p">,</span> <span class="o">**</span><span class="n">model_dump_kwargs</span><span class="p">)</span>
+
+    <span class="n">payload</span> <span class="o">=</span> <span class="p">[</span><span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="p">)</span> <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">obj</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="n">dump</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="n">indent</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -1423,16 +1459,16 @@ objects.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/qcdata/models/utils.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">89</span>
-<span class="normal">90</span>
-<span class="normal">91</span>
-<span class="normal">92</span>
-<span class="normal">93</span>
-<span class="normal">94</span>
-<span class="normal">95</span>
-<span class="normal">96</span>
-<span class="normal">97</span>
-<span class="normal">98</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">to_multi_xyz</span><span class="p">(</span><span class="n">structures</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="s2">&quot;Structure&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">to_multi_xyz</span><span class="p">(</span><span class="n">structures</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="s2">&quot;Structure&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a multi-structure XYZ string from a list of structures.</span>
 
 <span class="sd">    Args:</span>

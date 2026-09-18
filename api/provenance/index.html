@@ -16,7 +16,7 @@
         <link rel="prev" href="../model/">
       
       
-        <link rel="next" href="../qcdatabasemodel/">
+        <link rel="next" href="../execution/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -84,7 +84,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#qcdata.Provenance" class="md-skip">
+        <a href="#provenance" class="md-skip">
           Skip to content
         </a>
       
@@ -617,29 +617,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../results/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Deprecated Results Alias
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../utils/" class="md-nav__link">
         
   
@@ -679,10 +656,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
         
           
-          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
             
   
   
@@ -695,8 +672,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_8">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
             <span class="md-nav__icon md-icon"></span>
             Visualizations
           </label>
@@ -758,10 +735,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_9" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" checked>
         
           
-          <label class="md-nav__link" for="__nav_2_9" id="__nav_2_9_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
             
   
   
@@ -774,8 +751,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_9_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2_9">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             Additional Models
           </label>
@@ -863,6 +840,8 @@
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
+        
+      
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
           
@@ -897,6 +876,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -917,6 +898,29 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ExecutionInfo
+    
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -1166,6 +1170,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -1201,7 +1207,11 @@
   
 
 
-  <h1>Provenance</h1>
+<h1 id="provenance">Provenance<a class="headerlink" href="#provenance" title="Permanent link">&para;</a></h1>
+<p><code>Provenance</code> identifies the program that produced a result. It belongs on <code>FileData</code> and every structured result type, accessed as <code>output.results.provenance</code>. Saving data independently preserves this identity.</p>
+<p><code>program</code> is required; <code>program_version</code> is optional. Provenance is also required for manually constructed data and empty failure payloads. Callers must supply the program identity explicitly; qcdata does not infer it from <code>input_data.program</code>.</p>
+<p>Each trajectory entry has its own data provenance. For example, optimization data can identify geomeTRIC while gradient data identifies TeraChem. Runtime details belong in <a href="../execution/"><code>ExecutionInfo</code></a>.</p>
+
 
 <div class="doc doc-object doc-class">
 
@@ -1217,7 +1227,7 @@
     <div class="doc doc-contents first">
 
 
-        <p>Provenance information for a QC program.</p>
+        <p>Identity of the program that produced a result payload.</p>
 
 
 <p><span class="doc-section-title">Attributes:</span></p>
@@ -1237,73 +1247,19 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The name of the program that created the output.</p>
+                <p>The scientific program associated with the data. For empty failure
+results, this identifies the intended producer even if execution never began.</p>
               </div>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="qcdata.Provenance.version">version</span></code></td>
-            <td>
-                  <code><span title="str">str</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The version of the program that created the output.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="qcdata.Provenance.scratch_dir">scratch_dir</span></code></td>
-            <td>
-                  <code><span title="pathlib.Path">Path</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The working directory used by the program.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="qcdata.Provenance.wall_time">wall_time</span></code></td>
-            <td>
-                  <code><span title="float">float</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The wall time used by the program.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="qcdata.Provenance.hostname">hostname</span></code></td>
+            <td><code><span title="qcdata.Provenance.program_version">program_version</span></code></td>
             <td>
                   <code><span title="str">str</span> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The hostname of the machine the program was run on.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="qcdata.Provenance.hostcpus">hostcpus</span></code></td>
-            <td>
-                  <code><span title="int">int</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The number of logical CPUs on the host machine where the program ran.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="qcdata.Provenance.hostmem">hostmem</span></code></td>
-            <td>
-                  <code><span title="int">int</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The amount of memory on the host machine where the program ran in GiB.</p>
+                <p>The program version, if known.</p>
               </div>
             </td>
           </tr>
@@ -1314,8 +1270,7 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Additional information to bundle with the object. Use for schema
-development and scratch space.</p>
+                <p>Additional information about the origin of the data.</p>
               </div>
             </td>
           </tr>
@@ -1349,7 +1304,9 @@ development and scratch space.</p>
 
     </div>
 
-</div>
+</div><p>For empty failure results, <code>program</code> identifies the intended scientific producer even
+if execution never began. Its version remains <code>None</code> unless known. The output's
+<code>success</code>, traceback, and execution metadata describe what actually happened.</p>
 
 
 
