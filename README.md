@@ -171,7 +171,7 @@ output = ProgramOutput(
     results=data,
     execution=ExecutionInfo(wall_time=12.5, scratch_dir="/tmp/calculation"),
 )
-data.save("data.json")  # Includes program identity and version
+output.save("data.json")  # Save the output object to disk
 ```
 
 Calculation values are stored in a `ProgramOutput` object. `ProgramOutput` contains parsed data, files, logs, and additional execution details. A `ProgramOutput` object has the following attributes:
