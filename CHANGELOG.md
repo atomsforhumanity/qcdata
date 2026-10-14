@@ -6,13 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.20.0] - 2026-10-14
+
 ### Added
 
 - `SinglePointData.atomic_charges` (per-atom partial charges in e) and `SinglePointData.point_charge_gradient` (n_charges x 3 gradient on external point charges in Hartrees/Bohr, for QM/MM electrostatic embedding).
 
 ### Removed
 
-- `qcdata.qcel` (`to_qcel_input`, `from_qcel_output_results`) and the QCElemental test dependency. The qc* suite no longer delegates to QCEngine; programs are supported through native qccodec codecs.
+- `qcdata.qcel` (`to_qcel_input`, `from_qcel_output_results`) and the QCElemental test dependency. The qc\* suite no longer delegates to QCEngine; programs are supported through native qccodec codecs.
 
 ## [0.19.0] - 2026-09-16
 
@@ -712,7 +714,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - `SinglePointComputedProperties`
   - `Wavefunction`
 
-[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.19.0...HEAD
+[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.20.0...HEAD
+[0.20.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.20.0
 [0.19.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.19.0
 [0.18.1]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.18.1
 [0.18.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.18.0
