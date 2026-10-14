@@ -2937,7 +2937,7 @@ wheels = [
 
 [[package]]
 name = "qcdata"
-version = "0.18.1"
+version = "0.19.0"
 source = { editable = "." }
 dependencies = [
     { name = "eval-type-backport" },
@@ -2981,7 +2981,6 @@ dev = [
     { name = "py3dmol" },
     { name = "pytest" },
     { name = "pytest-cov" },
-    { name = "qcelemental" },
     { name = "qcinf", extra = ["all"] },
     { name = "rdkit" },
     { name = "ruff" },
@@ -3030,7 +3029,6 @@ dev = [
     { name = "py3dmol", specifier = ">=2.2.1" },
     { name = "pytest", specifier = ">=7.2.2" },
     { name = "pytest-cov", specifier = ">=4.0.0" },
-    { name = "qcelemental", specifier = ">=0.50.4" },
     { name = "qcinf", extras = ["all"], specifier = ">=0.4.1" },
     { name = "rdkit", specifier = ">=2022.9.5" },
     { name = "ruff", specifier = ">=0.10.1" },
@@ -3045,23 +3043,6 @@ docs = [
     { name = "mkdocstrings", extras = ["python"], specifier = ">=0.25.2" },
     { name = "mknotebooks", specifier = ">=0.8.0" },
     { name = "pymdown-extensions", specifier = ">=10.8.1" },
-]
-
-[[package]]
-name = "qcelemental"
-version = "0.50.4"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "pint", version = "0.24.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "pint", version = "0.25", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "pydantic", version = "2.11.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
-    { name = "pydantic", version = "2.13.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/14/b1/6f5a95889aa3d52aae4b2c6690608e1d06257bffb2881eb806fdb9d372d0/qcelemental-0.50.4.tar.gz", hash = "sha256:8d53826d33ff157caa2f5c896c19311cf3c9daf719cab8c6f86060f95d5f744b", size = 9076469 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2e/c5/85bd4ed7da727e1f40c9d1fe7005f351c37f8f35e1b240e4d41fea5657a1/qcelemental-0.50.4-py3-none-any.whl", hash = "sha256:fc8d3d770eca2cf3bd99fc386aebb923fd4a7b37699072e5effe66140894922e", size = 364815 },
 ]
 
 [[package]]

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Removed
+
+- `qcdata.qcel` (`to_qcel_input`, `from_qcel_output_results`) and the QCElemental test dependency. The qc* suite no longer delegates to QCEngine; programs are supported through native qccodec codecs.
+
 ## [0.19.0] - 2026-09-16
 
 ### Added
