@@ -42,7 +42,7 @@ This is a breaking schema change with no automatic legacy-provenance loader:
 - Use `FileData(provenance=...)` only with `FileInput`. For failed structured calculations, construct the corresponding scientific type, such as `SinglePointData(provenance=...)`, and update generic annotations accordingly.
 - Apply the same migration to each nested trajectory output. Do not copy parent provenance or execution information to children.
 
-Standalone structured data now also requires explicit provenance. QCSchema conversion preserves source extras and additional provenance metadata without inventing a QCEngine attribution. QCSchema conversion obtains it from `provenance.creator` and `provenance.version` and raises `ValueError` if producer identity is missing.
+Standalone structured data now also requires explicit provenance.
 
 External callers must migrate too: qccodec should attach the parsed producer and version to the returned data; qccompute should supply `execution` and return the corresponding scientific data type even when a structured calculation fails without producing values.
 

@@ -116,6 +116,14 @@ class SinglePointData(FileData, CalcInfoData):
             respectively.
         scf_dipole_moment: The x, y, z component of the dipole moment of the structure
             in units of e a0 (NOT Debye!).
+        atomic_charges: Partial charge on each atom in units of e, ordered like the
+            structure's atoms. The partitioning scheme (Mulliken, Lowdin, CM5, ...)
+            is the program's; parsers record it in ``extras`` when it is not the
+            program's default.
+        point_charge_gradient: n_charges x 3 gradient of the energy with respect
+            to the positions of external point charges, in `Hartrees/Bohr`, ordered
+            like the point charges given to the calculation (QM/MM electrostatic
+            embedding).
 
     """
 
@@ -131,6 +139,9 @@ class SinglePointData(FileData, CalcInfoData):
     gibbs_free_energy: float | None = None
 
     scf_dipole_moment: list[float] | None = None
+
+    atomic_charges: SerializableVector | None = None
+    point_charge_gradient: SerializableMatrix | None = None
 
     @field_validator("normal_modes_cartesian")
     @classmethod
@@ -149,6 +160,20 @@ class SinglePointData(FileData, CalcInfoData):
         """Validate gradient is n x 3."""
         if v is not None:
             return np.asarray(v).reshape(-1, 3)
+
+    @field_validator("atomic_charges")
+    @classmethod
+    def _validate_atomic_charges_shape(cls, v: SerializableNDArray):
+        """Validate atomic charges are one value per atom."""
+        if v is not None:
+            return np.asarray(v, dtype=float).reshape(-1)
+
+    @field_validator("point_charge_gradient")
+    @classmethod
+    def _validate_point_charge_gradient_shape(cls, v: SerializableNDArray):
+        """Validate the point-charge gradient is n_charges x 3."""
+        if v is not None:
+            return np.asarray(v, dtype=float).reshape(-1, 3)
 
     @field_validator("hessian")
     @classmethod

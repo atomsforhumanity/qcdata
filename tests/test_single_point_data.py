@@ -110,3 +110,21 @@ def test_single_point_data_can_be_empty_for_partial_or_failed_outputs():
     assert data.energy is None
     assert data.gradient is None
     assert data.hessian is None
+
+
+def test_atomic_charges_and_point_charge_gradient_shapes():
+    """Charges are a flat per-atom vector; point-charge gradients are n x 3."""
+    data = SinglePointData(
+        provenance={"program": "qcdata-test-suite"},
+        atomic_charges=[[-0.8], [0.4], [0.4]],
+        point_charge_gradient=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
+    )
+    assert data.atomic_charges.shape == (3,)
+    assert data.atomic_charges.dtype == np.float64
+    assert data.point_charge_gradient.shape == (2, 3)
+    restored = SinglePointData.model_validate_json(data.model_dump_json())
+    np.testing.assert_allclose(restored.atomic_charges, [-0.8, 0.4, 0.4])
+    np.testing.assert_allclose(
+        restored.point_charge_gradient, [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
+    )
+    assert SinglePointData(provenance={"program": "x"}).atomic_charges is None

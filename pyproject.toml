@@ -63,7 +63,6 @@ dev = [
     "pre-commit>=3.2.1",
     "pytest-cov>=4.0.0",
     "jsonschema>=4.0",
-    "qcelemental>=0.50.4",
     "types-toml>=0.10.8.6",
     "types-pyyaml>=6.0.12.10",
     "rdkit>=2022.9.5",
