@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.20.0] - 2026-10-14
+
 ## [0.19.0] - 2026-09-16
 
 ### Added
@@ -704,7 +706,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - `SinglePointComputedProperties`
   - `Wavefunction`
 
-[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.19.0...HEAD
+[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.20.0...HEAD
+[0.20.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.20.0
 [0.19.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.19.0
 [0.18.1]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.18.1
 [0.18.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.18.0
