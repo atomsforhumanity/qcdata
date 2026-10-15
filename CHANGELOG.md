@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Changed
+
+- The documentation site is built and published by a Docs workflow on every release tag (or by hand), instead of locally. Pinned `pymdown-extensions` below 11, which broke the docs build.
+
 ## [0.20.1] - 2026-10-14
 
 ### Changed
