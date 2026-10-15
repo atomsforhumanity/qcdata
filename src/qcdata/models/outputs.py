@@ -68,7 +68,7 @@ class ProgramOutput(QCDataBaseModel, Generic[ProgramInputType, DataType]):
             payload["results"] = payload.pop("data")
         return payload
 
-    def model_post_init(self, __context) -> None:
+    def model_post_init(self, __context: Any) -> None:
         """Parameterize the class (if not set explicitly)."""
         if self.__class__ is ProgramOutput:
             input_type = type(self.input_data)
@@ -183,12 +183,14 @@ ConformerSearchData.model_rebuild()
 ScanData.model_rebuild()
 
 
-def _register_program_output_classes():
+def _register_program_output_classes() -> None:
     """Required so that pickle can find the concrete classes for serialization."""
+    # Parameterized with runtime class objects, which mypy cannot treat as types.
+    generic_output: Any = ProgramOutput
     for spec_type, data_type in [(FileInput, FileData)] + [
         (ProgramInput, data_type) for data_type in get_args(StructuredData)
     ]:
-        _class = ProgramOutput[spec_type, data_type]
+        _class = generic_output[spec_type, data_type]
         name = _class.__name__
         this_module = sys.modules[__name__]
         if name not in this_module.__dict__:

@@ -1,11 +1,18 @@
+"""Molecular structure models: atoms, Cartesian geometry, and identifiers."""
+
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import numpy as np
-from pydantic import field_serializer, field_validator, model_validator
-from qcconst import periodic_table as pt
-from qcconst.constants import BOHR_TO_ANGSTROM
+from pydantic import (
+    FieldSerializationInfo,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
+from qcref import constants
+from qcref import periodic_table as pt
 from typing_extensions import Self
 
 from qcdata.helper_types import SerializableMatrix
@@ -61,8 +68,10 @@ class Identifiers(QCDataBaseModel):
 
 
 class Structure(QCDataBaseModel):
-    """A Structure object with atoms and their corresponding cartesian coordinates,
-        charge, multiplicity, and identifiers such as name, smiles, etc.
+    """A molecular structure: atoms, Cartesian coordinates, charge, and multiplicity.
+
+    Optionally carries identifiers such as name and SMILES and explicit bond
+    connectivity.
 
     Attributes:
         symbols: The atomic symbols of the structure.
@@ -197,7 +206,7 @@ class Structure(QCDataBaseModel):
         exclude_none: bool = True,
         exclude_unset: bool = True,
         indent: int = 4,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Save a Structure to a file.
 
@@ -282,7 +291,6 @@ class Structure(QCDataBaseModel):
             struct = Structure.from_xyz(xyz_str)
             ```
         """
-
         lines = xyz_str.split("\n")
 
         num_atoms = int(lines[0])
@@ -324,7 +332,9 @@ class Structure(QCDataBaseModel):
         for line in lines[2 : 2 + num_atoms]:
             split_line = line.split()
             symbols.append(split_line[0])
-            geometry.append([float(val) / BOHR_TO_ANGSTROM for val in split_line[1:]])
+            geometry.append(
+                [float(val) / constants.BOHR_TO_ANGSTROM for val in split_line[1:]]
+            )
 
         return cls(
             symbols=symbols,
@@ -345,6 +355,12 @@ class Structure(QCDataBaseModel):
 
         Args:
             xyz_str: The multi-structure XYZ string.
+            charge: The molecular charge applied to every structure. If not provided,
+                each structure reads it from its XYZ comment line if set or defaults
+                to 0.
+            multiplicity: The molecular multiplicity applied to every structure. If
+                not provided, each structure reads it from its XYZ comment line if set
+                or defaults to 1.
 
         Returns:
             A list of Structure objects.
@@ -386,7 +402,7 @@ class Structure(QCDataBaseModel):
         """
         distance = np.linalg.norm(self.geometry[i] - self.geometry[j])
         if units == LengthUnit.ANGSTROM:
-            return float(distance * BOHR_TO_ANGSTROM)
+            return float(distance * constants.BOHR_TO_ANGSTROM)
         return float(distance)
 
     def to_xyz(self, precision: int = 17) -> str:
@@ -395,11 +411,11 @@ class Structure(QCDataBaseModel):
         Args:
             precision: The number of decimal places to include in the xyz file. Default
                 17 which captures all precision of float64.
+
         Notes:
             Will add qcdata data such as charge and multiplicity to the comments line with
             a `qcdata_key=value` format.
         """
-
         qcdata_data = {  # These get added to comments line (line 2) in xyz file
             "qcdata_charge": self.charge,
             "qcdata_multiplicity": self.multiplicity,
@@ -412,7 +428,7 @@ class Structure(QCDataBaseModel):
                 qcdata_data[f"qcdata__identifiers_{key}"] = value
 
         assert isinstance(self.geometry, np.ndarray)  # For mypy
-        geometry_angstrom = self.geometry * BOHR_TO_ANGSTROM
+        geometry_angstrom = self.geometry * constants.BOHR_TO_ANGSTROM
 
         xyz_lines = []
         xyz_lines.append(f"{len(self.symbols)}")
@@ -426,20 +442,21 @@ class Structure(QCDataBaseModel):
         # Create a format string using the precision parameter
         format_str = f"{{:2s}} {{: >18.{precision}f}} {{: >18.{precision}f}} {{: >18.{precision}f}}"  # noqa: E501
 
-        for symbol, (x, y, z) in zip(self.symbols, geometry_angstrom):
+        for symbol, (x, y, z) in zip(self.symbols, geometry_angstrom, strict=False):
             xyz_lines.append(format_str.format(symbol, x, y, z))
         xyz_lines.append("")  # Append newline to end of file
         return "\n".join(xyz_lines)
 
     def __repr_args__(self) -> "ReprArgs":
-        """A helper for __repr__ that returns a list of tuples of the form
-        (name, value).
+        """Return the `(name, value)` pairs shown in `__repr__`.
+
+        Only the molecular formula is shown to keep the representation compact.
         """
         return [  # pragma: no cover
             ("formula", self.formula),
         ]
 
-    def add_identifiers(self, **identifiers) -> None:
+    def add_identifiers(self, **identifiers: str | None) -> None:
         """Add an identifier to the structure.
 
         Args:
@@ -470,7 +487,7 @@ class Structure(QCDataBaseModel):
         self.__pydantic_fields_set__.add("identifiers")
 
     @model_validator(mode="before")
-    def _validate_symbols_and_geometry(cls, values):
+    def _validate_symbols_and_geometry(cls, values: Any) -> dict[str, Any]:
         """Ensure symbols are valid atomic symbols and geometry is correct."""
         values = dict(values)
         symbols = [symbol.capitalize() for symbol in values.get("symbols", [])]
@@ -510,7 +527,11 @@ class Structure(QCDataBaseModel):
         return sorted(bonds_ascending)
 
     @field_serializer("connectivity")
-    def _serialize_connectivity(self, connectivity, _info) -> list[list[float]]:
+    def _serialize_connectivity(
+        self,
+        connectivity: list[tuple[int, int, float]],
+        _info: FieldSerializationInfo,
+    ) -> list[list[float]]:
         """Serialize connectivity to a list of tuples.
 
         Cannot have homogeneous data types in .toml files so must cast all values to
@@ -521,7 +542,7 @@ class Structure(QCDataBaseModel):
     @property
     def geometry_angstrom(self) -> np.ndarray:
         """Return the geometry of the structure in Angstrom."""
-        return self.geometry * BOHR_TO_ANGSTROM
+        return self.geometry * constants.BOHR_TO_ANGSTROM
 
     @property
     def atomic_numbers(self) -> list[int]:
@@ -551,8 +572,16 @@ class Structure(QCDataBaseModel):
             for element, count in sorted_elements
         )
 
-    def model_dump(self, **kwargs) -> dict[str, Any]:
-        """Handle tuple in connectivity"""
+    def model_dump(self, **kwargs: Any) -> dict[str, Any]:
+        """Dump the model to a dict, serializing connectivity bonds as float lists.
+
+        Args:
+            **kwargs: Keyword arguments forwarded to `BaseModel.model_dump`.
+
+        Returns:
+            The model as a dict. Each connectivity bond is a list of floats because
+            TOML cannot represent mixed-type arrays.
+        """
         as_dict = super().model_dump(**kwargs)
         # Connectivity may be empty and super().dict() will remove empty values
         if (connectivity := as_dict.get("connectivity")) is not None:

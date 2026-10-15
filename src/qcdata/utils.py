@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import numpy as np
 from pydantic import BaseModel
@@ -30,7 +31,7 @@ def json_dumps(
     obj: BaseModel | list[BaseModel],
     exclude_unset: bool = True,
     indent: int | None = None,
-    **model_dump_kwargs,
+    **model_dump_kwargs: Any,
 ) -> str:
     """Serialization helper for lists of pydantic objects.
 
@@ -47,7 +48,7 @@ def json_dumps(
     if mode != "json":
         raise ValueError("json_dumps requires JSON serialization mode.")
 
-    def dump(model: BaseModel):
+    def dump(model: BaseModel) -> dict[str, Any]:
         return model.model_dump(
             mode="json", exclude_unset=exclude_unset, **model_dump_kwargs
         )

@@ -29,6 +29,4 @@
 
 ## Publishing Checklist
 
-- Checkout `master` branch.
-- Pull down all changes.
-- `python `scripts/release.py x.x.x`
+Releases go through a pull request and a tag; see the Releases section of [CONTRIBUTING.md](https://github.com/atomsforhumanity/qcdata/blob/master/CONTRIBUTING.md).

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeVar, Union
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import numpy as np
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
@@ -73,7 +73,18 @@ class Wavefunction(QCDataBaseModel):
         "scf_occupations_b",
     )
     @classmethod
-    def to_numpy(cls, val, _info) -> np.ndarray | None:
+    def to_numpy(
+        cls, val: np.ndarray | None, _info: ValidationInfo
+    ) -> np.ndarray | None:
+        """Ensure orbital eigenvalues and occupations are stored as numpy arrays.
+
+        Args:
+            val: The eigenvalue or occupation vector, or None if not provided.
+            _info: Pydantic validation context (unused).
+
+        Returns:
+            The value as a numpy array, or None if it was not provided.
+        """
         return np.asarray(val) if val is not None else None
 
 
@@ -146,8 +157,8 @@ class SinglePointData(FileData, CalcInfoData):
     @field_validator("normal_modes_cartesian")
     @classmethod
     def _validate_normal_modes_cartesian_shape(
-        cls, v: SerializableNDArray, info: ValidationInfo
-    ):
+        cls, v: SerializableNDArray | None, info: ValidationInfo
+    ) -> np.ndarray | None:
         if v is not None:
             freqs = info.data.get("freqs_wavenumber")
             n_normal_modes = len(freqs) if freqs else len(v)
@@ -156,33 +167,45 @@ class SinglePointData(FileData, CalcInfoData):
 
     @field_validator("gradient")
     @classmethod
-    def _validate_gradient_shape(cls, v: SerializableNDArray):
+    def _validate_gradient_shape(
+        cls, v: SerializableNDArray | None
+    ) -> np.ndarray | None:
         """Validate gradient is n x 3."""
         if v is not None:
             return np.asarray(v).reshape(-1, 3)
+        return None
 
     @field_validator("atomic_charges")
     @classmethod
-    def _validate_atomic_charges_shape(cls, v: SerializableNDArray):
+    def _validate_atomic_charges_shape(
+        cls, v: SerializableNDArray | None
+    ) -> np.ndarray | None:
         """Validate atomic charges are one value per atom."""
         if v is not None:
             return np.asarray(v, dtype=float).reshape(-1)
+        return None
 
     @field_validator("point_charge_gradient")
     @classmethod
-    def _validate_point_charge_gradient_shape(cls, v: SerializableNDArray):
+    def _validate_point_charge_gradient_shape(
+        cls, v: SerializableNDArray | None
+    ) -> np.ndarray | None:
         """Validate the point-charge gradient is n_charges x 3."""
         if v is not None:
             return np.asarray(v, dtype=float).reshape(-1, 3)
+        return None
 
     @field_validator("hessian")
     @classmethod
-    def _validate_hessian_shape(cls, v: SerializableNDArray):
+    def _validate_hessian_shape(
+        cls, v: SerializableNDArray | None
+    ) -> np.ndarray | None:
         """Validate hessian is square."""
         if v is not None:
             v = np.asarray(v)
             n = int(np.sqrt(v.size))
             return v.reshape((n, n))
+        return None
 
     def return_result(self, calctype: CalcType) -> float | SerializableNDArray | None:
         """Return the primary result of the calculation."""
@@ -208,9 +231,7 @@ class OptimizationData(FileData, CalcInfoData):
 
     @property
     def final_energy(self) -> float | None:
-        """
-        The final step's energy, None for no steps, or `np.nan` if unavailable.
-        """
+        """The final step's energy, None for no steps, or `np.nan` if unavailable."""
         return self.energies[-1] if self.trajectory else None
 
     @property
@@ -230,9 +251,18 @@ class OptimizationData(FileData, CalcInfoData):
         return [output.input_data.structure for output in self.trajectory]
 
     def return_result(self, calctype: CalcType) -> Structure | None:
+        """Return the primary result of the optimization.
+
+        Args:
+            calctype: The calculation type. Unused; an optimization's primary result
+                is always its final structure.
+
+        Returns:
+            The final structure, or None if the trajectory is empty.
+        """
         return self.final_structure
 
-    def __repr_args__(self):
+    def __repr_args__(self) -> list[tuple[str, str]]:
         """Custom repr to avoid printing the entire collection of objects."""
         return [
             ("final_structure", f"{self.final_structure}"),
@@ -253,7 +283,7 @@ class OptimizationData(FileData, CalcInfoData):
         exclude_none: bool = True,
         exclude_unset: bool = True,
         indent: int = 4,
-        **kwargs: dict[str, Any],
+        **kwargs: Any,
     ) -> None:
         """Save an OptimizationOutput to a file.
 
@@ -263,6 +293,8 @@ class OptimizationData(FileData, CalcInfoData):
                 to the file.
             exclude_unset: If True, attributes that have not been set will not be
                 written to the file. Defaults to True for compact files.
+            indent: The number of spaces to use for indentation in JSON and YAML
+                files. Ignored for `.xyz` files.
             **kwargs: Additional keyword arguments to pass to the json serializer.
 
         Note:
@@ -343,7 +375,7 @@ class ConformerSearchData(FileData):
 class ScanData(FileData, CalcInfoData):
     """Computed data for a scan (may be for a relaxed or frozen).
 
-    Attributes
+    Attributes:
     ----------
         energies: The energies for each step of the scan.
         structures: The Structure objects for each step of the scan.
@@ -393,7 +425,7 @@ class ScanData(FileData, CalcInfoData):
         exclude_none: bool = True,
         exclude_unset: bool = True,
         indent: int = 4,
-        **kwargs: dict[str, Any],
+        **kwargs: Any,
     ) -> None:
         """Save a ScanData to a file.
 
@@ -403,6 +435,8 @@ class ScanData(FileData, CalcInfoData):
                 to the file.
             exclude_unset: If True, attributes that have not been set will not be
                 written to the file. Defaults to True for compact files.
+            indent: The number of spaces to use for indentation in JSON and YAML
+                files. Ignored for `.xyz` files.
             **kwargs: Additional keyword arguments to pass to the json serializer.
 
         Note:
@@ -416,9 +450,9 @@ class ScanData(FileData, CalcInfoData):
         super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)
 
 
-StructuredData = Union[SinglePointData, OptimizationData, ConformerSearchData, ScanData]
+StructuredData = SinglePointData | OptimizationData | ConformerSearchData | ScanData
 StructuredDataType = TypeVar("StructuredDataType", bound=StructuredData)
-Data = Union[FileData, StructuredData]
+Data = FileData | StructuredData
 DataType = TypeVar("DataType", bound=Data)
 
 
