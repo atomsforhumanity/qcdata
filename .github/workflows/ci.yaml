@@ -39,8 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 3.14 is not tested yet: the locked rdkit/openbabel-wheel have no 3.14 wheels.
-        python-version: ["3.10", "3.13"]
+        python-version: ["3.10", "3.14"]
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
