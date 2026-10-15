@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.20.1] - 2026-10-14
+
 ### Changed
 
 - Development tooling: shared ruff (including Google docstring rules), mypy (fully typed library code), and pytest settings; pre-commit hooks that run the locked tools through `uv run`; one CI workflow; a tag-driven release workflow with `scripts/prepare_release.py` and an approval-gated PyPI deployment. Added CONTRIBUTING.md and AGENTS.md.
@@ -719,7 +721,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - `SinglePointComputedProperties`
   - `Wavefunction`
 
-[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.20.0...HEAD
+[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.20.1...HEAD
+[0.20.1]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.20.1
 [0.20.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.20.0
 [0.19.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.19.0
 [0.18.1]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.18.1
