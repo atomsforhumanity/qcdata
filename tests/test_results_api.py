@@ -141,9 +141,7 @@ def test_program_output_view_uses_results(prog_output, opt_output, monkeypatch):
     assert len(rendered) == 2
 
 
-def test_conformer_view_filters_duplicates(
-    water, prog_input_factory, monkeypatch
-):
+def test_conformer_view_filters_duplicates(water, prog_input_factory, monkeypatch):
     from qcdata import view
 
     output = ProgramOutput(
@@ -165,9 +163,7 @@ def test_conformer_view_filters_duplicates(
     monkeypatch.setattr(view, "display", lambda obj: None)
     with warnings.catch_warnings():
         warnings.simplefilter("error", FutureWarning)
-        view.program_outputs(
-            output, conformer_rmsd_threshold=1.0
-        )
+        view.program_outputs(output, conformer_rmsd_threshold=1.0)
     assert displayed_structures == [
         water,
         water,

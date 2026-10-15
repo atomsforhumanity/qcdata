@@ -1,23 +1,24 @@
-# Quantum Chemistry Data
+# qcdata
 
 [![image](https://img.shields.io/pypi/v/qcdata.svg)](https://pypi.python.org/pypi/qcdata)
 [![image](https://img.shields.io/pypi/l/qcdata.svg)](https://pypi.python.org/pypi/qcdata)
 [![image](https://img.shields.io/pypi/pyversions/qcdata.svg)](https://pypi.python.org/pypi/qcdata)
-[![Actions status](https://github.com/atomsforhumanity/qcdata/workflows/Tests/badge.svg)](https://github.com/atomsforhumanity/qcdata/actions)
-[![Actions status](https://github.com/atomsforhumanity/qcdata/workflows/Basic%20Code%20Quality/badge.svg)](https://github.com/atomsforhumanity/qcdata/actions)
+[![CI](https://github.com/atomsforhumanity/qcdata/actions/workflows/ci.yaml/badge.svg)](https://github.com/atomsforhumanity/qcdata/actions/workflows/ci.yaml)
 
-Elegant and intuitive data structures for quantum chemistry, featuring seamless Jupyter Notebook visualizations.
+Data structures for quantum chemistry inputs and results, with Jupyter visualizations.
 
-`qcdata` works in harmony with a suite of other quantum chemistry tools for fast, structured, and interoperable quantum chemistry.
 
-## The QC Suite of Programs
+## The QC Suite
 
-- [qcconst](https://github.com/atomsforhumanity/qcconst) - NIST/CODATA2022 core physical constants, conversion factors, and a periodic table with clear source information for every value.
-- [qcdata](https://github.com/atomsforhumanity/qcdata) - Elegant and intuitive data structures for quantum chemistry, featuring seamless Jupyter Notebook visualizations. [Documentation](https://qcdata.docs.atomsforhumanity.org)
-- [qccodec](https://github.com/atomsforhumanity/qccodec) - A translation layer between quantum chemistry program inputs and outputs and structured `qcdata` objects.
-- [qcop](https://github.com/atomsforhumanity/qccompute) - A package for operating quantum chemistry programs using `qcdata` standardized data structures. Compatible with `TeraChem`, `psi4`, `QChem`, `NWChem`, `ORCA`, `Molpro`, `geomeTRIC` and many more.
-- [BigChem](https://github.com/mtzgroup/bigchem) - A distributed application for running quantum chemistry calculations at scale across clusters of computers or the cloud. Bring multi-node scaling to your favorite quantum chemistry program.
-- `ChemCloud` - A [web application](https://github.com/mtzgroup/chemcloud-server) and associated [Python client](https://github.com/mtzgroup/chemcloud-client) for exposing a BigChem cluster securely over the internet.
+These packages work together to make quantum chemistry fast, structured, and interoperable.
+
+- [qcref](https://github.com/atomsforhumanity/qcref) - Reference data for computational chemistry: CODATA physical constants, conversion factors, a periodic table, and solvent properties, each value with its source.
+- [qcdata](https://github.com/atomsforhumanity/qcdata) - Data structures for quantum chemistry inputs and results, with Jupyter visualizations. [Documentation](https://qcdata.docs.atomsforhumanity.org)
+- [qcinf](https://github.com/atomsforhumanity/qcinf) - Cheminformatics algorithms and structure utilities for [qcdata](https://github.com/atomsforhumanity/qcdata) structures.
+- [qccodec](https://github.com/atomsforhumanity/qccodec) - Translates [qcdata](https://github.com/atomsforhumanity/qcdata) inputs into native program inputs and parses program outputs back into qcdata objects, one codec per program.
+- [qccompute](https://github.com/atomsforhumanity/qccompute) - Runs quantum chemistry programs on [qcdata](https://github.com/atomsforhumanity/qcdata) inputs using [qccodec](https://github.com/atomsforhumanity/qccodec) codecs and returns structured results. [Documentation](https://qccompute.docs.atomsforhumanity.org)
+- [BigChem](https://github.com/mtzgroup/bigchem) - Distributed execution of qccompute calculations across clusters of computers or the cloud.
+- [ChemCloud](https://github.com/mtzgroup/chemcloud-client) - A [web application](https://github.com/mtzgroup/chemcloud-server) and [Python client](https://github.com/mtzgroup/chemcloud-client) that expose a BigChem cluster securely over the internet.
 
 ## Installation
 

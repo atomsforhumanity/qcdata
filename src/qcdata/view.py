@@ -1,5 +1,4 @@
-"""
-Tools for visualizing qcdata objects in Jupyter Notebooks.
+"""Tools for visualizing qcdata objects in Jupyter Notebooks.
 
 Design Decisions:
     - The view function is the top-level method for viewing all qcdata objects. It can
@@ -24,12 +23,13 @@ import base64
 import html
 import io
 import math
+from collections.abc import Iterator
 from contextlib import contextmanager
 from itertools import zip_longest
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
-from qcconst import constants
+from qcref import constants
 
 from qcdata import (
     ConformerSearchData,
@@ -66,7 +66,7 @@ except ImportError as e:
     raise ImportError(
         f"Missing dependencies: {', '.join(missing_packages)} required for the view "
         "module. Please install them using: pip install qcdata[view]"
-    )
+    ) from e
 
 DEFAULT_WIDTH: int = 600
 """The default width of the viewer in pixels."""
@@ -75,7 +75,7 @@ DEFAULT_HEIGHT: int = 450
 
 
 def generate_structure_viewer_html(
-    *structs: Union["Structure", list["Structure"]],
+    *structs: Structure | list[Structure],
     width: int | None = None,
     height: int | None = None,
     titles: list[str] | None = None,
@@ -90,9 +90,10 @@ def generate_structure_viewer_html(
     view_2d: bool = False,
     interval: int = 100,
 ) -> str:
-    """
-    Generate the core HTML viewer for a Structure or list of Structures using py3Dmol
-    or 2D PNG images. These keywords may be passed to high level viewer functions.
+    """Generate the core HTML viewer for one or more Structures.
+
+    Structures are rendered in 3D with py3Dmol or as 2D PNG images. These keywords
+    may be passed to high level viewer functions.
 
     Args:
         structs: The Structure or list of Structures to visualize.
@@ -111,6 +112,8 @@ def generate_structure_viewer_html(
         style: A dictionary of styles to apply to the viewer (for py3Dmol). Should be a
             dictionary for AtomStyleSpec <https://3dmol.org/doc/AtomStyleSpec.html>
         show_indices: Whether to show the atom indices in the viewer.
+        same_viewer: Whether to overlay all structures in a single py3Dmol viewer
+            instead of a two-column grid of viewers. Ignored when view_2d is True.
         view_2d: Whether to display the structure in 2D (PNG images).
         interval: The interval in milliseconds for the animation.
 
@@ -120,7 +123,6 @@ def generate_structure_viewer_html(
     Raises:
         ValueError: If a list of Structures is passed and view_2d is True.
     """
-
     # Set defaults
     width = width or DEFAULT_WIDTH
     height = height or DEFAULT_HEIGHT
@@ -299,8 +301,7 @@ def generate_structure_viewer_html(
 
 
 def generate_dictionary_string(dictionary: dict[str, Any]) -> str:
-    """
-    Generate an HTML string displaying a dictionary without explicit row colors.
+    """Generate an HTML string displaying a dictionary without explicit row colors.
 
     Args:
         dictionary: The dictionary to display.
@@ -317,9 +318,15 @@ def generate_dictionary_string(dictionary: dict[str, Any]) -> str:
 
 
 def generate_files_string(files: dict[str, str | bytes]) -> str:
-    """
-    Generate an HTML string displaying a dictionary of files substituting <str> or
-    <bytes> for the actual file data
+    """Generate an HTML string listing filenames with placeholders for their data.
+
+    File contents are replaced by `<str>` or `<bytes>` according to their type.
+
+    Args:
+        files: A dict mapping filename to file data.
+
+    Returns:
+        A string of HTML displaying each filename and its data type.
     """
     # Generate the symbolic dictionary
     viewer_dict = {}
@@ -360,8 +367,7 @@ def generate_subprograms_string(subprograms: list[ProgramSpec]) -> str:
 
 
 def generate_output_table(*results: ProgramOutput) -> str:
-    """
-    Generate an HTML table displaying the basic parameters for ProgramOutput objects.
+    """Generate an HTML table displaying the basic parameters for ProgramOutput objects.
 
     Args:
         *results: The ProgramOutput objects to display.
@@ -454,7 +460,9 @@ def generate_output_table(*results: ProgramOutput) -> str:
             f"{res.results.provenance.program} {res.results.provenance.program_version or ''}"
         }</td>
             <td>{
-            generate_dictionary_string(structured.model.model_dump(exclude={"extras", "qcdata_version"}))
+            generate_dictionary_string(
+                structured.model.model_dump(exclude={"extras", "qcdata_version"})
+            )
             if structured and structured.model
             else ""
         }</td>
@@ -475,10 +483,11 @@ def generate_output_table(*results: ProgramOutput) -> str:
 
 
 def generate_optimization_plot(
-    prog_output: ProgramOutput, figsize=(6.4, 4.8), grid=True
+    prog_output: ProgramOutput,
+    figsize: tuple[float, float] = (6.4, 4.8),
+    grid: bool = True,
 ) -> str:
-    """
-    Generate a plot of the energy optimization by cycle for a single ProgramOutput.
+    """Generate a plot of the energy optimization by cycle for a single ProgramOutput.
 
     Args:
         prog_output: The ProgramOutput to generate the plot for.
@@ -539,13 +548,15 @@ def generate_optimization_plot(
 
 
 @contextmanager
-def _numpy_print_options(*args, **kwargs):
-    """
-    Temporarily set numpy print options.
+def _numpy_print_options(*args: Any, **kwargs: Any) -> Iterator[None]:
+    """Temporarily set numpy print options.
 
     Args:
         *args: Arguments for numpy print options.
         **kwargs: Keyword arguments for numpy print options.
+
+    Yields:
+        None. The original print options are restored on exit.
     """
     original_options = np.get_printoptions()
     np.set_printoptions(*args, **kwargs)
@@ -555,9 +566,8 @@ def _numpy_print_options(*args, **kwargs):
         np.set_printoptions(**original_options)
 
 
-def _not_empty(value) -> bool:
-    """
-    Check if a value is empty. Accommodates numpy arrays.
+def _not_empty(value: Any) -> bool:
+    """Check if a value is empty. Accommodates numpy arrays.
 
     Args:
         value: The value to check.
@@ -586,8 +596,7 @@ def _format_time(seconds_float: float) -> str:
 
 
 def generate_data_table(data: FileData) -> str:
-    """
-    Generate an HTML table displaying the results.
+    """Generate an HTML table displaying the results.
 
     Args:
         data: The Data object to display.
@@ -595,7 +604,6 @@ def generate_data_table(data: FileData) -> str:
     Returns:
         str: A string of HTML displaying the results in a table.
     """
-
     rows = ""
     for key, value in data.__dict__.items():
         if _not_empty(value):
@@ -627,10 +635,9 @@ def generate_data_table(data: FileData) -> str:
 
 def structures(
     *structs: Structure | list[Structure],
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
-    """
-    Display one or many Structure objects.
+    """Display one or many Structure objects.
 
     Args:
         *structs: The Structure objects or list of objects to display. If a list is
@@ -650,17 +657,19 @@ def program_outputs(
     conformer_rmsd_threshold: float | None = None,
     conformer_rmsd_backend: str = "rdkit",
     conformer_rmsd_kwargs: dict | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
-    """
-    Display one or many ProgramOutput objects.
+    """Display one or many ProgramOutput objects.
 
     Args:
         *results: The ProgramOutput objects to display.
         animate: Whether to animate the structure if it is an optimization.
         struct_viewer: Whether to display the structure viewer.
-        conformer_rmsd_threshold: The threshold for RMSD to determine if conformers are
-            unique. Defaults to 1.0 Bohr (0.53 Å).
+        conformer_rmsd_threshold: The RMSD threshold in Bohr below which conformers are
+            considered duplicates and hidden. If None (default), all conformers are
+            shown.
+        conformer_rmsd_backend: The qcinf backend used to compute conformer RMSDs
+            when filtering. Only used if conformer_rmsd_threshold is set.
         conformer_rmsd_kwargs: Additional keyword arguments to pass to the conformer
             RMSD filtering function.
         **kwargs: Additional keyword arguments to pass to the viewer functions.
@@ -668,7 +677,6 @@ def program_outputs(
     Returns:
         None. Displays the ProgramOutput objects in the Jupyter Notebook.
     """
-
     width = kwargs.get("width", DEFAULT_WIDTH)
     height = kwargs.get("height", DEFAULT_HEIGHT)
 
@@ -783,11 +791,12 @@ def program_outputs(
 
 def view(
     *objs: ProgramOutput | Structure | list[Structure],
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
-    """
-    Top level method for viewing all qcdata objects. This should be the only method you
-    need to use to view any qcdata object.
+    """Display any qcdata objects in a Jupyter Notebook.
+
+    This is the top-level viewing function and should be the only one needed to view
+    any qcdata object.
 
     Args:
         *objs: The ProgramOutput or Structure objects to view. May pass one or more

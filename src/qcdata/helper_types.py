@@ -1,3 +1,5 @@
+"""Annotated types for serializing paths and numpy arrays in pydantic models."""
+
 from pathlib import Path
 from typing import Annotated, Any
 

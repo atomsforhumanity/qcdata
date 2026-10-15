@@ -12,6 +12,7 @@ import toml
 import yaml
 from pydantic import (
     BaseModel,
+    FieldSerializationInfo,
     computed_field,
     field_serializer,
     field_validator,
@@ -42,7 +43,7 @@ class LengthUnit(str, Enum):
     ANGSTROM = "angstrom"
 
     def __repr__(self) -> str:
-        """Custom repr for LengthUnit"""
+        """Return the member name in quotes, e.g. `'BOHR'`."""
         return f"'{self.name}'"  # pragma: no cover
 
 
@@ -144,11 +145,12 @@ class QCDataBaseModel(BaseModel, ABC):
         exclude_none: bool = True,
         exclude_unset: bool = True,
         indent: int = 4,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
-        """
-        Save an object to disk as `json`, `yaml`, or `toml`. Objects such as `Structure`
-        and `OptimizationData` can additionally be saved as `xyz` files.
+        """Save an object to disk as `json`, `yaml`, or `toml`.
+
+        Objects such as `Structure` and `OptimizationData` can additionally be saved
+        as `xyz` files.
 
         Note:
             By default the object will be saved as a `json` file. If the file extension
@@ -215,7 +217,7 @@ class QCDataBaseModel(BaseModel, ABC):
     def __repr_args__(self) -> "ReprArgs":
         """Only show non empty fields in repr but always show success even if false."""
 
-        def exists(value):
+        def exists(value: Any) -> bool:
             if isinstance(value, np.ndarray):
                 return value.size > 0
             return bool(value)
@@ -248,7 +250,9 @@ class Files(QCDataBaseModel):
     files: dict[str, str | bytes] = {}
 
     @field_validator("files")
-    def _convert_base64_to_bytes(cls, value):
+    def _convert_base64_to_bytes(
+        cls, value: dict[str, str | bytes]
+    ) -> dict[str, str | bytes]:
         """Convert base64 encoded data to bytes."""
         for filename, data in value.items():
             if isinstance(data, str) and data.startswith("base64:"):
@@ -256,7 +260,9 @@ class Files(QCDataBaseModel):
         return value
 
     @field_serializer("files")
-    def _serialize_files(self, files, _info) -> dict[str, str]:
+    def _serialize_files(
+        self, files: dict[str, str | bytes], _info: FieldSerializationInfo
+    ) -> dict[str, str]:
         """Serialize files to a dict of filename to base64 encoded string."""
         return {
             filename: (
@@ -268,8 +274,11 @@ class Files(QCDataBaseModel):
         }
 
     def add_file(self, filepath: Path | str, relative_dir: Path | None = None) -> None:
-        """Add a file to the object. The file will be added at to the `files` attribute
-            with the filename as the key and the file data as the value.
+        """Add a file to the object.
+
+        The file is added to the `files` attribute with the filename as the key and
+        the file data as the value. UTF-8 decodable files are stored as `str`; all
+        other files are stored as `bytes`.
 
         Args:
             filepath: The path to the file.
@@ -325,7 +334,16 @@ class Files(QCDataBaseModel):
                 self.add_file(filepath, directory)
 
     def save_files(self, directory: StrOrPath = Path(".")) -> None:
-        """Write all files to the specified directory"""
+        """Write all files to the specified directory.
+
+        Text data is written in text mode and binary data in binary mode. Parent
+        directories are created for filenames that contain relative paths.
+
+        Args:
+            directory: The directory to write the files to. Created if it does not
+                exist (its parent must already exist). Defaults to the current
+                working directory.
+        """
         directory = Path(directory)
         directory.mkdir(exist_ok=True)
         for filename, data in self.files.items():
@@ -410,7 +428,7 @@ class CalcType(str, Enum):
     scan = "scan"
 
     def __repr__(self) -> str:
-        """Custom repr for CalcType"""
+        """Return the member name in quotes, e.g. `'energy'`."""
         return f"'{self.name}'"  # pragma: no cover
 
 

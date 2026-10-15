@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any, TypeVar
 
-from pydantic import field_serializer, field_validator
+from pydantic import FieldSerializationInfo, field_serializer, field_validator
 from typing_extensions import Self
 
 from .base_models import CalcType, Files, Model
@@ -33,7 +33,7 @@ class FileInput(Files):
     cmdline_args: list[str] = []
 
     @classmethod
-    def from_directory(cls, directory: Path | str, **kwargs) -> Self:
+    def from_directory(cls, directory: Path | str, **kwargs: Any) -> Self:
         """Collect directory files, passing required `program` and other fields as kwargs."""
         obj = cls(**kwargs)
         directory = Path(directory)
@@ -79,7 +79,9 @@ class ProgramSpec(FileInput):
         return subprograms
 
     @field_serializer("calctype")
-    def _serialize_calctype(self, calctype: CalcType, _info) -> str:
+    def _serialize_calctype(
+        self, calctype: CalcType, _info: FieldSerializationInfo
+    ) -> str:
         """Serialize CalcType to string."""
         return calctype.value
 

@@ -3,6 +3,8 @@
 Ba = "Ba"
 Nd = "Nd"
 ND = "ND"
+# numpy
+arange = "arange"
 
 [files]
 extend-exclude = [
