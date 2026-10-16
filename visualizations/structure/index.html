@@ -1,0 +1,2097 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+        <meta name="author" content="Colton Hicks">
+      
+      
+        <link rel="canonical" href="https://qcdata.docs.atomsforhumanity.org/visualizations/structure/">
+      
+      
+        <link rel="prev" href="../overview/">
+      
+      
+        <link rel="next" href="../results/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Structure - Quantum Chemistry Data (qcdata)</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../css/ansi-colours.css">
+    
+      <link rel="stylesheet" href="../../css/jupyter-cells.css">
+    
+      <link rel="stylesheet" href="../../css/pandas-dataframe.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#easily-view-and-interact-with-any-structure" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Quantum Chemistry Data (qcdata)" class="md-header__button md-logo" aria-label="Quantum Chemistry Data (qcdata)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Quantum Chemistry Data (qcdata)
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Structure
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7M9 21v-1h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1m3-17a5 5 0 0 0-5 5c0 2.05 1.23 3.81 3 4.58V16h4v-2.42c1.77-.77 3-2.53 3-4.58a5 5 0 0 0-5-5"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/atomsforhumanity/qcdata" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../.." class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/overview/" class="md-tabs__link">
+          
+  
+  
+  API Documentation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../overview/" class="md-tabs__link">
+          
+  
+  
+  ✨Visualizations✨
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="https://github.com/atomsforhumanity/qcdata/blob/master/CHANGELOG.md" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Quantum Chemistry Data (qcdata)" class="md-nav__button md-logo" aria-label="Quantum Chemistry Data (qcdata)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Quantum Chemistry Data (qcdata)
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/atomsforhumanity/qcdata" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Welcome to qcdata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../why/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why use qcdata?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Documentation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Documentation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/inputs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/outputs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Outputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visualizations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Visualizations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/view/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    View
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Additional Models
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Additional Models
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/calctype/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CalcType
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/provenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ExecutionInfo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/qcdatabasemodel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QCDataBaseModel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/lengthunit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LengthUnit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ✨Visualizations✨
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ✨Visualizations✨
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Structure
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="Page contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Page contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#easily-view-and-interact-with-any-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Easily view and interact with any structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pass-any-number-of-objects-of-any-type-to-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pass any number of objects (of any type) to view
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#titles-are-generated-automatically-from-identifier-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Titles are generated automatically from identifier information
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#or-manually-add-titles-or-subtitles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Or manually add titles or subtitles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#show-atom-indices-zero-indexed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Show Atom Indices (Zero Indexed)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#measure-distances-between-atoms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measure Distances Between Atoms
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../results/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coreviews/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Views
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://github.com/atomsforhumanity/qcdata/blob/master/CHANGELOG.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="Page contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Page contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#easily-view-and-interact-with-any-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Easily view and interact with any structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pass-any-number-of-objects-of-any-type-to-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pass any number of objects (of any type) to view
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#titles-are-generated-automatically-from-identifier-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Titles are generated automatically from identifier information
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#or-manually-add-titles-or-subtitles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Or manually add titles or subtitles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#show-atom-indices-zero-indexed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Show Atom Indices (Zero Indexed)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#measure-distances-between-atoms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measure Distances Between Atoms
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+  <h1>Structure</h1>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<script>
+(function() {
+  function addWidgetsRenderer() {
+    var requireJsScript = document.createElement('script');
+    requireJsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js';
+
+    var mimeElement = document.querySelector('script[type="application/vnd.jupyter.widget-view+json"]');
+    var jupyterWidgetsScript = document.createElement('script');
+    var widgetRendererSrc = 'https://unpkg.com/@jupyter-widgets/html-manager@*/dist/embed-amd.js';
+    var widgetState;
+
+    // Fallback for older version:
+    try {
+      widgetState = mimeElement && JSON.parse(mimeElement.innerHTML);
+
+      if (widgetState && (widgetState.version_major < 2 || !widgetState.version_major)) {
+        widgetRendererSrc = 'jupyter-js-widgets@*/dist/embed.js';
+      }
+    } catch(e) {}
+
+    jupyterWidgetsScript.src = widgetRendererSrc;
+
+    document.body.appendChild(requireJsScript);
+    document.body.appendChild(jupyterWidgetsScript);
+  }
+
+  document.addEventListener('DOMContentLoaded', addWidgetsRenderer);
+}());
+</script>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="easily-view-and-interact-with-any-structure">Easily view and interact with any structure<a class="headerlink" href="#easily-view-and-interact-with-any-structure" title="Permanent link">&para;</a></h2>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="language-python highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">qcdata</span><span class="w"> </span><span class="kn">import</span> <span class="n">Structure</span><span class="p">,</span> <span class="n">view</span>
+
+<span class="c1"># Defaults changed just to fit within narrow documentation layout</span>
+<span class="n">view</span><span class="o">.</span><span class="n">DEFAULT_WIDTH</span> <span class="o">=</span> <span class="mi">400</span>
+<span class="n">view</span><span class="o">.</span><span class="n">DEFAULT_HEIGHT</span> <span class="o">=</span> <span class="mi">300</span>
+</code></pre></div>
+
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="language-python highlight"><pre><span></span><code><span class="n">caffeine</span> <span class="o">=</span> <span class="n">Structure</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="s1">&#39;CN1C=NC2=C1C(=O)N(C(=O)N2C)C&#39;</span><span class="p">)</span>
+<span class="n">view</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">caffeine</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_html rendered_html output_subarea">
+<div style="display: flex; flex-wrap: wrap; justify-content: center;">
+<div id="3dmolviewer_17398379557012856" style="position: relative; width: 400px; height: 300px;">
+<p id="3dmolwarning_17398379557012856" style="background-color:#ffcccc;color:black">3Dmol.js failed to load for some reason.  Please check your browser console for error messages.<br/></p>
+</div>
+<script>
+
+var loadScriptAsync = function(uri){
+  return new Promise((resolve, reject) => {
+    //this is to ignore the existence of requirejs amd
+    var savedexports, savedmodule;
+    if (typeof exports !== 'undefined') savedexports = exports;
+    else exports = {}
+    if (typeof module !== 'undefined') savedmodule = module;
+    else module = {}
+
+    var tag = document.createElement('script');
+    tag.src = uri;
+    tag.async = true;
+    tag.onload = () => {
+        exports = savedexports;
+        module = savedmodule;
+        resolve();
+    };
+  var firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+});
+};
+
+if(typeof $3Dmolpromise === 'undefined') {
+$3Dmolpromise = null;
+  $3Dmolpromise = loadScriptAsync('https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.4.2/3Dmol-min.js');
+}
+
+var viewer_17398379557012856 = null;
+var warn = document.getElementById("3dmolwarning_17398379557012856");
+if(warn) {
+    warn.parentNode.removeChild(warn);
+}
+$3Dmolpromise.then(function() {
+var viewergrid_17398379557012856 = null;
+viewergrid_17398379557012856 = $3Dmol.createViewerGrid(document.getElementById("3dmolviewer_17398379557012856"),{rows: 1, cols: 1, control_all: true},{backgroundColor:"white"});
+viewer_17398379557012856 = viewergrid_17398379557012856[0][0];
+viewergrid_17398379557012856[0][0].zoomTo();    viewergrid_17398379557012856[0][0].addModel("24\nqcdata_charge=0 qcdata_multiplicity=1 qcdata__identifiers_smiles=CN1C=NC2=C1C(=O)N(C(=O)N2C)C qcdata__identifiers_canonical_smiles=Cn1c(=O)c2c(ncn2C)n(C)c1=O qcdata__identifiers_canonical_smiles_program=rdkit\nC  3.27058816309630274 0.60109610699795946 -0.22253241806615684\nN  2.12528296563460639 -0.27174599042740266 -0.27198046303875856\nC  2.14352186056434668 -1.61654573211534736 -0.53248317082983543\nN  0.93088627640153676 -2.13328513943591958 -0.50648948816001382\nC  0.11888017683797696 -1.07788971498306707 -0.21957874358919960\nC  0.82137569014618550 0.07905295464060573 -0.06971485084675914\nC  0.21204804108022551 1.32666204616471850 0.23320715524152713\nO  0.85453513740279430 2.36398174478888778 0.36627161299603017\nN  -1.17717187423064695 1.23391404498828394 0.35899354825707452\nC  -1.93980629387840220 0.05613418082710030 0.21134060472684330\nO  -3.16747875550366365 0.07509255581832507 0.34190959538824967\nN  -1.24780059878631100 -1.11838136216192541 -0.08607240237761707\nC  -1.95800175542193933 -2.37302607629393369 -0.25392787633051223\nC  -1.91718786277366893 2.44176276560118710 0.66778074004310706\nH  4.17689665064978133 0.02527766029312227 -0.42696960000316153\nH  3.14911946738331583 1.37811250974020871 -0.98130901711125551\nH  3.33084587411985877 1.04008036444958574 0.77642352150087524\nH  3.05563556979344941 -2.16499856865378648 -0.73225383748482653\nH  -1.59172961071887942 -3.09258778559276326 0.48519560980181869\nH  -3.03611135546146382 -2.25284123845355655 -0.11935788832522644\nH  -1.77238321918398323 -2.75654366631312220 -1.26223719871681528\nH  -2.46555959499632893 2.29294597682665824 1.60386169039408366\nH  -2.64478142116512771 2.62628009520821681 -0.12950647310348221\nH  -1.27160353098984968 3.31745226808628102 0.76942934963399601\n","xyz");
+    viewergrid_17398379557012856[0][0].addLabel("CN1C=NC2=C1C(=O)N(C(=O)N2C)C ",{"position": {"x": 200.0, "y": 0, "z": 0}, "alignment": "topCenter", "fontSize": 24, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_17398379557012856[0][0].addLabel(" ",{"position": {"x": 200.0, "y": 300, "z": 0}, "alignment": "bottomCenter", "fontSize": 20, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_17398379557012856[0][0].setStyle({"stick": {}, "sphere": {"scale": 0.3}});
+    viewergrid_17398379557012856[0][0].zoomTo();
+viewergrid_17398379557012856[0][0].render();
+});
+</script>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="pass-any-number-of-objects-of-any-type-to-view">Pass any number of objects (of any type) to view<a class="headerlink" href="#pass-any-number-of-objects-of-any-type-to-view" title="Permanent link">&para;</a></h2>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="language-python highlight"><pre><span></span><code><span class="n">serotonin</span> <span class="o">=</span> <span class="n">Structure</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="s2">&quot;C1=CC2=C(C=C1O)C(=CN2)CCN&quot;</span><span class="p">)</span>
+<span class="n">dopamine</span> <span class="o">=</span> <span class="n">Structure</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="s2">&quot;NCCc1cc(O)c(O)cc1&quot;</span><span class="p">)</span>
+<span class="n">view</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">serotonin</span><span class="p">,</span> <span class="n">dopamine</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_html rendered_html output_subarea">
+<div style="display: flex; flex-wrap: wrap; justify-content: center;">
+<div id="3dmolviewer_17238552105552895" style="position: relative; width: 800px; height: 300px;">
+<p id="3dmolwarning_17238552105552895" style="background-color:#ffcccc;color:black">3Dmol.js failed to load for some reason.  Please check your browser console for error messages.<br/></p>
+</div>
+<script>
+
+var loadScriptAsync = function(uri){
+  return new Promise((resolve, reject) => {
+    //this is to ignore the existence of requirejs amd
+    var savedexports, savedmodule;
+    if (typeof exports !== 'undefined') savedexports = exports;
+    else exports = {}
+    if (typeof module !== 'undefined') savedmodule = module;
+    else module = {}
+
+    var tag = document.createElement('script');
+    tag.src = uri;
+    tag.async = true;
+    tag.onload = () => {
+        exports = savedexports;
+        module = savedmodule;
+        resolve();
+    };
+  var firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+});
+};
+
+if(typeof $3Dmolpromise === 'undefined') {
+$3Dmolpromise = null;
+  $3Dmolpromise = loadScriptAsync('https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.2.1-post1/3Dmol-min.js');
+}
+
+var viewer_17238552105552895 = null;
+var warn = document.getElementById("3dmolwarning_17238552105552895");
+if(warn) {
+    warn.parentNode.removeChild(warn);
+}
+$3Dmolpromise.then(function() {
+var viewergrid_17238552105552895 = null;
+viewergrid_17238552105552895 = $3Dmol.createViewerGrid(document.getElementById("3dmolviewer_17238552105552895"),{rows: 1, cols: 2, control_all: false},{backgroundColor:"white"});
+viewer_17238552105552895 = viewergrid_17238552105552895[0][0];
+viewergrid_17238552105552895[0][0].zoomTo();viewergrid_17238552105552895[0][1].zoomTo();    viewergrid_17238552105552895[0][0].addModel("25\nqcdata_charge=0 qcdata_multiplicity=1 qcdata__identifiers_smiles=C1=CC2=C(C=C1O)C(=CN2)CCN qcdata__identifiers_canonical_smiles=NCCc1c[nH]c2ccc(O)cc12 qcdata__identifiers_canonical_smiles_program=rdkit\nC  2.80662837943892596 0.19461624510125644 1.62644004594558789\nC  2.18671738713131081 -1.04739462810659001 1.78559406544228305\nC  1.04205221631035050 -1.30371588331231392 1.01976405293294148\nC  0.51135558434941475 -0.38099887062730470 0.11625514708800186\nC  1.15528315276037841 0.86637271442856167 -0.02525252446684082\nC  2.29336987732469488 1.13099264862406690 0.73973086890098005\nO  2.94019505341360654 2.33042463772491804 0.64072408820936022\nC  -0.64248928597900123 -0.98139451755059748 -0.48590882876610791\nC  -0.77415410236114401 -2.23828935762225933 0.07514506173286904\nN  0.23947356255826094 -2.41856452406281708 0.97631545313932067\nC  -1.53584322201008616 -0.38941800438644519 -1.53453994105079805\nC  -2.55261258637334310 0.62389585158003458 -0.98757820497747850\nN  -2.03784623404194587 1.99659435506692651 -0.95736744415048758\nH  3.69504497676978971 0.43297752545155627 2.20497726891362067\nH  2.58244102558036603 -1.77972645463350809 2.48100386493334835\nH  0.75377724819234682 1.60007920276663640 -0.71439409236891127\nH  2.42717931676543630 2.89619196027562076 0.04027652711009141\nH  -1.50211112477823416 -3.02022181334629458 -0.09489126075898915\nH  0.38600652411385267 -3.24987117750598165 1.53133884665722397\nH  -0.92963077628609858 0.05707205393057579 -2.33283807432805279\nH  -2.09467533618915525 -1.20723015268739697 -2.00932783141162341\nH  -2.88582840927973061 0.34008317783131742 0.01697273380365259\nH  -3.43672981497666674 0.62051368655550287 -1.63562243768870519\nH  -1.87522970904775632 2.31753693807875072 -1.91053679716472602\nH  -2.75237370338658005 2.60947438642610452 -0.56628058767652500\n","xyz");
+    viewergrid_17238552105552895[0][0].addLabel("C1=CC2=C(C=C1O)C(=CN2)CCN ",{"position": {"x": 200.0, "y": 0, "z": 0}, "alignment": "topCenter", "fontSize": 24, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_17238552105552895[0][0].addLabel(" ",{"position": {"x": 200.0, "y": 300, "z": 0}, "alignment": "bottomCenter", "fontSize": 20, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_17238552105552895[0][1].addModel("22\nqcdata_charge=0 qcdata_multiplicity=1 qcdata__identifiers_smiles=NCCc1cc(O)c(O)cc1 qcdata__identifiers_canonical_smiles=NCCc1ccc(O)c(O)c1 qcdata__identifiers_canonical_smiles_program=rdkit\nN  -3.82831747238149411 0.47797332750282095 0.01557447593432387\nC  -2.44674839009917244 0.29824270330147828 0.46007480321415595\nC  -1.52880033545415484 -0.05563548727794237 -0.71454775657072400\nC  -0.09796828627024931 -0.23799898591558089 -0.26762190827144189\nC  0.78504240481459764 0.85189771715028473 -0.25193925437347586\nC  2.09451440396264932 0.66832214640712939 0.17205335000858096\nO  2.96010598303404127 1.72266094692922955 0.11710946822371407\nC  2.52773316430253425 -0.57657842472618315 0.61755030715260861\nO  3.79030556489432247 -0.73455878561961718 1.11146772189513365\nC  1.67273080040658995 -1.66802681757307858 0.59760341369749626\nC  0.35783253729462089 -1.49806038997911073 0.15693275419270553\nH  -4.40489466202813951 0.73725422629241977 0.81557357253781837\nH  -3.87864135414258637 1.26170786257199774 -0.63454846411673349\nH  -2.41980660609490750 -0.49757616273153082 1.21313769218607792\nH  -2.10477651018549006 1.21810035735981526 0.94861016814279753\nH  -1.57120839716960137 0.72925341488762829 -1.48105122838296621\nH  -1.87565617658815365 -0.97446770548190109 -1.20519382390179808\nH  0.46217962862540890 1.83450272373461098 -0.58477475867416895\nH  3.81313081254230157 1.34944717949571857 -0.17258231972863564\nH  3.99137606415011925 0.08721044955844016 1.59586279009137133\nH  2.01656187383775398 -2.63990545674299470 0.93837385160721420\nH  -0.31469504745108745 -2.35376483914379797 0.15270025171143120\n","xyz");
+    viewergrid_17238552105552895[0][1].addLabel("NCCc1cc(O)c(O)cc1 ",{"position": {"x": 200.0, "y": 0, "z": 0}, "alignment": "topCenter", "fontSize": 24, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_17238552105552895[0][1].addLabel(" ",{"position": {"x": 200.0, "y": 300, "z": 0}, "alignment": "bottomCenter", "fontSize": 20, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_17238552105552895[0][0].setStyle({"stick": {}, "sphere": {"scale": 0.3}});
+    viewergrid_17238552105552895[0][1].setStyle({"stick": {}, "sphere": {"scale": 0.3}});
+    viewergrid_17238552105552895[0][0].zoomTo();
+    viewergrid_17238552105552895[0][1].zoomTo();
+viewergrid_17238552105552895[0][1].render();
+viewergrid_17238552105552895[0][0].render();
+});
+</script>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="titles-are-generated-automatically-from-identifier-information">Titles are generated automatically from identifier information<a class="headerlink" href="#titles-are-generated-automatically-from-identifier-information" title="Permanent link">&para;</a></h2>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="language-python highlight"><pre><span></span><code><span class="n">serotonin</span><span class="o">.</span><span class="n">add_identifiers</span><span class="p">({</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Serotonin&quot;</span><span class="p">})</span>
+<span class="n">dopamine</span><span class="o">.</span><span class="n">add_identifiers</span><span class="p">({</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Dopamine&quot;</span><span class="p">})</span>
+<span class="n">view</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">serotonin</span><span class="p">,</span> <span class="n">dopamine</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_html rendered_html output_subarea">
+<div style="display: flex; flex-wrap: wrap; justify-content: center;">
+<div id="3dmolviewer_1723855210561661" style="position: relative; width: 800px; height: 300px;">
+<p id="3dmolwarning_1723855210561661" style="background-color:#ffcccc;color:black">3Dmol.js failed to load for some reason.  Please check your browser console for error messages.<br/></p>
+</div>
+<script>
+
+var loadScriptAsync = function(uri){
+  return new Promise((resolve, reject) => {
+    //this is to ignore the existence of requirejs amd
+    var savedexports, savedmodule;
+    if (typeof exports !== 'undefined') savedexports = exports;
+    else exports = {}
+    if (typeof module !== 'undefined') savedmodule = module;
+    else module = {}
+
+    var tag = document.createElement('script');
+    tag.src = uri;
+    tag.async = true;
+    tag.onload = () => {
+        exports = savedexports;
+        module = savedmodule;
+        resolve();
+    };
+  var firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+});
+};
+
+if(typeof $3Dmolpromise === 'undefined') {
+$3Dmolpromise = null;
+  $3Dmolpromise = loadScriptAsync('https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.2.1-post1/3Dmol-min.js');
+}
+
+var viewer_1723855210561661 = null;
+var warn = document.getElementById("3dmolwarning_1723855210561661");
+if(warn) {
+    warn.parentNode.removeChild(warn);
+}
+$3Dmolpromise.then(function() {
+var viewergrid_1723855210561661 = null;
+viewergrid_1723855210561661 = $3Dmol.createViewerGrid(document.getElementById("3dmolviewer_1723855210561661"),{rows: 1, cols: 2, control_all: false},{backgroundColor:"white"});
+viewer_1723855210561661 = viewergrid_1723855210561661[0][0];
+viewergrid_1723855210561661[0][0].zoomTo();viewergrid_1723855210561661[0][1].zoomTo();  viewergrid_1723855210561661[0][0].addModel("25\nqcdata_charge=0 qcdata_multiplicity=1 qcdata__identifiers_name=Serotonin qcdata__identifiers_smiles=C1=CC2=C(C=C1O)C(=CN2)CCN qcdata__identifiers_canonical_smiles=NCCc1c[nH]c2ccc(O)cc12 qcdata__identifiers_canonical_smiles_program=rdkit\nC  2.80662837943892596 0.19461624510125644 1.62644004594558789\nC  2.18671738713131081 -1.04739462810659001 1.78559406544228305\nC  1.04205221631035050 -1.30371588331231392 1.01976405293294148\nC  0.51135558434941475 -0.38099887062730470 0.11625514708800186\nC  1.15528315276037841 0.86637271442856167 -0.02525252446684082\nC  2.29336987732469488 1.13099264862406690 0.73973086890098005\nO  2.94019505341360654 2.33042463772491804 0.64072408820936022\nC  -0.64248928597900123 -0.98139451755059748 -0.48590882876610791\nC  -0.77415410236114401 -2.23828935762225933 0.07514506173286904\nN  0.23947356255826094 -2.41856452406281708 0.97631545313932067\nC  -1.53584322201008616 -0.38941800438644519 -1.53453994105079805\nC  -2.55261258637334310 0.62389585158003458 -0.98757820497747850\nN  -2.03784623404194587 1.99659435506692651 -0.95736744415048758\nH  3.69504497676978971 0.43297752545155627 2.20497726891362067\nH  2.58244102558036603 -1.77972645463350809 2.48100386493334835\nH  0.75377724819234682 1.60007920276663640 -0.71439409236891127\nH  2.42717931676543630 2.89619196027562076 0.04027652711009141\nH  -1.50211112477823416 -3.02022181334629458 -0.09489126075898915\nH  0.38600652411385267 -3.24987117750598165 1.53133884665722397\nH  -0.92963077628609858 0.05707205393057579 -2.33283807432805279\nH  -2.09467533618915525 -1.20723015268739697 -2.00932783141162341\nH  -2.88582840927973061 0.34008317783131742 0.01697273380365259\nH  -3.43672981497666674 0.62051368655550287 -1.63562243768870519\nH  -1.87522970904775632 2.31753693807875072 -1.91053679716472602\nH  -2.75237370338658005 2.60947438642610452 -0.56628058767652500\n","xyz");
+    viewergrid_1723855210561661[0][0].addLabel("Serotonin ",{"position": {"x": 200.0, "y": 0, "z": 0}, "alignment": "topCenter", "fontSize": 24, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_1723855210561661[0][0].addLabel(" ",{"position": {"x": 200.0, "y": 300, "z": 0}, "alignment": "bottomCenter", "fontSize": 20, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_1723855210561661[0][1].addModel("22\nqcdata_charge=0 qcdata_multiplicity=1 qcdata__identifiers_name=Dopamine qcdata__identifiers_smiles=NCCc1cc(O)c(O)cc1 qcdata__identifiers_canonical_smiles=NCCc1ccc(O)c(O)c1 qcdata__identifiers_canonical_smiles_program=rdkit\nN  -3.82831747238149411 0.47797332750282095 0.01557447593432387\nC  -2.44674839009917244 0.29824270330147828 0.46007480321415595\nC  -1.52880033545415484 -0.05563548727794237 -0.71454775657072400\nC  -0.09796828627024931 -0.23799898591558089 -0.26762190827144189\nC  0.78504240481459764 0.85189771715028473 -0.25193925437347586\nC  2.09451440396264932 0.66832214640712939 0.17205335000858096\nO  2.96010598303404127 1.72266094692922955 0.11710946822371407\nC  2.52773316430253425 -0.57657842472618315 0.61755030715260861\nO  3.79030556489432247 -0.73455878561961718 1.11146772189513365\nC  1.67273080040658995 -1.66802681757307858 0.59760341369749626\nC  0.35783253729462089 -1.49806038997911073 0.15693275419270553\nH  -4.40489466202813951 0.73725422629241977 0.81557357253781837\nH  -3.87864135414258637 1.26170786257199774 -0.63454846411673349\nH  -2.41980660609490750 -0.49757616273153082 1.21313769218607792\nH  -2.10477651018549006 1.21810035735981526 0.94861016814279753\nH  -1.57120839716960137 0.72925341488762829 -1.48105122838296621\nH  -1.87565617658815365 -0.97446770548190109 -1.20519382390179808\nH  0.46217962862540890 1.83450272373461098 -0.58477475867416895\nH  3.81313081254230157 1.34944717949571857 -0.17258231972863564\nH  3.99137606415011925 0.08721044955844016 1.59586279009137133\nH  2.01656187383775398 -2.63990545674299470 0.93837385160721420\nH  -0.31469504745108745 -2.35376483914379797 0.15270025171143120\n","xyz");
+    viewergrid_1723855210561661[0][1].addLabel("Dopamine ",{"position": {"x": 200.0, "y": 0, "z": 0}, "alignment": "topCenter", "fontSize": 24, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_1723855210561661[0][1].addLabel(" ",{"position": {"x": 200.0, "y": 300, "z": 0}, "alignment": "bottomCenter", "fontSize": 20, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_1723855210561661[0][0].setStyle({"stick": {}, "sphere": {"scale": 0.3}});
+    viewergrid_1723855210561661[0][1].setStyle({"stick": {}, "sphere": {"scale": 0.3}});
+    viewergrid_1723855210561661[0][0].zoomTo();
+    viewergrid_1723855210561661[0][1].zoomTo();
+viewergrid_1723855210561661[0][1].render();
+viewergrid_1723855210561661[0][0].render();
+});
+</script>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="or-manually-add-titles-or-subtitles">Or manually add titles or subtitles<a class="headerlink" href="#or-manually-add-titles-or-subtitles" title="Permanent link">&para;</a></h2>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="language-python highlight"><pre><span></span><code><span class="n">epinephrine</span> <span class="o">=</span> <span class="n">Structure</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="s2">&quot;CNC[C@H](O)c1ccc(O)c(O)c1&quot;</span><span class="p">)</span>
+<span class="n">glutamate</span> <span class="o">=</span> <span class="n">Structure</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="s2">&quot;C(CC(=O)O)[C@@H](C(=O)[O-])N&quot;</span><span class="p">)</span>
+<span class="n">view</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+    <span class="n">epinephrine</span><span class="p">,</span>
+    <span class="n">glutamate</span><span class="p">,</span>
+    <span class="n">titles</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Good morning ☀️&quot;</span><span class="p">,</span> <span class="s2">&quot;Glutamate 🧪&quot;</span><span class="p">],</span>
+    <span class="n">subtitles</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Charge: </span><span class="si">{</span><span class="n">glutamate</span><span class="o">.</span><span class="n">charge</span><span class="si">}</span><span class="s2"> Multiplicity: </span><span class="si">{</span><span class="n">glutamate</span><span class="o">.</span><span class="n">multiplicity</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">],</span>
+<span class="p">)</span>
+</code></pre></div>
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_html rendered_html output_subarea">
+<div style="display: flex; flex-wrap: wrap; justify-content: center;">
+<div id="3dmolviewer_1739837982664772" style="position: relative; width: 800px; height: 300px;">
+<p id="3dmolwarning_1739837982664772" style="background-color:#ffcccc;color:black">3Dmol.js failed to load for some reason.  Please check your browser console for error messages.<br/></p>
+</div>
+<script>
+
+var loadScriptAsync = function(uri){
+  return new Promise((resolve, reject) => {
+    //this is to ignore the existence of requirejs amd
+    var savedexports, savedmodule;
+    if (typeof exports !== 'undefined') savedexports = exports;
+    else exports = {}
+    if (typeof module !== 'undefined') savedmodule = module;
+    else module = {}
+
+    var tag = document.createElement('script');
+    tag.src = uri;
+    tag.async = true;
+    tag.onload = () => {
+        exports = savedexports;
+        module = savedmodule;
+        resolve();
+    };
+  var firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+});
+};
+
+if(typeof $3Dmolpromise === 'undefined') {
+$3Dmolpromise = null;
+  $3Dmolpromise = loadScriptAsync('https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.4.2/3Dmol-min.js');
+}
+
+var viewer_1739837982664772 = null;
+var warn = document.getElementById("3dmolwarning_1739837982664772");
+if(warn) {
+    warn.parentNode.removeChild(warn);
+}
+$3Dmolpromise.then(function() {
+var viewergrid_1739837982664772 = null;
+viewergrid_1739837982664772 = $3Dmol.createViewerGrid(document.getElementById("3dmolviewer_1739837982664772"),{rows: 1, cols: 2, control_all: false},{backgroundColor:"white"});
+viewer_1739837982664772 = viewergrid_1739837982664772[0][0];
+viewergrid_1739837982664772[0][0].zoomTo();viewergrid_1739837982664772[0][1].zoomTo();  viewergrid_1739837982664772[0][0].addModel("26\nqcdata_charge=0 qcdata_multiplicity=1 qcdata__identifiers_smiles=CNC[C@H](O)c1ccc(O)c(O)c1 qcdata__identifiers_canonical_smiles=CNC[C@H](O)c1ccc(O)c(O)c1 qcdata__identifiers_canonical_smiles_program=rdkit\nC  3.73927170151424448 1.20843901074132276 -0.37281840877081240\nN  3.34237634011471885 -0.12356056161574508 0.05755978062356290\nC  1.94165908569958345 -0.43306791535614803 -0.28530576798387813\nC  0.89689237650495279 0.28714854346442376 0.60438984089153258\nO  1.19346691712578057 0.04225885056740579 1.98549180222824040\nC  -0.52342036563916694 -0.14319345500040306 0.29302006877356779\nC  -0.97429595141738723 -1.43430708979455313 0.63064246059813978\nC  -2.28116945327332710 -1.83310769557481223 0.34396791957561673\nC  -3.13749098460630682 -0.94208830167755564 -0.28243096418979696\nO  -4.41571377403386744 -1.33122112994176778 -0.56247421378907136\nC  -2.70812684212081045 0.33646707703719192 -0.62660612618436784\nO  -3.60691400995144695 1.16185881007613712 -1.24447709250534833\nC  -1.40776086630236130 0.74423303701500743 -0.34487906212556502\nH  4.79670388060256592 1.36377396777734661 -0.13679916128721870\nH  3.16969652396560075 1.99269227830732354 0.13428683756604903\nH  3.62507083848816647 1.32541940155132942 -1.45524305050375680\nH  3.41637831662301883 -0.17877796252304309 1.07833662245728434\nH  1.75082216346380615 -0.23637534315038780 -1.34754509489640384\nH  1.83553185205859637 -1.51654390117308902 -0.15047584708577236\nH  0.97986436069195693 1.37069407885322403 0.46385876033668649\nH  0.35689268189460183 0.11039431773894248 2.47745990623749446\nH  -0.30366713528169986 -2.13830381288934968 1.12190168489634567\nH  -2.62597520000327211 -2.82899609159295551 0.60557205102931233\nH  -4.81883292234630112 -0.55441111545703015 -0.99857458811882482\nH  -3.16719572441693753 2.00868165909874952 -1.43182279133150248\nH  -1.07406380935427181 1.74189334351849268 -0.61500701420164128\n","xyz");
+    viewergrid_1739837982664772[0][0].addLabel("Good morning \u2600\ufe0f ",{"position": {"x": 200.0, "y": 0, "z": 0}, "alignment": "topCenter", "fontSize": 24, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_1739837982664772[0][0].addLabel(" ",{"position": {"x": 200.0, "y": 300, "z": 0}, "alignment": "bottomCenter", "fontSize": 20, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_1739837982664772[0][1].addModel("18\nqcdata_charge=-1 qcdata_multiplicity=1 qcdata__identifiers_smiles=C(CC(=O)O)[C@@H](C(=O)[O-])N qcdata__identifiers_canonical_smiles=N[C@@H](CCC(=O)O)C(=O)[O-] qcdata__identifiers_canonical_smiles_program=rdkit\nC  0.10153856257511122 0.31111637799946035 0.36501451972647281\nC  1.15071235067778654 -0.03651556319030587 -0.68785084458767254\nC  2.09009466612069295 1.10975326833482613 -0.92161123107485055\nO  3.29706703481421792 1.10868642068641043 -0.73373806694160104\nO  1.48708039389773550 2.20369560421860555 -1.42616620171855568\nC  -0.75948929185881087 -0.88911854123625855 0.75799841651692523\nC  -1.82557657396763351 -0.53657418366809906 1.87354577185506188\nO  -1.48942933132030753 0.34774898245672220 2.70795521877713874\nO  -2.90536083397776146 -1.20026615644983559 1.78383291384500908\nN  -1.47963389781495769 -1.44608699733038359 -0.43611510633850809\nH  -0.53691213467729348 1.12721249668945944 0.00139426798836988\nH  0.61032898065258701 0.70547821178184666 1.25433676428391183\nH  0.69777698580160086 -0.30652162716702575 -1.64779666524232549\nH  1.74813022687916386 -0.89391524037943915 -0.35636910258224636\nH  2.21186904146590058 2.85661879880955860 -1.48938181813524029\nH  -0.12535242470385385 -1.68479852367773231 1.16678969263923360\nH  -2.10333407619982671 -0.69639622302231741 -0.74733293396676082\nH  -2.16950967836495412 -2.08011710485771673 0.00357676072818436\n","xyz");
+    viewergrid_1739837982664772[0][1].addLabel("Glutamate \ud83e\uddea ",{"position": {"x": 200.0, "y": 0, "z": 0}, "alignment": "topCenter", "fontSize": 24, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_1739837982664772[0][1].addLabel("Charge: -1 Multiplicity: 1 ",{"position": {"x": 200.0, "y": 300, "z": 0}, "alignment": "bottomCenter", "fontSize": 20, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_1739837982664772[0][0].setStyle({"stick": {}, "sphere": {"scale": 0.3}});
+    viewergrid_1739837982664772[0][1].setStyle({"stick": {}, "sphere": {"scale": 0.3}});
+    viewergrid_1739837982664772[0][0].zoomTo();
+    viewergrid_1739837982664772[0][1].zoomTo();
+viewergrid_1739837982664772[0][1].render();
+viewergrid_1739837982664772[0][0].render();
+});
+</script>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="show-atom-indices-zero-indexed">Show Atom Indices (Zero Indexed)<a class="headerlink" href="#show-atom-indices-zero-indexed" title="Permanent link">&para;</a></h2>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="language-python highlight"><pre><span></span><code><span class="n">view</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+    <span class="n">epinephrine</span><span class="p">,</span> 
+    <span class="n">titles</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Epinephrine&quot;</span><span class="p">],</span> 
+    <span class="n">show_indices</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+</code></pre></div>
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_html rendered_html output_subarea">
+<div style="display: flex; flex-wrap: wrap; justify-content: center;">
+<div id="3dmolviewer_1739838166973903" style="position: relative; width: 400px; height: 300px;">
+<p id="3dmolwarning_1739838166973903" style="background-color:#ffcccc;color:black">3Dmol.js failed to load for some reason.  Please check your browser console for error messages.<br/></p>
+</div>
+<script>
+
+var loadScriptAsync = function(uri){
+  return new Promise((resolve, reject) => {
+    //this is to ignore the existence of requirejs amd
+    var savedexports, savedmodule;
+    if (typeof exports !== 'undefined') savedexports = exports;
+    else exports = {}
+    if (typeof module !== 'undefined') savedmodule = module;
+    else module = {}
+
+    var tag = document.createElement('script');
+    tag.src = uri;
+    tag.async = true;
+    tag.onload = () => {
+        exports = savedexports;
+        module = savedmodule;
+        resolve();
+    };
+  var firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+});
+};
+
+if(typeof $3Dmolpromise === 'undefined') {
+$3Dmolpromise = null;
+  $3Dmolpromise = loadScriptAsync('https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.4.2/3Dmol-min.js');
+}
+
+var viewer_1739838166973903 = null;
+var warn = document.getElementById("3dmolwarning_1739838166973903");
+if(warn) {
+    warn.parentNode.removeChild(warn);
+}
+$3Dmolpromise.then(function() {
+var viewergrid_1739838166973903 = null;
+viewergrid_1739838166973903 = $3Dmol.createViewerGrid(document.getElementById("3dmolviewer_1739838166973903"),{rows: 1, cols: 1, control_all: true},{backgroundColor:"white"});
+viewer_1739838166973903 = viewergrid_1739838166973903[0][0];
+viewergrid_1739838166973903[0][0].zoomTo(); viewergrid_1739838166973903[0][0].addModel("26\nqcdata_charge=0 qcdata_multiplicity=1 qcdata__identifiers_smiles=CNC[C@H](O)c1ccc(O)c(O)c1 qcdata__identifiers_canonical_smiles=CNC[C@H](O)c1ccc(O)c(O)c1 qcdata__identifiers_canonical_smiles_program=rdkit\nC  3.73927170151424448 1.20843901074132276 -0.37281840877081240\nN  3.34237634011471885 -0.12356056161574508 0.05755978062356290\nC  1.94165908569958345 -0.43306791535614803 -0.28530576798387813\nC  0.89689237650495279 0.28714854346442376 0.60438984089153258\nO  1.19346691712578057 0.04225885056740579 1.98549180222824040\nC  -0.52342036563916694 -0.14319345500040306 0.29302006877356779\nC  -0.97429595141738723 -1.43430708979455313 0.63064246059813978\nC  -2.28116945327332710 -1.83310769557481223 0.34396791957561673\nC  -3.13749098460630682 -0.94208830167755564 -0.28243096418979696\nO  -4.41571377403386744 -1.33122112994176778 -0.56247421378907136\nC  -2.70812684212081045 0.33646707703719192 -0.62660612618436784\nO  -3.60691400995144695 1.16185881007613712 -1.24447709250534833\nC  -1.40776086630236130 0.74423303701500743 -0.34487906212556502\nH  4.79670388060256592 1.36377396777734661 -0.13679916128721870\nH  3.16969652396560075 1.99269227830732354 0.13428683756604903\nH  3.62507083848816647 1.32541940155132942 -1.45524305050375680\nH  3.41637831662301883 -0.17877796252304309 1.07833662245728434\nH  1.75082216346380615 -0.23637534315038780 -1.34754509489640384\nH  1.83553185205859637 -1.51654390117308902 -0.15047584708577236\nH  0.97986436069195693 1.37069407885322403 0.46385876033668649\nH  0.35689268189460183 0.11039431773894248 2.47745990623749446\nH  -0.30366713528169986 -2.13830381288934968 1.12190168489634567\nH  -2.62597520000327211 -2.82899609159295551 0.60557205102931233\nH  -4.81883292234630112 -0.55441111545703015 -0.99857458811882482\nH  -3.16719572441693753 2.00868165909874952 -1.43182279133150248\nH  -1.07406380935427181 1.74189334351849268 -0.61500701420164128\n","xyz");
+    viewergrid_1739838166973903[0][0].addLabel("Epinephrine ",{"position": {"x": 200.0, "y": 0, "z": 0}, "alignment": "topCenter", "fontSize": 24, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_1739838166973903[0][0].addLabel(" ",{"position": {"x": 200.0, "y": 300, "z": 0}, "alignment": "bottomCenter", "fontSize": 20, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_1739838166973903[0][0].addLabel("0",{"position": {"x": 3.7392717015142445, "y": 1.2084390107413228, "z": -0.3728184087708124}});
+    viewergrid_1739838166973903[0][0].addLabel("1",{"position": {"x": 3.342376340114719, "y": -0.12356056161574508, "z": 0.0575597806235629}});
+    viewergrid_1739838166973903[0][0].addLabel("2",{"position": {"x": 1.9416590856995835, "y": -0.433067915356148, "z": -0.28530576798387813}});
+    viewergrid_1739838166973903[0][0].addLabel("3",{"position": {"x": 0.8968923765049528, "y": 0.28714854346442376, "z": 0.6043898408915326}});
+    viewergrid_1739838166973903[0][0].addLabel("4",{"position": {"x": 1.1934669171257806, "y": 0.04225885056740579, "z": 1.9854918022282404}});
+    viewergrid_1739838166973903[0][0].addLabel("5",{"position": {"x": -0.5234203656391669, "y": -0.14319345500040306, "z": 0.2930200687735678}});
+    viewergrid_1739838166973903[0][0].addLabel("6",{"position": {"x": -0.9742959514173872, "y": -1.4343070897945531, "z": 0.6306424605981398}});
+    viewergrid_1739838166973903[0][0].addLabel("7",{"position": {"x": -2.281169453273327, "y": -1.8331076955748122, "z": 0.34396791957561673}});
+    viewergrid_1739838166973903[0][0].addLabel("8",{"position": {"x": -3.137490984606307, "y": -0.9420883016775556, "z": -0.28243096418979696}});
+    viewergrid_1739838166973903[0][0].addLabel("9",{"position": {"x": -4.4157137740338674, "y": -1.3312211299417678, "z": -0.5624742137890714}});
+    viewergrid_1739838166973903[0][0].addLabel("10",{"position": {"x": -2.7081268421208105, "y": 0.3364670770371919, "z": -0.6266061261843678}});
+    viewergrid_1739838166973903[0][0].addLabel("11",{"position": {"x": -3.606914009951447, "y": 1.1618588100761371, "z": -1.2444770925053483}});
+    viewergrid_1739838166973903[0][0].addLabel("12",{"position": {"x": -1.4077608663023613, "y": 0.7442330370150074, "z": -0.344879062125565}});
+    viewergrid_1739838166973903[0][0].addLabel("13",{"position": {"x": 4.796703880602566, "y": 1.3637739677773466, "z": -0.1367991612872187}});
+    viewergrid_1739838166973903[0][0].addLabel("14",{"position": {"x": 3.1696965239656008, "y": 1.9926922783073235, "z": 0.13428683756604903}});
+    viewergrid_1739838166973903[0][0].addLabel("15",{"position": {"x": 3.6250708384881665, "y": 1.3254194015513294, "z": -1.4552430505037568}});
+    viewergrid_1739838166973903[0][0].addLabel("16",{"position": {"x": 3.416378316623019, "y": -0.1787779625230431, "z": 1.0783366224572843}});
+    viewergrid_1739838166973903[0][0].addLabel("17",{"position": {"x": 1.7508221634638061, "y": -0.2363753431503878, "z": -1.3475450948964038}});
+    viewergrid_1739838166973903[0][0].addLabel("18",{"position": {"x": 1.8355318520585964, "y": -1.516543901173089, "z": -0.15047584708577236}});
+    viewergrid_1739838166973903[0][0].addLabel("19",{"position": {"x": 0.9798643606919569, "y": 1.370694078853224, "z": 0.4638587603366865}});
+    viewergrid_1739838166973903[0][0].addLabel("20",{"position": {"x": 0.3568926818946018, "y": 0.11039431773894248, "z": 2.4774599062374945}});
+    viewergrid_1739838166973903[0][0].addLabel("21",{"position": {"x": -0.30366713528169986, "y": -2.1383038128893497, "z": 1.1219016848963457}});
+    viewergrid_1739838166973903[0][0].addLabel("22",{"position": {"x": -2.625975200003272, "y": -2.8289960915929555, "z": 0.6055720510293123}});
+    viewergrid_1739838166973903[0][0].addLabel("23",{"position": {"x": -4.818832922346301, "y": -0.5544111154570301, "z": -0.9985745881188248}});
+    viewergrid_1739838166973903[0][0].addLabel("24",{"position": {"x": -3.1671957244169375, "y": 2.0086816590987495, "z": -1.4318227913315025}});
+    viewergrid_1739838166973903[0][0].addLabel("25",{"position": {"x": -1.0740638093542718, "y": 1.7418933435184927, "z": -0.6150070142016413}});
+    viewergrid_1739838166973903[0][0].setStyle({"stick": {}, "sphere": {"scale": 0.3}});
+    viewergrid_1739838166973903[0][0].zoomTo();
+viewergrid_1739838166973903[0][0].render();
+});
+</script>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="measure-distances-between-atoms">Measure Distances Between Atoms<a class="headerlink" href="#measure-distances-between-atoms" title="Permanent link">&para;</a></h2>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="language-python highlight"><pre><span></span><code><span class="n">view</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+    <span class="n">epinephrine</span><span class="p">,</span> 
+    <span class="n">titles</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Epinephrine&quot;</span><span class="p">],</span> 
+    <span class="n">distances</span><span class="o">=</span><span class="p">[(</span><span class="mi">17</span><span class="p">,</span><span class="mi">25</span><span class="p">),</span> <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">21</span><span class="p">)],</span> 
+    <span class="n">length_unit</span><span class="o">=</span><span class="s2">&quot;angstrom&quot;</span>
+<span class="p">)</span>
+</code></pre></div>
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_html rendered_html output_subarea">
+<div style="display: flex; flex-wrap: wrap; justify-content: center;">
+<div id="3dmolviewer_1739838167801321" style="position: relative; width: 400px; height: 300px;">
+<p id="3dmolwarning_1739838167801321" style="background-color:#ffcccc;color:black">3Dmol.js failed to load for some reason.  Please check your browser console for error messages.<br/></p>
+</div>
+<script>
+
+var loadScriptAsync = function(uri){
+  return new Promise((resolve, reject) => {
+    //this is to ignore the existence of requirejs amd
+    var savedexports, savedmodule;
+    if (typeof exports !== 'undefined') savedexports = exports;
+    else exports = {}
+    if (typeof module !== 'undefined') savedmodule = module;
+    else module = {}
+
+    var tag = document.createElement('script');
+    tag.src = uri;
+    tag.async = true;
+    tag.onload = () => {
+        exports = savedexports;
+        module = savedmodule;
+        resolve();
+    };
+  var firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+});
+};
+
+if(typeof $3Dmolpromise === 'undefined') {
+$3Dmolpromise = null;
+  $3Dmolpromise = loadScriptAsync('https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.4.2/3Dmol-min.js');
+}
+
+var viewer_1739838167801321 = null;
+var warn = document.getElementById("3dmolwarning_1739838167801321");
+if(warn) {
+    warn.parentNode.removeChild(warn);
+}
+$3Dmolpromise.then(function() {
+var viewergrid_1739838167801321 = null;
+viewergrid_1739838167801321 = $3Dmol.createViewerGrid(document.getElementById("3dmolviewer_1739838167801321"),{rows: 1, cols: 1, control_all: true},{backgroundColor:"white"});
+viewer_1739838167801321 = viewergrid_1739838167801321[0][0];
+viewergrid_1739838167801321[0][0].zoomTo(); viewergrid_1739838167801321[0][0].addModel("26\nqcdata_charge=0 qcdata_multiplicity=1 qcdata__identifiers_smiles=CNC[C@H](O)c1ccc(O)c(O)c1 qcdata__identifiers_canonical_smiles=CNC[C@H](O)c1ccc(O)c(O)c1 qcdata__identifiers_canonical_smiles_program=rdkit\nC  3.73927170151424448 1.20843901074132276 -0.37281840877081240\nN  3.34237634011471885 -0.12356056161574508 0.05755978062356290\nC  1.94165908569958345 -0.43306791535614803 -0.28530576798387813\nC  0.89689237650495279 0.28714854346442376 0.60438984089153258\nO  1.19346691712578057 0.04225885056740579 1.98549180222824040\nC  -0.52342036563916694 -0.14319345500040306 0.29302006877356779\nC  -0.97429595141738723 -1.43430708979455313 0.63064246059813978\nC  -2.28116945327332710 -1.83310769557481223 0.34396791957561673\nC  -3.13749098460630682 -0.94208830167755564 -0.28243096418979696\nO  -4.41571377403386744 -1.33122112994176778 -0.56247421378907136\nC  -2.70812684212081045 0.33646707703719192 -0.62660612618436784\nO  -3.60691400995144695 1.16185881007613712 -1.24447709250534833\nC  -1.40776086630236130 0.74423303701500743 -0.34487906212556502\nH  4.79670388060256592 1.36377396777734661 -0.13679916128721870\nH  3.16969652396560075 1.99269227830732354 0.13428683756604903\nH  3.62507083848816647 1.32541940155132942 -1.45524305050375680\nH  3.41637831662301883 -0.17877796252304309 1.07833662245728434\nH  1.75082216346380615 -0.23637534315038780 -1.34754509489640384\nH  1.83553185205859637 -1.51654390117308902 -0.15047584708577236\nH  0.97986436069195693 1.37069407885322403 0.46385876033668649\nH  0.35689268189460183 0.11039431773894248 2.47745990623749446\nH  -0.30366713528169986 -2.13830381288934968 1.12190168489634567\nH  -2.62597520000327211 -2.82899609159295551 0.60557205102931233\nH  -4.81883292234630112 -0.55441111545703015 -0.99857458811882482\nH  -3.16719572441693753 2.00868165909874952 -1.43182279133150248\nH  -1.07406380935427181 1.74189334351849268 -0.61500701420164128\n","xyz");
+    viewergrid_1739838167801321[0][0].addLabel("Epinephrine ",{"position": {"x": 200.0, "y": 0, "z": 0}, "alignment": "topCenter", "fontSize": 24, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_1739838167801321[0][0].addLabel(" ",{"position": {"x": 200.0, "y": 300, "z": 0}, "alignment": "bottomCenter", "fontSize": 20, "backgroundOpacity": 0, "fontColor": "black", "useScreen": true});
+    viewergrid_1739838167801321[0][0].addLine({"start": {"x": 1.7508221634638061, "y": -0.2363753431503878, "z": -1.3475450948964038}, "end": {"x": -1.0740638093542718, "y": 1.7418933435184927, "z": -0.6150070142016413}, "color": "red", "linewidth": 2});
+    viewergrid_1739838167801321[0][0].addLabel("3.53 \u00c5",{"position": {"x": 0.33837917705476717, "y": 0.7527590001840524, "z": -0.9812760545490226}, "backgroundColor": "white", "fontSize": 14, "fontColor": "black"});
+    viewergrid_1739838167801321[0][0].addLine({"start": {"x": 0.3568926818946018, "y": 0.11039431773894248, "z": 2.4774599062374945}, "end": {"x": -0.30366713528169986, "y": -2.1383038128893497, "z": 1.1219016848963457}, "color": "red", "linewidth": 2});
+    viewergrid_1739838167801321[0][0].addLabel("2.71 \u00c5",{"position": {"x": 0.026612773306450982, "y": -1.0139547475752035, "z": 1.79968079556692}, "backgroundColor": "white", "fontSize": 14, "fontColor": "black"});
+    viewergrid_1739838167801321[0][0].setStyle({"stick": {}, "sphere": {"scale": 0.3}});
+    viewergrid_1739838167801321[0][0].zoomTo();
+viewergrid_1739838167801321[0][0].render();
+});
+</script>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.tabs.link", "content.code.annotate", "content.code.copy", "announce.dismiss", "navigation.tabs", "navigation.instant", "navigation.instant.prefetch", "navigation.instant.preview", "navigation.instant.progress", "navigation.path", "navigation.sections", "navigation.top", "navigation.tracking", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
