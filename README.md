@@ -45,7 +45,7 @@ prog_input = ProgramInput(
     program="terachem",
     structure=caffeine,
     calctype="energy",
-    model={"method": "hf", "basis": "sto-3g"},
+    model={"method": "wb97xd3", "basis": "def2-svp"},
     keywords={"purify": "no", "restricted": False},
     extras={"comment": "This is a comment"}, # Anything extra not in the schema
 )
@@ -163,7 +163,7 @@ data = SinglePointData(
 output = ProgramOutput(
     input_data=ProgramInput(
         program="terachem", calctype="energy", structure=caffeine,
-        model={"method": "hf", "basis": "sto-3g"},
+        model={"method": "wb97xd3", "basis": "def2-svp"},
     ),
     success=True,
     results=data,
