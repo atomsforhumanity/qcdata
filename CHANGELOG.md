@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.20.2] - 2026-10-20
+
 ### Changed
 
 - `SinglePointData.normal_modes_cartesian` is defined precisely: each mode is a Cartesian displacement (not mass-weighted) scaled to unit length, dimensionless, in the input structure's frame and atom order, ordered like `freqs_wavenumber`, with arbitrary sign. The previous description ("displacements in Bohr") left the scale undefined, and programs disagreed.
@@ -726,7 +728,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - `SinglePointComputedProperties`
   - `Wavefunction`
 
-[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.20.1...HEAD
+[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.20.2...HEAD
+[0.20.2]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.20.2
 [0.20.1]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.20.1
 [0.20.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.20.0
 [0.19.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.19.0
