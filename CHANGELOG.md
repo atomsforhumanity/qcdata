@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
+- `SinglePointData.normal_modes_cartesian` is defined precisely: each mode is a Cartesian displacement (not mass-weighted) scaled to unit length, dimensionless, in the input structure's frame and atom order, ordered like `freqs_wavenumber`, with arbitrary sign. The previous description ("displacements in Bohr") left the scale undefined, and programs disagreed.
 - The documentation site is built and published by a Docs workflow on every release tag (or by hand), instead of locally. Pinned `pymdown-extensions` below 11, which broke the docs build.
 
 ## [0.20.1] - 2026-10-14

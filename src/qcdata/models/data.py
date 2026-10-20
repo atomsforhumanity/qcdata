@@ -118,9 +118,14 @@ class SinglePointData(FileData, CalcInfoData):
 
         wavefunction: Wavefunction data from the calculation.
 
-        freqs_wavenumber: The frequencies of the structure in wavenumbers.
-        normal_modes_cartesian: 3D n_vibmodes x n_atoms x 3 array containing
-            un-mass-weighted Cartesian displacements of each normal mode in Bohr.
+        freqs_wavenumber: Harmonic vibrational frequencies in wavenumbers (cm^-1),
+            negative for imaginary modes.
+        normal_modes_cartesian: n_vibmodes x n_atoms x 3 array of normal modes, one per
+            entry of ``freqs_wavenumber`` and in the same order. Each mode is a
+            Cartesian displacement (not mass-weighted) scaled to unit length, in the
+            input structure's frame and atom order; it is dimensionless. The sign of a
+            mode is arbitrary. Multiplying a mode by the square root of each atom's
+            mass and normalizing gives the eigenvector of the mass-weighted Hessian.
         gibbs_free_energy: Gibbs free energy (i.e. thermochemical analysis) in Hartrees
             of a system where translation / rotation / vibration degrees of freedom are
             approximated using ideal gas / rigid rotor / harmonic oscillator
