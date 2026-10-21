@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Added
+
+- Supports Python 3.15; CI tests the oldest (3.11) and newest (3.15) supported versions.
+
 ### Changed
 
 - `CalcType` and `LengthUnit` are `enum.StrEnum`s: `str()`, `format()`, and f-strings give the value (`"energy"`) on every supported Python. With `(str, Enum)`, f-strings gave `"energy"` on Python 3.11 but `"CalcType.energy"` on 3.12 and later, as `str()` always did. Equality with strings, JSON, and validation are unchanged.
