@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import sys
 import warnings
-from typing import Any, Generic, Literal, get_args
+from typing import Any, Generic, Literal, Self, get_args
 
 from pydantic import ValidationInfo, field_validator, model_validator
-from typing_extensions import Self
 
 from .base_models import ExecutionInfo, QCDataBaseModel
 from .data import (

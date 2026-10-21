@@ -5,7 +5,7 @@ description = "Beautiful and user friendly data structures for quantum chemistry
 readme = "README.md"
 authors = [{ name = "Colton Hicks", email = "github@coltonhicks.com" }]
 license = { file = "LICENSE" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 keywords = ["quantum-chemistry", "data-structures", "cheminformatics"]
 dependencies = [
     "pydantic>=2.0.0, !=2.0.1, !=2.1.0",
@@ -22,7 +22,6 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -92,12 +91,17 @@ build-backend = "hatchling.build"
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py311"
 extend-exclude = ["*.ipynb", "*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "D"]
-ignore = ["E501"] # line length is the formatter's job
+ignore = [
+    "E501", # line length is the formatter's job
+    # StrEnum would change str(CalcType.energy) from "CalcType.energy" to "energy";
+    # keep the (str, Enum) behavior unless that change is made deliberately.
+    "UP042",
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["qcdata", "tests"]
@@ -129,7 +133,7 @@ testpaths = ["tests"]
 addopts = "--strict-markers"
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 files = ["src", "tests", "scripts"]
 plugins = ["pydantic.mypy"]
 ignore_missing_imports = true
