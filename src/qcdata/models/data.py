@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 import numpy as np
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
-from typing_extensions import Self
 
 from qcdata.helper_types import (
     SerializableMatrix,

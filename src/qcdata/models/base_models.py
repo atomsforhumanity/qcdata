@@ -5,7 +5,7 @@ from abc import ABC
 from base64 import b64decode, b64encode
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
 import toml
@@ -18,7 +18,6 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from typing_extensions import Self
 
 from .. import _version
 from ..helper_types import StrOrPath

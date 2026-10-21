@@ -2,7 +2,7 @@
 
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 import numpy as np
 from pydantic import (
@@ -13,7 +13,6 @@ from pydantic import (
 )
 from qcref import constants
 from qcref import periodic_table as pt
-from typing_extensions import Self
 
 from qcdata.helper_types import SerializableMatrix
 

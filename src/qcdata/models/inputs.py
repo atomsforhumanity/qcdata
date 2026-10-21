@@ -1,10 +1,9 @@
 """Input models for quantum chemistry calculations."""
 
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, Self, TypeVar
 
 from pydantic import FieldSerializationInfo, field_serializer, field_validator
-from typing_extensions import Self
 
 from .base_models import CalcType, Files, Model
 from .structure import Structure
