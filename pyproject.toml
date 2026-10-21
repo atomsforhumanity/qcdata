@@ -26,6 +26,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries",
 ]
@@ -69,7 +70,9 @@ dev = [
     "matplotlib>=3.0.0",
     "py3Dmol>=2.2.1",
     "pint>=0.24.4",
-    "qcinf[all]>=0.4.1",
+    "qcinf>=0.4.1",
+    # qcinf[all] adds Open Babel, which has no Python 3.15 wheels yet.
+    "qcinf[all]>=0.4.1; python_version < '3.15'",
     "pre-commit-hooks>=5.0",
     "detect-secrets>=1.5",
     "typos>=1.30",
