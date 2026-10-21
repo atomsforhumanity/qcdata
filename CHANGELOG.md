@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.22.0] - 2026-10-21
+
 ### Added
 
 - Supports Python 3.15; CI tests the oldest (3.11) and newest (3.15) supported versions.
@@ -742,7 +744,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - `SinglePointComputedProperties`
   - `Wavefunction`
 
-[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.21.0...HEAD
+[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.22.0...HEAD
+[0.22.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.22.0
 [0.21.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.21.0
 [0.20.2]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.20.2
 [0.20.1]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.20.1
