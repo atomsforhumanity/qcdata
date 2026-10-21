@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.21.0] - 2026-10-21
+
 ### Changed
 
 - 🚨 Requires Python 3.11 or newer. Python 3.10 reached end of life in October 2026.
@@ -732,7 +734,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - `SinglePointComputedProperties`
   - `Wavefunction`
 
-[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.20.2...HEAD
+[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.21.0...HEAD
+[0.21.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.21.0
 [0.20.2]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.20.2
 [0.20.1]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.20.1
 [0.20.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.20.0
