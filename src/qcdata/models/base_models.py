@@ -3,7 +3,7 @@
 import json
 from abc import ABC
 from base64 import b64decode, b64encode
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self
 
@@ -29,7 +29,7 @@ if TYPE_CHECKING:  # pragma: no cover
 __all__ = ["Files", "Provenance", "ExecutionInfo", "Model", "CalcType", "LengthUnit"]
 
 
-class LengthUnit(str, Enum):
+class LengthUnit(StrEnum):
     """The unit of length.
 
     Attributes:
@@ -406,7 +406,7 @@ class ExecutionInfo(QCDataBaseModel):
     host_mem_gib: float | None = None
 
 
-class CalcType(str, Enum):
+class CalcType(StrEnum):
     """The Calculation type.
 
     Attributes:
