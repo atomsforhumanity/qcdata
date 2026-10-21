@@ -96,12 +96,7 @@ extend-exclude = ["*.ipynb", "*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "D"]
-ignore = [
-    "E501", # line length is the formatter's job
-    # StrEnum would change str(CalcType.energy) from "CalcType.energy" to "energy";
-    # keep the (str, Enum) behavior unless that change is made deliberately.
-    "UP042",
-]
+ignore = ["E501"] # line length is the formatter's job
 
 [tool.ruff.lint.isort]
 known-first-party = ["qcdata", "tests"]
