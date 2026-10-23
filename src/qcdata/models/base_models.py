@@ -167,7 +167,7 @@ class QCDataBaseModel(BaseModel, ABC):
             extension is `.toml`, the object will be saved as a `toml` file. If the file
             extension is `.xyz`, the object will be saved as an `xyz` file (for objects
             that support this format such as a `Structure` or an `OptimizationData`
-            which contains `.trajectory: list[Structure]`).
+            whose frames hold structures).
 
             Additionally, padding will be added to the file by default to make it more
             human-readable. You can adjust the amount of padding added by changing the

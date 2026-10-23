@@ -26,9 +26,9 @@ from qcdata import (
     [
         (FileData, {}),
         (SinglePointData, {"energy": -1.0}),
-        (OptimizationData, {"trajectory": []}),
+        (OptimizationData, {"frames": []}),
         (ConformerSearchData, {}),
-        (ScanData, {"trajectory": []}),
+        (ScanData, {"points": []}),
     ],
 )
 def test_required_result_provenance(cls, fields):
@@ -132,16 +132,14 @@ def test_nested_execution_and_provenance_roundtrip(
         success=True,
         results=OptimizationData(
             provenance=Provenance(program="geometric", program_version="1.0"),
-            trajectory=[step],
+            frames=[step],
         ),
         execution=ExecutionInfo(scratch_dir="/tmp/opt", wall_time=3),
     )
     output = ProgramOutput(
         input_data=prog_input_factory("scan"),
         success=True,
-        results=ScanData(
-            provenance=Provenance(program="scan-driver"), trajectory=[opt]
-        ),
+        results=ScanData(provenance=Provenance(program="scan-driver"), points=[opt]),
         execution=ExecutionInfo(
             scratch_dir="/tmp/scan",
             wall_time=5,
@@ -158,8 +156,8 @@ def test_nested_execution_and_provenance_roundtrip(
     assert pickle.loads(pickle.dumps(output)) == output
     assert ProgramOutput.model_validate_json(output.model_dump_json()) == output
     assert reopened.results.provenance.program == "scan-driver"
-    opt = reopened.results.trajectory[0]
-    step = opt.results.trajectory[0]
+    opt = reopened.results.points[0]
+    step = opt.results.frames[0]
     assert opt.results.provenance.program == "geometric"
     assert step.results.provenance.program == "terachem"
     assert step.results.provenance.program_version == "1.9"

@@ -30,9 +30,9 @@ The result type depends on the input, regardless of success or failure:
 | IRC `ProgramInput` | `PathData` |
 | Path-optimization `ProgramInput` | `PathOptimizationData` |
 
-Successful single-point calculations require the requested value; successful optimizations, scans, and path optimizations require a nonempty trajectory, successful IRCs require frames, and successful conformer searches require conformers. Failed calculations require a traceback and retain the corresponding scientific type, with empty or partial values allowed. Producer provenance is always required.
+Successful single-point calculations require the requested value; successful optimizations and IRCs require frames, scans require points, path optimizations require paths, and successful conformer searches require conformers. Failed calculations require a traceback and retain the corresponding scientific type, with empty or partial values allowed. Producer provenance is always required.
 
-When deserializing, `ProgramOutput` uses the input contract to select the result model. Empty scientific payloads therefore retain their type when saved and reopened, including inside trajectories. No additional serialized type tag is needed. Explicit generic types must agree with the input contract.
+When deserializing, `ProgramOutput` uses the input contract to select the result model. Empty scientific payloads therefore retain their type when saved and reopened, including inside frames and scan points. No additional serialized type tag is needed. Explicit generic types must agree with the input contract.
 
 `input_data` belongs on `ProgramOutput`, not inside `results`. Save the whole output when you need scientific values together with the requested calculation and execution context. Save a standalone data object when exchanging only scientific values and producer identity.
 
@@ -50,11 +50,10 @@ Standalone structured data now also requires explicit provenance.
 
 External callers must migrate too: qccodec should attach the parsed producer and version to the returned data; qccompute should supply `execution` and return the corresponding scientific data type even when a structured calculation fails without producing values.
 
-## Reconstructed trajectory records
+## Reconstructed frames
 
-Parsers may reconstruct trajectory entries from the parent calculation and saved
-structures and energies. Such entries describe recovered scientific evaluations,
-which need not be separate process invocations. An energy-only snapshot has
-`calctype="energy"`; a snapshot with a recovered gradient may use `"gradient"`.
-Every successful entry still satisfies the requested-value contract. Missing an
-optional gradient artifact does not by itself establish execution failure.
+Parsers reconstruct frames from what a program saved (structures and energies, sometimes
+gradients). Such frames describe recovered scientific evaluations, which need not be
+separate process invocations, and carry no input of their own: the parent output's input
+describes the calculation. A frame's `results` holds whatever was recovered; missing an
+optional gradient does not by itself make a frame a failure.

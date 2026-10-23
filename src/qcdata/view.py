@@ -35,6 +35,7 @@ from qcdata import (
     ConformerSearchData,
     Data,
     FileData,
+    Frame,
     Inputs,
     LengthUnit,
     OptimizationData,
@@ -696,17 +697,17 @@ def program_outputs(
 
             if conformer_rmsd_threshold is not None:
                 keep_indices = filter_conformers_indices(
-                    result.results.conformers,
+                    result.results.structures,
                     backend=conformer_rmsd_backend,
                     threshold=conformer_rmsd_threshold,
                     **(conformer_rmsd_kwargs or {}),
                 )
-                conformers = [result.results.conformers[i] for i in keep_indices]
+                conformers = [result.results.structures[i] for i in keep_indices]
                 energies_rel = result.results.conformer_energies_relative
                 if energies_rel.size:
                     energies_rel = energies_rel[keep_indices]
             else:
-                conformers = result.results.conformers
+                conformers = result.results.structures
                 energies_rel = result.results.conformer_energies_relative
 
             structures += conformers
@@ -739,7 +740,7 @@ def program_outputs(
                 # Determine the Structure to use
                 if isinstance(result.results, OptimizationData):
                     for_viewer: Structure | list[Structure]
-                    if not result.results.trajectory:
+                    if not result.results.frames:
                         for_viewer = result.input_data.require_structure()
                         title_extra += " (Initial Structure; no optimization steps)"
                     elif animate:
@@ -807,7 +808,7 @@ def program_outputs(
 
 
 def view(
-    *objs: ProgramOutput | Structure | list[Structure],
+    *objs: ProgramOutput | Frame | Structure | list[Structure],
     **kwargs: Any,
 ) -> None:
     """Display any qcdata objects in a Jupyter Notebook.
@@ -816,8 +817,9 @@ def view(
     any qcdata object.
 
     Args:
-        *objs: The ProgramOutput or Structure objects to view. May pass one or more
-            objects or one or more lists of Structure objects.
+        *objs: The ProgramOutput, Frame, or Structure objects to view. May pass one
+            or more objects or one or more lists of Structure objects. A Frame (a
+            step of an optimization or a point of a path) shows its structure.
         **kwargs: Additional keyword arguments to pass to the viewer functions.
 
     Returns:
@@ -836,6 +838,9 @@ def view(
 
         elif isinstance(obj, ProgramOutput):
             program_outputs(obj, **kwargs)
+
+        elif isinstance(obj, Frame):
+            structures(obj.structure, **kwargs)
 
         else:
             raise NotImplementedError(f"Viewing of {type(obj)} is not implemented.")

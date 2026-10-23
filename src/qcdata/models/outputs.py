@@ -131,13 +131,15 @@ class ProgramOutput(OutputBase, Generic[ProgramInputType, DataType]):
                 primary = self.input_data.calctype.value
                 if getattr(self.results, primary) is None:
                     raise ValueError(f"Missing the primary result: {primary}.")
-            elif isinstance(
-                self.results, (OptimizationData, ScanData, PathOptimizationData)
-            ):
-                if not self.results.trajectory:
-                    raise ValueError(
-                        "Successful calculations require a nonempty trajectory."
-                    )
+            elif isinstance(self.results, OptimizationData):
+                if not self.results.frames:
+                    raise ValueError("Successful optimizations require frames.")
+            elif isinstance(self.results, PathOptimizationData):
+                if not self.results.paths:
+                    raise ValueError("Successful path optimizations require paths.")
+            elif isinstance(self.results, ScanData):
+                if not self.results.points:
+                    raise ValueError("Successful scans require points.")
             elif isinstance(self.results, PathData):
                 if not self.results.frames:
                     raise ValueError("Successful path calculations require frames.")
