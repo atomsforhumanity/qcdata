@@ -276,8 +276,13 @@ class Frame(OutputBase):
         return value
 
     @classmethod
-    def from_output(cls, output: ProgramOutput[ProgramInput, SinglePointData]) -> Self:
-        """Record a child calculation's output as a step, at its input's structure."""
+    def from_output(cls, output: ProgramOutput[Any, Any]) -> Self:
+        """Record a child calculation's output as a step, at its input's structure.
+
+        Raises:
+            ValidationError: The output's results are not `SinglePointData`, or its
+                input has no single structure.
+        """
         return cls.model_validate(output)
 
 

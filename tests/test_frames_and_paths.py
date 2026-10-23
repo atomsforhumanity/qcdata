@@ -272,3 +272,16 @@ def test_scan_points_rename(opt_output):
     assert scan.points == [opt_output]
     with pytest.warns(FutureWarning, match="renamed to .points"):
         assert scan.trajectory == scan.points
+
+
+def test_from_output_and_from_spec_accept_wide_types(prog_output, water):
+    """from_output takes any ProgramOutput; from_spec takes a Mapping of structures."""
+    from types import MappingProxyType
+
+    wide: ProgramOutput = prog_output
+    assert Frame.from_output(wide).structure == water
+    spec = ProgramSpec(program="p", calctype="energy")
+    bound = ProgramInput.from_spec(
+        spec, water, structures=MappingProxyType({"reference": water})
+    )
+    assert bound.structures == {"reference": water}
