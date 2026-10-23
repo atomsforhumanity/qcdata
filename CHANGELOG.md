@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Changed
+
+- `Frame.from_output` accepts any `ProgramOutput` (its results are checked to be `SinglePointData` at runtime), so drivers need no casts for child outputs typed as `Data`.
+- `ProgramInput.from_spec` takes `structures` as any `Mapping`, so a `dict[str, Structure]` type-checks against the wider value type.
+
 ## [0.23.0] - 2026-10-23
 
 ### Added

@@ -1,5 +1,6 @@
 """Input models for quantum chemistry calculations."""
 
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Self, TypeVar
 
@@ -211,7 +212,7 @@ class ProgramInput(ProgramSpec):
         spec: ProgramSpec,
         structure: Structure | None = None,
         *,
-        structures: dict[str, Structure | list[Structure]] | None = None,
+        structures: Mapping[str, Structure | list[Structure]] | None = None,
     ) -> Self:
         """Bind a specification to primary and additional role-named structures.
 
@@ -223,7 +224,7 @@ class ProgramInput(ProgramSpec):
         )
         values["structure"] = structure
         if structures is not None:
-            values["structures"] = structures
+            values["structures"] = dict(structures)
         return cls.model_validate(values)
 
 
