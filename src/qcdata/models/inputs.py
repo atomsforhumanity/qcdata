@@ -3,7 +3,12 @@
 from pathlib import Path
 from typing import Any, Self, TypeVar
 
-from pydantic import FieldSerializationInfo, field_serializer, field_validator
+from pydantic import (
+    FieldSerializationInfo,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from .base_models import CalcType, Files, Model
 from .structure import Structure
@@ -98,13 +103,27 @@ class ProgramSpec(FileInput):
         )
 
 
+# Role in ``ProgramInput.structures`` holding the starting chain of a path optimization.
+INITIAL_CHAIN = "initial_chain"
+# Calculation types whose subject is a chain of structures rather than one structure.
+CHAIN_CALCTYPES = frozenset({CalcType.path_optimization})
+
+
 class ProgramInput(ProgramSpec):
     """A program specification bound to structures.
 
+    Most calculations are about one structure, ``structure``. A path optimization is
+    about a chain: its structures, endpoints included and in order, go in
+    ``structures["initial_chain"]`` and ``structure`` is left out. Validation enforces
+    this by calculation type, so ``structure`` is always set for every other one; use
+    ``require_structure()`` where a type checker needs to know that.
+
     Attributes:
-        structure: The required primary/start/reference structure.
-        structures: Additional complete structures identified by role, such as the
-            product endpoint of a nudged elastic band calculation.
+        structure: The primary/start/reference structure; None only for chain
+            calculation types (``path_optimization``).
+        structures: Additional complete structures identified by role, such as a
+            QM/MM environment, or a list of structures for a role that holds several
+            in order, such as ``"initial_chain"``.
 
     Example:
         ```python
@@ -126,16 +145,73 @@ class ProgramInput(ProgramSpec):
         ```
     """
 
-    structure: Structure
-    structures: dict[str, Structure] = {}
+    structure: Structure | None = None
+    structures: dict[str, Structure | list[Structure]] = {}
+
+    @model_validator(mode="after")
+    def _check_structures_for_calctype(self) -> Self:
+        """A chain calculation has a chain; every other one has a structure."""
+        if self.calctype in CHAIN_CALCTYPES:
+            if self.structure is not None:
+                raise ValueError(
+                    f"A {self.calctype.value} input takes its structures from "
+                    f"structures[{INITIAL_CHAIN!r}]; leave structure out."
+                )
+            chain = self.structures.get(INITIAL_CHAIN)
+            if not isinstance(chain, list) or len(chain) < 2:
+                raise ValueError(
+                    f"A {self.calctype.value} input needs structures"
+                    f"[{INITIAL_CHAIN!r}]: a list of at least two structures, "
+                    "endpoints included, in order."
+                )
+            if any(s.symbols != chain[0].symbols for s in chain):
+                raise ValueError(
+                    f"Every structure in structures[{INITIAL_CHAIN!r}] must have the "
+                    "same atoms in the same order."
+                )
+        elif self.structure is None:
+            raise ValueError(f"A {self.calctype.value} input requires a structure.")
+        return self
+
+    def require_structure(self) -> Structure:
+        """Return ``structure``, or raise if this input has none (a chain input).
+
+        Validation guarantees a structure for every calculation type except chain
+        types, so this only narrows the type for type checkers and gives a clear
+        error if a chain input reaches code that needs one structure.
+
+        Raises:
+            ValueError: The input carries a chain instead of one structure.
+        """
+        if self.structure is None:
+            raise ValueError(
+                f"This {self.calctype.value} input has no single structure; its "
+                f"structures are in structures[{INITIAL_CHAIN!r}]."
+            )
+        return self.structure
+
+    @property
+    def initial_chain(self) -> list[Structure]:
+        """The starting chain of a path optimization, endpoints included, in order.
+
+        Raises:
+            ValueError: The input has no chain.
+        """
+        chain = self.structures.get(INITIAL_CHAIN)
+        if not isinstance(chain, list):
+            raise ValueError(
+                f"This {self.calctype.value} input has no structures"
+                f"[{INITIAL_CHAIN!r}]."
+            )
+        return chain
 
     @classmethod
     def from_spec(
         cls,
         spec: ProgramSpec,
-        structure: Structure,
+        structure: Structure | None = None,
         *,
-        structures: dict[str, Structure] | None = None,
+        structures: dict[str, Structure | list[Structure]] | None = None,
     ) -> Self:
         """Bind a specification to primary and additional role-named structures.
 

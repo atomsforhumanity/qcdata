@@ -145,7 +145,8 @@ def test_json_schema(cls):
         )
         assert set(spec["required"]) == {"program", "calctype"}
     if cls is ProgramInput:
-        assert set(schema["required"]) == {"program", "calctype", "structure"}
+        # structure is optional in the schema; validation requires it by calctype.
+        assert set(schema["required"]) == {"program", "calctype"}
 
 
 @pytest.mark.parametrize(

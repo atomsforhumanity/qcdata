@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self, TypeVar
 
@@ -15,7 +16,7 @@ from qcdata.helper_types import (
     SerializableVector,
 )
 
-from .base_models import CalcType, Files, Provenance, QCDataBaseModel
+from .base_models import CalcType, Files, OutputBase, Provenance, QCDataBaseModel
 from .inputs import ProgramInput
 from .structure import Structure
 from .utils import to_multi_xyz
@@ -27,7 +28,10 @@ __all__ = [
     "FileData",
     "Wavefunction",
     "SinglePointData",
+    "Frame",
     "OptimizationData",
+    "PathData",
+    "PathOptimizationData",
     "ConformerSearchData",
     "ScanData",
     "StructuredData",
@@ -216,43 +220,150 @@ class SinglePointData(FileData, CalcInfoData):
         return getattr(self, calctype.value)
 
 
-class OptimizationData(FileData, CalcInfoData):
+class Frame(OutputBase):
+    """One structure inside a larger calculation, with what was computed there.
+
+    A step of an optimization, a point of an IRC, an image of a path. It is a
+    `ProgramOutput` without `input_data`: the parent calculation's input already
+    holds the program, model, and keywords, so a frame keeps only its structure.
+    ``ProgramInput.from_spec(parent_spec, frame.structure)`` rebuilds a step's input.
+
+    Attributes:
+        structure: The structure of this step.
+        results: What was computed at it; an empty `SinglePointData` (with the
+            producing program's provenance) when nothing was.
+    """
+
+    structure: Structure
+    results: SinglePointData
+
+    @model_validator(mode="before")
+    @classmethod
+    def _from_program_output(cls, value: Any) -> Any:
+        """Accept a ProgramOutput, or its saved form, as a frame.
+
+        Trajectories saved before frames existed hold one ProgramOutput per step; the
+        step's structure is its input's structure.
+        """
+        from .outputs import ProgramOutput
+
+        if isinstance(value, ProgramOutput):
+            value = {
+                "success": value.success,
+                "results": value.results,
+                "logs": value.logs,
+                "traceback": value.traceback,
+                "execution": value.execution,
+                "structure": value.input_data.structure,
+            }
+        if isinstance(value, dict) and "data" in value and "results" not in value:
+            warnings.warn(
+                "'data' has been renamed to 'results'. Please update your code accordingly.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            value = {**value, "results": value["data"]}
+            del value["data"]
+        if isinstance(value, dict) and "input_data" in value:
+            value = dict(value)
+            input_data = value.pop("input_data")
+            if "structure" not in value:
+                value["structure"] = (
+                    input_data["structure"]
+                    if isinstance(input_data, dict)
+                    else input_data.structure
+                )
+        return value
+
+    @classmethod
+    def from_output(cls, output: ProgramOutput[ProgramInput, SinglePointData]) -> Self:
+        """Record a child calculation's output as a step, at its input's structure."""
+        return cls.model_validate(output)
+
+
+class _FrameSeries:
+    """Reading a sequence of frames: structures, energies, xyz, and saving."""
+
+    def _series(self) -> list[Frame]:
+        raise NotImplementedError  # pragma: no cover
+
+    @property
+    def structures(self) -> list[Structure]:
+        """The structure of each frame, in order."""
+        return [frame.structure for frame in self._series()]
+
+    @property
+    def energies(self) -> np.ndarray:
+        """The energy of each frame in Hartree, `np.nan` where none was computed."""
+        return np.array(
+            [
+                frame.results.energy if frame.results.energy is not None else np.nan
+                for frame in self._series()
+            ],
+            dtype=float,
+        )
+
+    def to_xyz(self) -> str:
+        """Return the frames as a multi-structure `xyz` string."""
+        return to_multi_xyz(self.structures)
+
+    def save(
+        self,
+        filepath: Path | str,
+        exclude_none: bool = True,
+        exclude_unset: bool = True,
+        indent: int = 4,
+        **kwargs: Any,
+    ) -> None:
+        """Save to a file; a `.xyz` extension writes the frames' structures.
+
+        Args:
+            filepath: The path to write.
+            exclude_none: If True, attributes with a value of None are not written.
+            exclude_unset: If True, attributes that have not been set are not written.
+                Defaults to True for compact files.
+            indent: The number of spaces to use for indentation in JSON and YAML
+                files. Ignored for `.xyz` files.
+            **kwargs: Additional keyword arguments to pass to the json serializer.
+        """
+        filepath = Path(filepath)
+        if filepath.suffix == ".xyz":
+            filepath.write_text(self.to_xyz())
+            return
+        super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)  # type: ignore[misc]
+
+
+def _check_same_atoms(structures: list[Structure], what: str) -> None:
+    """Raise if the structures do not share their atoms in the same order."""
+    if structures and any(s.symbols != structures[0].symbols for s in structures):
+        raise ValueError(f"Every {what} must have the same atoms in the same order.")
+
+
+class OptimizationData(_FrameSeries, FileData, CalcInfoData):
     """Computed data for an optimization (may be for a minimum or transition state).
 
     Attributes:
-        energies: The energies for each step of the optimization.
-        structures: The Structure objects for each step of the optimization.
-        final_structure: The final, optimized Structure.
-        trajectory: The ProgramOutput objects for each step of the optimization.
+        trajectory: One `Frame` per optimizer step: its structure and what was
+            computed there.
+        energies: `@property` The energy of each step.
+        structures: `@property` The structure of each step.
+        final_structure: `@property` The final, optimized structure.
     """
 
-    trajectory: list[ProgramOutput[ProgramInput, SinglePointData]] = []
+    trajectory: list[Frame] = []
+
+    def _series(self) -> list[Frame]:
+        return self.trajectory
 
     @property
     def final_structure(self) -> Structure | None:
         """The last evaluated structure, or None when there are no steps."""
-        return self.structures[-1] if self.trajectory else None
+        return self.trajectory[-1].structure if self.trajectory else None
 
     @property
     def final_energy(self) -> float | None:
         """The final step's energy, None for no steps, or `np.nan` if unavailable."""
         return self.energies[-1] if self.trajectory else None
-
-    @property
-    def energies(self) -> np.ndarray:
-        """The energies for each step of the optimization."""
-        return np.array(
-            [
-                output.results.energy if output.results.energy is not None else np.nan
-                for output in self.trajectory
-            ],
-            dtype=float,
-        )
-
-    @property
-    def structures(self) -> list[Structure]:
-        """The Structure objects for each step of the optimization."""
-        return [output.input_data.structure for output in self.trajectory]
 
     def return_result(self, calctype: CalcType) -> Structure | None:
         """Return the primary result of the optimization.
@@ -275,41 +386,114 @@ class OptimizationData(FileData, CalcInfoData):
             ("structures", "[...]"),
         ]
 
+
+class PathData(_FrameSeries, FileData):
+    """A path of structures through a reaction: an IRC, or a chain of images.
+
+    For an IRC the frames run from the end of the reverse branch, through the
+    transition state, to the end of the forward branch. For a chain (NEB, string,
+    growing string) they are the images in order, endpoints included.
+
+    Attributes:
+        frames: The structures along the path, in order, with what was computed at
+            each.
+        ts_index: The position of the transition state in `frames`, if the path has
+            one: the starting saddle point of an IRC, or the highest (climbing) image
+            of a chain.
+        energies: `@property` The energy of each frame.
+        structures: `@property` The structure of each frame.
+    """
+
+    frames: list[Frame] = []
+    ts_index: int | None = None
+
+    def _series(self) -> list[Frame]:
+        return self.frames
+
+    @model_validator(mode="after")
+    def _check_path(self) -> Self:
+        """Frames share their atoms; the transition state is one of them."""
+        _check_same_atoms(self.structures, "frame of a path")
+        if self.ts_index is not None and not 0 <= self.ts_index < len(self.frames):
+            raise ValueError(
+                f"ts_index {self.ts_index} is outside the {len(self.frames)} frames."
+            )
+        return self
+
+    @property
+    def transition_state(self) -> Frame | None:
+        """The frame at `ts_index`, or None."""
+        return self.frames[self.ts_index] if self.ts_index is not None else None
+
+    @property
+    def forward_barrier(self) -> float | None:
+        """The transition state's energy above the first frame, in Hartree."""
+        return self._barrier(0)
+
+    @property
+    def reverse_barrier(self) -> float | None:
+        """The transition state's energy above the last frame, in Hartree."""
+        return self._barrier(-1)
+
+    def _barrier(self, end: int) -> float | None:
+        if self.ts_index is None or not self.frames:
+            return None
+        energies = self.energies
+        barrier = float(energies[self.ts_index] - energies[end])
+        return None if np.isnan(barrier) else barrier
+
+    def return_result(self, calctype: CalcType) -> list[Structure]:
+        """Return the primary result: the structures along the path."""
+        return self.structures
+
+    def __repr_args__(self) -> list[tuple[str, str]]:
+        """Avoid printing every frame."""
+        return [
+            ("frames", f"[{len(self.frames)} frames]"),
+            ("ts_index", f"{self.ts_index}"),
+        ]
+
+
+class PathOptimizationData(FileData):
+    """Computed data for a path optimization (NEB, string, growing string, ...).
+
+    Like an optimization's trajectory of steps, but each step is a whole path.
+
+    Attributes:
+        trajectory: The path at each iteration, the optimized one last.
+        final_path: `@property` The last path, or None when there are none.
+        energies: `@property` The energy of each frame of the final path.
+        structures: `@property` The structures of the final path.
+    """
+
+    trajectory: list[PathData] = []
+
+    @property
+    def final_path(self) -> PathData | None:
+        """The optimized (last) path, or None when there are no iterations."""
+        return self.trajectory[-1] if self.trajectory else None
+
+    @property
+    def structures(self) -> list[Structure]:
+        """The structures of the final path."""
+        return self.final_path.structures if self.final_path else []
+
+    @property
+    def energies(self) -> np.ndarray:
+        """The energies of the final path's frames, in Hartree."""
+        return self.final_path.energies if self.final_path else np.array([])
+
     def to_xyz(self) -> str:
-        """Return the trajectory as an `xyz` string."""
-        return to_multi_xyz(
-            prog_output.input_data.structure for prog_output in self.trajectory
-        )
+        """Return the final path as a multi-structure `xyz` string."""
+        return to_multi_xyz(self.structures)
 
-    def save(
-        self,
-        filepath: Path | str,
-        exclude_none: bool = True,
-        exclude_unset: bool = True,
-        indent: int = 4,
-        **kwargs: Any,
-    ) -> None:
-        """Save an OptimizationOutput to a file.
+    def return_result(self, calctype: CalcType) -> PathData | None:
+        """Return the primary result: the final path."""
+        return self.final_path
 
-        Args:
-            filepath: The path to save the molecule to.
-            exclude_none: If True, attributes with a value of None will not be written
-                to the file.
-            exclude_unset: If True, attributes that have not been set will not be
-                written to the file. Defaults to True for compact files.
-            indent: The number of spaces to use for indentation in JSON and YAML
-                files. Ignored for `.xyz` files.
-            **kwargs: Additional keyword arguments to pass to the json serializer.
-
-        Note:
-            If the filepath has a `.xyz` extension, the trajectory will be saved to a
-            multi-structure `xyz` file.
-        """
-        filepath = Path(filepath)
-        if filepath.suffix == ".xyz":
-            filepath.write_text(self.to_xyz())
-            return
-        super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)
+    def __repr_args__(self) -> list[tuple[str, str]]:
+        """Avoid printing every path."""
+        return [("trajectory", f"[{len(self.trajectory)} paths]")]
 
 
 class ConformerSearchData(FileData):
@@ -360,6 +544,20 @@ class ConformerSearchData(FileData):
             self.rotamer_energies[:] = self.rotamer_energies[sorted_indices]
 
         return self
+
+    @property
+    def structures(self) -> list[Structure]:
+        """The conformers, lowest energy first (the shared reading interface)."""
+        return self.conformers
+
+    @property
+    def energies(self) -> np.ndarray:
+        """The conformers' energies in Hartree, lowest first."""
+        return self.conformer_energies
+
+    def to_xyz(self) -> str:
+        """Return the conformers as a multi-structure `xyz` string."""
+        return to_multi_xyz(self.conformers)
 
     @property
     def conformer_energies_relative(self) -> np.ndarray:
@@ -454,7 +652,14 @@ class ScanData(FileData, CalcInfoData):
         super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)
 
 
-StructuredData = SinglePointData | OptimizationData | ConformerSearchData | ScanData
+StructuredData = (
+    SinglePointData
+    | OptimizationData
+    | ConformerSearchData
+    | ScanData
+    | PathData
+    | PathOptimizationData
+)
 StructuredDataType = TypeVar("StructuredDataType", bound=StructuredData)
 Data = FileData | StructuredData
 DataType = TypeVar("DataType", bound=Data)
@@ -468,6 +673,8 @@ _DATA_TYPES: dict[CalcType, type[StructuredData]] = {
     CalcType.transition_state: OptimizationData,
     CalcType.conformer_search: ConformerSearchData,
     CalcType.scan: ScanData,
+    CalcType.irc: PathData,
+    CalcType.path_optimization: PathOptimizationData,
 }
 
 

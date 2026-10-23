@@ -6,6 +6,8 @@
 options:
 members: false
 
+`success`, `logs`, `traceback`, and `execution` come from `OutputBase`, which `ProgramOutput` shares with [`Frame`](./data.md#frames-structures-inside-a-calculation).
+
 ## Canonical results field
 
 Scientific models retain their `Data` names and can exist independently of an execution. Within `ProgramOutput`, that data is the calculation's `results`: use `output.results.energy`, `output.results.gradient`, or `output.results.final_structure`.
@@ -25,8 +27,10 @@ The result type depends on the input, regardless of success or failure:
 | Optimization or transition-state `ProgramInput` | `OptimizationData` |
 | Conformer-search `ProgramInput` | `ConformerSearchData` |
 | Scan `ProgramInput` | `ScanData` |
+| IRC `ProgramInput` | `PathData` |
+| Path-optimization `ProgramInput` | `PathOptimizationData` |
 
-Successful single-point calculations require the requested value; successful optimizations and scans require a nonempty trajectory, and successful conformer searches require conformers. Failed calculations require a traceback and retain the corresponding scientific type, with empty or partial values allowed. Producer provenance is always required.
+Successful single-point calculations require the requested value; successful optimizations, scans, and path optimizations require a nonempty trajectory, successful IRCs require frames, and successful conformer searches require conformers. Failed calculations require a traceback and retain the corresponding scientific type, with empty or partial values allowed. Producer provenance is always required.
 
 When deserializing, `ProgramOutput` uses the input contract to select the result model. Empty scientific payloads therefore retain their type when saved and reopened, including inside trajectories. No additional serialized type tag is needed. Explicit generic types must agree with the input contract.
 

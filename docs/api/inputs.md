@@ -30,7 +30,19 @@ Children can contain further `subprograms` to arbitrary depth. Each immediate ch
 
 This replaces `ProgramArgs`, `ProgramArgsSub`, and `DualProgramInput` without compatibility aliases. Migrate `subprogram` and `subprogram_args` to a `subprograms` list with an explicit `program` and `calctype` on each child. Existing serialized inputs also need these fields. QCSchema AtomicInput conversion requires a non-None model and raises `ValueError` otherwise.
 
-`ProgramInput.structure` is always the primary/start/reference structure for the calculation. Calculations that require additional complete structures can provide them by role name with `ProgramInput.structures`, for example `structures={"product": product_structure}` for a nudged elastic band calculation where `structure` is the reactant endpoint. Calculation-specific tools should validate which structure names are required.
+`ProgramInput.structure` is the primary/start/reference structure for the calculation. Calculations that require additional complete structures can provide them by role name with `ProgramInput.structures`, for example `structures={"environment": mm_region}`. A role may also hold an ordered list of structures. Calculation-specific tools should validate which structure names are required.
+
+A path optimization (`calctype="path_optimization"`: NEB, string, growing string) is about a chain rather than one structure. Its structures, endpoints included and in order, go in `structures["initial_chain"]`, and `structure` is left out:
+
+```python
+ProgramInput(
+    program="...",
+    calctype="path_optimization",
+    structures={"initial_chain": [reactant, *images, product]},  # or [reactant, product]
+)
+```
+
+Validation enforces this by calculation type: a path optimization needs a chain of at least two structures with the same atoms and no `structure`; every other calculation type requires `structure`. Code that needs one structure calls `inp.require_structure()`, which returns a `Structure` (or raises for a chain input) so type checkers know it is not `None`; `inp.initial_chain` returns the chain. To restart from a previous path, pass `structures={"initial_chain": output.results.final_path.structures}`.
 
 `FileInput.from_directory("inputs", program="psi4")` collects native input files with the required executor identity.
 
