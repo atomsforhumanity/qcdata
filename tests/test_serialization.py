@@ -70,8 +70,8 @@ def test_version_restamped_on_save(extension, opt_output, tmp_path):
         payload["results"],
         payload["results"]["provenance"],
         payload["execution"],
-        payload["results"]["trajectory"][0],
-        payload["results"]["trajectory"][0]["results"],
+        payload["results"]["frames"][0],
+        payload["results"]["frames"][0]["results"],
     ]
     for model in models:
         assert model["qcdata_version"] == __version__
@@ -88,7 +88,7 @@ def test_version_restamped_on_save(extension, opt_output, tmp_path):
     opened.save(path)
     saved = loads(path.read_text())
     assert saved["qcdata_version"] == __version__
-    assert saved["results"]["trajectory"][0]["results"]["qcdata_version"] == __version__
+    assert saved["results"]["frames"][0]["results"]["qcdata_version"] == __version__
     assert "qcdata_version=" not in repr(opened)
 
 

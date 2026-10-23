@@ -33,7 +33,7 @@ def test_generate_optimization_plot_with_single_prog_output_failure(
         success=False,
         traceback="Traceback...",
         results=OptimizationData(
-            provenance={"program": "qcdata-test-suite"}, trajectory=[results_failure]
+            provenance={"program": "qcdata-test-suite"}, frames=[results_failure]
         ),
         execution={},
     )
@@ -143,3 +143,13 @@ def test_display_empty_failures(prog_input_factory, file_input, monkeypatch):
     assert len(rendered) == 5
     assert "no optimization steps" in rendered[2].data
     assert "No optimization energies available" in rendered[2].data
+
+
+def test_view_shows_a_frame(prog_output, monkeypatch):
+    """A step of an optimization is viewed as its structure."""
+    from qcdata import Frame, view
+
+    shown = []
+    monkeypatch.setattr(view, "structures", lambda *s, **k: shown.extend(s))
+    view.view(Frame.from_output(prog_output))
+    assert shown == [prog_output.input_data.structure]

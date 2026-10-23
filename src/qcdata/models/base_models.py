@@ -13,9 +13,11 @@ import yaml
 from pydantic import (
     BaseModel,
     FieldSerializationInfo,
+    SerializerFunctionWrapHandler,
     computed_field,
     field_serializer,
     field_validator,
+    model_serializer,
     model_validator,
 )
 
@@ -26,7 +28,15 @@ if TYPE_CHECKING:  # pragma: no cover
     from pydantic.typing import ReprArgs
 
 
-__all__ = ["Files", "Provenance", "ExecutionInfo", "Model", "CalcType", "LengthUnit"]
+__all__ = [
+    "Files",
+    "Provenance",
+    "ExecutionInfo",
+    "OutputBase",
+    "Model",
+    "CalcType",
+    "LengthUnit",
+]
 
 
 class LengthUnit(StrEnum):
@@ -157,7 +167,7 @@ class QCDataBaseModel(BaseModel, ABC):
             extension is `.toml`, the object will be saved as a `toml` file. If the file
             extension is `.xyz`, the object will be saved as an `xyz` file (for objects
             that support this format such as a `Structure` or an `OptimizationData`
-            which contains `.trajectory: list[Structure]`).
+            whose frames hold structures).
 
             Additionally, padding will be added to the file by default to make it more
             human-readable. You can adjust the amount of padding added by changing the
@@ -406,6 +416,69 @@ class ExecutionInfo(QCDataBaseModel):
     host_mem_gib: float | None = None
 
 
+class OutputBase(QCDataBaseModel):
+    """What every calculation reports, whatever it was given: success, logs, failure.
+
+    `ProgramOutput` adds the input it ran (`input_data`); `Frame` adds the structure
+    of a step inside a larger calculation, whose input its parent already holds.
+    Subclasses declare `results`.
+
+    Attributes:
+        success: Whether the calculation succeeded.
+        logs: The program's output, kept for failures and on request otherwise.
+        traceback: Why it failed; required when `success` is False.
+        execution: Runtime information; defaults to an empty ExecutionInfo.
+        plogs str: `@property` Print the logs.
+        ptraceback str: `@property` Print the traceback.
+    """
+
+    success: bool
+    logs: str | None = None
+    traceback: str | None = None
+    execution: ExecutionInfo = ExecutionInfo()
+
+    @model_validator(mode="after")
+    def _require_traceback_on_failure(self) -> Self:
+        """A failure must say why."""
+        if not self.success and self.traceback is None:
+            raise ValueError("A traceback must be provided for failed calculations.")
+        return self
+
+    @model_serializer(mode="wrap")
+    def _serialize_in_reading_order(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> Any:
+        """Write success, then the subclass's fields, then logs and execution."""
+        data = handler(self)
+        if not isinstance(data, dict):
+            return data
+        trailing = ("logs", "traceback", "execution")
+        head = {k: data[k] for k in ("success",) if k in data}
+        body = {k: v for k, v in data.items() if k not in head and k not in trailing}
+        tail = {k: data[k] for k in trailing if k in data}
+        return {**head, **body, **tail}
+
+    @property
+    def plogs(self) -> None:
+        """Print the logs."""
+        print(self.logs)
+
+    @property
+    def ptraceback(self) -> None:
+        """Print the traceback."""
+        print(self.traceback)
+
+    def __repr_args__(self) -> "ReprArgs":
+        """Hide logs and traceback in the repr and put success first."""
+        args = [
+            (key, value if key not in {"logs", "traceback"} else "<...>")
+            for key, value in super().__repr_args__()
+        ]
+        return [a for a in args if a[0] == "success"] + [
+            a for a in args if a[0] != "success"
+        ]
+
+
 class CalcType(StrEnum):
     """The Calculation type.
 
@@ -416,6 +489,9 @@ class CalcType(StrEnum):
         optimization: Geometry optimization (to a minima).
         transition_state: Transition state optimization (to a saddle point).
         conformer_search: Conformer search.
+        scan: A scan over a coordinate.
+        irc: Intrinsic reaction coordinate from a transition state.
+        path_optimization: Optimization of a chain of structures (NEB, string, ...).
     """
 
     energy = "energy"
@@ -425,6 +501,8 @@ class CalcType(StrEnum):
     transition_state = "transition_state"
     conformer_search = "conformer_search"
     scan = "scan"
+    irc = "irc"
+    path_optimization = "path_optimization"
 
     def __repr__(self) -> str:
         """Return the member name in quotes, e.g. `'energy'`."""

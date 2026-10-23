@@ -151,7 +151,7 @@ def results_failure(prog_input_factory, sp_data):
 @pytest.fixture
 def opt_data(prog_output):
     return OptimizationData(
-        provenance={"program": "qcdata-test-suite"}, trajectory=[prog_output]
+        provenance={"program": "qcdata-test-suite"}, frames=[prog_output]
     )
 
 

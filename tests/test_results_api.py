@@ -106,19 +106,17 @@ def test_nested_legacy_results_and_unrelated_data_keys(opt_output):
     payload = opt_output.model_dump(mode="json")
     payload["extras"] = {"data": "unrelated metadata"}
     payload["data"] = payload.pop("results")
-    step = payload["data"]["trajectory"][0]
+    step = payload["data"]["frames"][0]
     step["data"] = step.pop("results")
     with pytest.warns(FutureWarning, match="'data' has been renamed"):
         output = ProgramOutput.model_validate(payload)
     assert "data" in payload and "results" not in payload
     assert "data" in step and "results" not in step
     assert output.results.final_energy == opt_output.results.final_energy
-    assert (
-        output.results.trajectory[0].results.energy == opt_output.results.final_energy
-    )
+    assert output.results.frames[0].results.energy == opt_output.results.final_energy
     canonical = json.loads(output.model_dump_json())
     assert "data" not in canonical
-    assert "data" not in canonical["results"]["trajectory"][0]
+    assert "data" not in canonical["results"]["frames"][0]
     assert canonical["extras"] == {"data": "unrelated metadata"}
 
 

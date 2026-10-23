@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Added
+
+- `Frame`: one structure inside a larger calculation (an optimizer step, an IRC point, a path image) with what was computed there. It is a `ProgramOutput` without `input_data`, since the parent's input already holds the program, model, and keywords: `structure`, `results` (a `SinglePointData`, never `None`), `success`, `logs`, `traceback`, `execution`. `Frame.from_output(child_output)` records a child calculation; `ProgramInput.from_spec(parent_spec, frame.structure)` rebuilds a step's input.
+- `OutputBase`: `success`, `logs`, `traceback`, `execution`, the failure rule (a traceback is required), and `plogs`/`ptraceback`, shared by `ProgramOutput` and `Frame`. Outputs serialize `success` first and logs and execution last.
+- `CalcType.irc` with `PathData`: frames in order along a path (for an IRC, reverse end, transition state, forward end) and `ts_index`, with `transition_state`, `forward_barrier`, and `reverse_barrier`.
+- `CalcType.path_optimization` with `PathOptimizationData`: the path at every iteration (`paths: list[PathData]`) and `final_path`. Its input carries the chain in `ProgramInput.structures["initial_chain"]`, endpoints included and in order.
+- A shared reading interface for results holding structures: `structures`, `energies`, `to_xyz()`, `save("*.xyz")` on `OptimizationData`, `PathData`, `PathOptimizationData`, and `ConformerSearchData`.
+- `ProgramInput.require_structure()` (returns the `Structure` or raises for a chain input; narrows the type for type checkers) and `ProgramInput.initial_chain`.
+
+### Changed
+
+- **Breaking:** `OptimizationData.trajectory` is now `OptimizationData.frames` and holds `Frame`s instead of `ProgramOutput`s. Read a step's structure as `step.structure` instead of `step.input_data.structure`. `trajectory=` and saved files with `"trajectory"` still load (with a `FutureWarning`), `ProgramOutput`s passed as steps become frames, and `.trajectory` remains as a deprecated property.
+- **Breaking:** `ScanData.trajectory` is now `ScanData.points`, with the same compatibility.
+- **Breaking:** `ConformerSearchData.conformers` and `.rotamers` hold `Frame`s (each conformer's energy in `frame.results.energy`), sorted by energy with energy-less frames last. `conformer_energies`, `rotamer_energies`, and their `*_relative` forms are now properties. Lists of structures with energy arrays, and saved files in that form, still load. Read structures with `.structures` (conformers) or `[f.structure for f in data.rotamers]`.
+- Fields holding several results are named after what they hold: `frames`, `paths`, `points`, `conformers`, `rotamers`.
+- **Breaking:** `ProgramInput.structure` is `Structure | None`. Validation requires it for every calculation type except `path_optimization`, which requires `structures["initial_chain"]` (at least two structures with the same atoms) and no `structure`. Type checkers no longer know `structure` is set; use `require_structure()`.
+- `ProgramInput.structures` values may be a `Structure` or an ordered `list[Structure]`.
+
 ## [0.22.0] - 2026-10-21
 
 ### Added

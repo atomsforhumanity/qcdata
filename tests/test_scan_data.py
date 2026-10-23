@@ -15,7 +15,7 @@ def test_scan_data_properties(opt_output):
     # No energies is fine
     scan_res = ScanData(
         provenance={"program": "qcdata-test-suite"},
-        trajectory=[opt_output],
+        points=[opt_output],
     )
 
     # Test properties
@@ -34,7 +34,7 @@ def test_scan_data_properties(opt_output):
 def test_scan_save_to_xyz(opt_output, tmp_path):
     scan_res = ScanData(
         provenance={"program": "qcdata-test-suite"},
-        trajectory=[opt_output] * 3,
+        points=[opt_output] * 3,
     )
     scan_res.save(tmp_path / "scan_res.xyz")
 
@@ -63,7 +63,7 @@ H  0.75016279902412597 -0.33132205318865016 -0.54481406902570462
 def test_scan_save_non_xyz(opt_output, tmp_path):
     scan_res = ScanData(
         provenance={"program": "qcdata-test-suite"},
-        trajectory=[opt_output] * 3,
+        points=[opt_output] * 3,
     )
     scan_res.save(tmp_path / "scan_res.json")
     scan_res_copy = ScanData.open(tmp_path / "scan_res.json")
@@ -90,7 +90,7 @@ def test_empty_and_partial_failed_trajectories(prog_input_factory, tmp_path):
         success=False,
         traceback="Gradient unavailable",
     )
-    partial = OptimizationData(provenance=provenance, trajectory=[step])
+    partial = OptimizationData(provenance=provenance, frames=[step])
     assert partial.final_structure == step.input_data.structure
     assert partial.final_energy == -1.0
     points = [
@@ -102,7 +102,7 @@ def test_empty_and_partial_failed_trajectories(prog_input_factory, tmp_path):
         )
         for data in [empty, partial]
     ]
-    scan = ScanData(provenance=provenance, trajectory=points)
+    scan = ScanData(provenance=provenance, points=points)
     assert scan.structures == [None, step.input_data.structure]
     assert np.isnan(scan.energies[0])
     assert scan.energies[1] == -1.0
@@ -112,4 +112,4 @@ def test_empty_and_partial_failed_trajectories(prog_input_factory, tmp_path):
     scan.save(path)
     reopened = ScanData.open(path)
     assert reopened == scan
-    assert reopened.trajectory[1].results.trajectory[0].results.energy == -1.0
+    assert reopened.points[1].results.frames[0].results.energy == -1.0

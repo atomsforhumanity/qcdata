@@ -35,9 +35,12 @@ from qcdata import (
     ConformerSearchData,
     Data,
     FileData,
+    Frame,
     Inputs,
     LengthUnit,
     OptimizationData,
+    PathData,
+    PathOptimizationData,
     ProgramInput,
     ProgramOutput,
     ProgramSpec,
@@ -430,6 +433,9 @@ def generate_output_table(*results: ProgramOutput) -> str:
         structured = (
             res.input_data if isinstance(res.input_data, ProgramInput) else None
         )
+        subject = None
+        if structured is not None:
+            subject = structured.structure or structured.initial_chain[0]
         success_style = (
             'style="color: green; font-weight: bold;"'
             if res.success
@@ -440,12 +446,12 @@ def generate_output_table(*results: ProgramOutput) -> str:
             <td>{
             generate_dictionary_string(
                 {
-                    "charge": structured.structure.charge,
-                    "multiplicity": structured.structure.multiplicity,
-                    "name": structured.structure.ids.name or "",
+                    "charge": subject.charge,
+                    "multiplicity": subject.multiplicity,
+                    "name": subject.ids.name or "",
                 }
             )
-            if structured
+            if subject
             else ""
         }</td>
             <td {success_style}>{res.success}</td>
@@ -687,21 +693,21 @@ def program_outputs(
         if isinstance(result.results, ConformerSearchData) and isinstance(
             result.input_data, ProgramInput
         ):
-            structures = [result.input_data.structure]
+            structures = [result.input_data.require_structure()]
 
             if conformer_rmsd_threshold is not None:
                 keep_indices = filter_conformers_indices(
-                    result.results.conformers,
+                    result.results.structures,
                     backend=conformer_rmsd_backend,
                     threshold=conformer_rmsd_threshold,
                     **(conformer_rmsd_kwargs or {}),
                 )
-                conformers = [result.results.conformers[i] for i in keep_indices]
+                conformers = [result.results.structures[i] for i in keep_indices]
                 energies_rel = result.results.conformer_energies_relative
                 if energies_rel.size:
                     energies_rel = energies_rel[keep_indices]
             else:
-                conformers = result.results.conformers
+                conformers = result.results.structures
                 energies_rel = result.results.conformer_energies_relative
 
             structures += conformers
@@ -734,8 +740,8 @@ def program_outputs(
                 # Determine the Structure to use
                 if isinstance(result.results, OptimizationData):
                     for_viewer: Structure | list[Structure]
-                    if not result.results.trajectory:
-                        for_viewer = result.input_data.structure
+                    if not result.results.frames:
+                        for_viewer = result.input_data.require_structure()
                         title_extra += " (Initial Structure; no optimization steps)"
                     elif animate:
                         for_viewer = result.results.structures
@@ -743,11 +749,23 @@ def program_outputs(
                         for_viewer = result.results.structures[-1]
                         title_extra += " (Last Evaluated Structure)"
 
+                elif isinstance(result.results, (PathData, PathOptimizationData)):
+                    path = result.results.structures
+                    if not path:
+                        for_viewer = (
+                            result.input_data.structure
+                            or result.input_data.initial_chain
+                        )
+                        title_extra += " (Input; no path computed)"
+                    else:
+                        for_viewer = path
+                        title_extra += " (Path)"
+
                 elif isinstance(result.results, SinglePointData):
-                    for_viewer = result.input_data.structure
+                    for_viewer = result.input_data.require_structure()
 
                 elif isinstance(result.results, FileData):
-                    for_viewer = result.input_data.structure
+                    for_viewer = result.input_data.require_structure()
                 else:
                     raise NotImplementedError(
                         f"Viewing of {type(result.results)} is not yet implemented."
@@ -790,7 +808,7 @@ def program_outputs(
 
 
 def view(
-    *objs: ProgramOutput | Structure | list[Structure],
+    *objs: ProgramOutput | Frame | Structure | list[Structure],
     **kwargs: Any,
 ) -> None:
     """Display any qcdata objects in a Jupyter Notebook.
@@ -799,8 +817,9 @@ def view(
     any qcdata object.
 
     Args:
-        *objs: The ProgramOutput or Structure objects to view. May pass one or more
-            objects or one or more lists of Structure objects.
+        *objs: The ProgramOutput, Frame, or Structure objects to view. May pass one
+            or more objects or one or more lists of Structure objects. A Frame (a
+            step of an optimization or a point of a path) shows its structure.
         **kwargs: Additional keyword arguments to pass to the viewer functions.
 
     Returns:
@@ -819,6 +838,9 @@ def view(
 
         elif isinstance(obj, ProgramOutput):
             program_outputs(obj, **kwargs)
+
+        elif isinstance(obj, Frame):
+            structures(obj.structure, **kwargs)
 
         else:
             raise NotImplementedError(f"Viewing of {type(obj)} is not implemented.")

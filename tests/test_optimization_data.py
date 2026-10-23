@@ -4,7 +4,7 @@ from qcdata import OptimizationData, __version__
 def test_optimization_result_properties(prog_output):
     opt_res = OptimizationData(
         provenance={"program": "qcdata-test-suite"},
-        trajectory=[prog_output],
+        frames=[prog_output],
     )
 
     # Test properties
@@ -24,7 +24,7 @@ def test_optimization_result_properties(prog_output):
 def test_optimization_save_to_xyz(prog_output, tmp_path):
     opt_res = OptimizationData(
         provenance={"program": "qcdata-test-suite"},
-        trajectory=[prog_output] * 3,
+        frames=[prog_output] * 3,
     )
     opt_res.save(tmp_path / "opt_res.xyz")
 
@@ -52,7 +52,7 @@ H  0.75016279902412597 -0.33132205318865016 -0.54481406902570462
 def test_optimization_save_non_xyz(prog_output, tmp_path):
     opt_res = OptimizationData(
         provenance={"program": "qcdata-test-suite"},
-        trajectory=[prog_output] * 3,
+        frames=[prog_output] * 3,
     )
     opt_res.save(tmp_path / "opt_res.json")
     opt_res_copy = OptimizationData.open(tmp_path / "opt_res.json")

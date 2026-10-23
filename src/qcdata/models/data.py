@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 import numpy as np
-from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
 
 from qcdata.helper_types import (
     SerializableMatrix,
@@ -15,7 +16,7 @@ from qcdata.helper_types import (
     SerializableVector,
 )
 
-from .base_models import CalcType, Files, Provenance, QCDataBaseModel
+from .base_models import CalcType, Files, OutputBase, Provenance, QCDataBaseModel
 from .inputs import ProgramInput
 from .structure import Structure
 from .utils import to_multi_xyz
@@ -27,7 +28,10 @@ __all__ = [
     "FileData",
     "Wavefunction",
     "SinglePointData",
+    "Frame",
     "OptimizationData",
+    "PathData",
+    "PathOptimizationData",
     "ConformerSearchData",
     "ScanData",
     "StructuredData",
@@ -216,70 +220,92 @@ class SinglePointData(FileData, CalcInfoData):
         return getattr(self, calctype.value)
 
 
-class OptimizationData(FileData, CalcInfoData):
-    """Computed data for an optimization (may be for a minimum or transition state).
+class Frame(OutputBase):
+    """One structure inside a larger calculation, with what was computed there.
+
+    A step of an optimization, a point of an IRC, an image of a path. It is a
+    `ProgramOutput` without `input_data`: the parent calculation's input already
+    holds the program, model, and keywords, so a frame keeps only its structure.
+    ``ProgramInput.from_spec(parent_spec, frame.structure)`` rebuilds a step's input.
 
     Attributes:
-        energies: The energies for each step of the optimization.
-        structures: The Structure objects for each step of the optimization.
-        final_structure: The final, optimized Structure.
-        trajectory: The ProgramOutput objects for each step of the optimization.
+        structure: The structure of this step.
+        results: What was computed at it; an empty `SinglePointData` (with the
+            producing program's provenance) when nothing was.
     """
 
-    trajectory: list[ProgramOutput[ProgramInput, SinglePointData]] = []
+    structure: Structure
+    results: SinglePointData
+
+    @model_validator(mode="before")
+    @classmethod
+    def _from_program_output(cls, value: Any) -> Any:
+        """Accept a ProgramOutput, or its saved form, as a frame.
+
+        Trajectories saved before frames existed hold one ProgramOutput per step; the
+        step's structure is its input's structure.
+        """
+        from .outputs import ProgramOutput
+
+        if isinstance(value, ProgramOutput):
+            value = {
+                "success": value.success,
+                "results": value.results,
+                "logs": value.logs,
+                "traceback": value.traceback,
+                "execution": value.execution,
+                "structure": value.input_data.structure,
+            }
+        if isinstance(value, dict) and "data" in value and "results" not in value:
+            warnings.warn(
+                "'data' has been renamed to 'results'. Please update your code accordingly.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            value = {**value, "results": value["data"]}
+            del value["data"]
+        if isinstance(value, dict) and "input_data" in value:
+            value = dict(value)
+            input_data = value.pop("input_data")
+            if "structure" not in value:
+                value["structure"] = (
+                    input_data["structure"]
+                    if isinstance(input_data, dict)
+                    else input_data.structure
+                )
+        return value
+
+    @classmethod
+    def from_output(cls, output: ProgramOutput[ProgramInput, SinglePointData]) -> Self:
+        """Record a child calculation's output as a step, at its input's structure."""
+        return cls.model_validate(output)
+
+
+class _FrameSeries:
+    """Reading a sequence of frames: structures, energies, xyz, and saving."""
+
+    def _series(self) -> list[Frame]:
+        raise NotImplementedError  # pragma: no cover
 
     @property
-    def final_structure(self) -> Structure | None:
-        """The last evaluated structure, or None when there are no steps."""
-        return self.structures[-1] if self.trajectory else None
-
-    @property
-    def final_energy(self) -> float | None:
-        """The final step's energy, None for no steps, or `np.nan` if unavailable."""
-        return self.energies[-1] if self.trajectory else None
+    def structures(self) -> list[Structure]:
+        """The structure of each frame, in order."""
+        return [frame.structure for frame in self._series()]
 
     @property
     def energies(self) -> np.ndarray:
-        """The energies for each step of the optimization."""
+        """The energy of each frame in Hartree, `np.nan` where none was computed."""
         return np.array(
             [
-                output.results.energy if output.results.energy is not None else np.nan
-                for output in self.trajectory
+                frame.results.energy if frame.results.energy is not None else np.nan
+                for frame in self._series()
             ],
             dtype=float,
         )
 
-    @property
-    def structures(self) -> list[Structure]:
-        """The Structure objects for each step of the optimization."""
-        return [output.input_data.structure for output in self.trajectory]
-
-    def return_result(self, calctype: CalcType) -> Structure | None:
-        """Return the primary result of the optimization.
-
-        Args:
-            calctype: The calculation type. Unused; an optimization's primary result
-                is always its final structure.
-
-        Returns:
-            The final structure, or None if the trajectory is empty.
-        """
-        return self.final_structure
-
-    def __repr_args__(self) -> list[tuple[str, str]]:
-        """Custom repr to avoid printing the entire collection of objects."""
-        return [
-            ("final_structure", f"{self.final_structure}"),
-            ("trajectory", "[...]"),
-            ("energies", "[...]"),
-            ("structures", "[...]"),
-        ]
-
     def to_xyz(self) -> str:
-        """Return the trajectory as an `xyz` string."""
-        return to_multi_xyz(
-            prog_output.input_data.structure for prog_output in self.trajectory
-        )
+        """Return the frames as a multi-structure `xyz` string."""
+        return to_multi_xyz(self.structures)
 
     def save(
         self,
@@ -289,91 +315,334 @@ class OptimizationData(FileData, CalcInfoData):
         indent: int = 4,
         **kwargs: Any,
     ) -> None:
-        """Save an OptimizationOutput to a file.
+        """Save to a file; a `.xyz` extension writes the frames' structures.
 
         Args:
-            filepath: The path to save the molecule to.
-            exclude_none: If True, attributes with a value of None will not be written
-                to the file.
-            exclude_unset: If True, attributes that have not been set will not be
-                written to the file. Defaults to True for compact files.
+            filepath: The path to write.
+            exclude_none: If True, attributes with a value of None are not written.
+            exclude_unset: If True, attributes that have not been set are not written.
+                Defaults to True for compact files.
             indent: The number of spaces to use for indentation in JSON and YAML
                 files. Ignored for `.xyz` files.
             **kwargs: Additional keyword arguments to pass to the json serializer.
-
-        Note:
-            If the filepath has a `.xyz` extension, the trajectory will be saved to a
-            multi-structure `xyz` file.
         """
         filepath = Path(filepath)
         if filepath.suffix == ".xyz":
             filepath.write_text(self.to_xyz())
             return
-        super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)
+        super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)  # type: ignore[misc]
+
+
+def _renamed(payload: Any, old: str, new: str) -> Any:
+    """Move a payload's deprecated field name to its new one, with a warning."""
+    if not isinstance(payload, dict) or old not in payload:
+        return payload
+    if new in payload:
+        raise ValueError(f"Provide only {new!r}; {old!r} is its deprecated name.")
+    warnings.warn(
+        f"'{old}' has been renamed to '{new}'. Please update your code accordingly.",
+        FutureWarning,
+        stacklevel=4,
+    )
+    payload = dict(payload)
+    payload[new] = payload.pop(old)
+    return payload
+
+
+def _check_same_atoms(structures: list[Structure], what: str) -> None:
+    """Raise if the structures do not share their atoms in the same order."""
+    if structures and any(s.symbols != structures[0].symbols for s in structures):
+        raise ValueError(f"Every {what} must have the same atoms in the same order.")
+
+
+class OptimizationData(_FrameSeries, FileData, CalcInfoData):
+    """Computed data for an optimization (may be for a minimum or transition state).
+
+    Attributes:
+        frames: One `Frame` per optimizer step: its structure and what was computed
+            there. Formerly `trajectory`, which is still accepted when constructing
+            or loading and readable as a deprecated property.
+        energies: `@property` The energy of each step.
+        structures: `@property` The structure of each step.
+        final_structure: `@property` The final, optimized structure.
+    """
+
+    frames: list[Frame] = []
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_trajectory(cls, payload: Any) -> Any:
+        """Accept the former field name ``trajectory`` for ``frames``."""
+        return _renamed(payload, "trajectory", "frames")
+
+    @property
+    def trajectory(self) -> list[Frame]:
+        """Deprecated name for `frames`."""
+        warnings.warn(
+            ".trajectory has been renamed to .frames. Please update your code "
+            "accordingly.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return self.frames
+
+    def _series(self) -> list[Frame]:
+        return self.frames
+
+    @property
+    def final_structure(self) -> Structure | None:
+        """The last evaluated structure, or None when there are no steps."""
+        return self.frames[-1].structure if self.frames else None
+
+    @property
+    def final_energy(self) -> float | None:
+        """The final step's energy, None for no steps, or `np.nan` if unavailable."""
+        return self.energies[-1] if self.frames else None
+
+    def return_result(self, calctype: CalcType) -> Structure | None:
+        """Return the primary result of the optimization.
+
+        Args:
+            calctype: The calculation type. Unused; an optimization's primary result
+                is always its final structure.
+
+        Returns:
+            The final structure, or None if there are no frames.
+        """
+        return self.final_structure
+
+    def __repr_args__(self) -> list[tuple[str, str]]:
+        """Custom repr to avoid printing the entire collection of objects."""
+        return [
+            ("final_structure", f"{self.final_structure}"),
+            ("frames", "[...]"),
+            ("energies", "[...]"),
+            ("structures", "[...]"),
+        ]
+
+
+class PathData(_FrameSeries, FileData):
+    """A path of structures through a reaction: an IRC, or a chain of images.
+
+    For an IRC the frames run from the end of the reverse branch, through the
+    transition state, to the end of the forward branch. For a chain (NEB, string,
+    growing string) they are the images in order, endpoints included.
+
+    Attributes:
+        frames: The structures along the path, in order, with what was computed at
+            each.
+        ts_index: The position of the transition state in `frames`, if the path has
+            one: the starting saddle point of an IRC, or the highest (climbing) image
+            of a chain.
+        energies: `@property` The energy of each frame.
+        structures: `@property` The structure of each frame.
+    """
+
+    frames: list[Frame] = []
+    ts_index: int | None = None
+
+    def _series(self) -> list[Frame]:
+        return self.frames
+
+    @model_validator(mode="after")
+    def _check_path(self) -> Self:
+        """Frames share their atoms; the transition state is one of them."""
+        _check_same_atoms(self.structures, "frame of a path")
+        if self.ts_index is not None and not 0 <= self.ts_index < len(self.frames):
+            raise ValueError(
+                f"ts_index {self.ts_index} is outside the {len(self.frames)} frames."
+            )
+        return self
+
+    @property
+    def transition_state(self) -> Frame | None:
+        """The frame at `ts_index`, or None."""
+        return self.frames[self.ts_index] if self.ts_index is not None else None
+
+    @property
+    def forward_barrier(self) -> float | None:
+        """The transition state's energy above the first frame, in Hartree."""
+        return self._barrier(0)
+
+    @property
+    def reverse_barrier(self) -> float | None:
+        """The transition state's energy above the last frame, in Hartree."""
+        return self._barrier(-1)
+
+    def _barrier(self, end: int) -> float | None:
+        if self.ts_index is None or not self.frames:
+            return None
+        energies = self.energies
+        barrier = float(energies[self.ts_index] - energies[end])
+        return None if np.isnan(barrier) else barrier
+
+    def return_result(self, calctype: CalcType) -> list[Structure]:
+        """Return the primary result: the structures along the path."""
+        return self.structures
+
+    def __repr_args__(self) -> list[tuple[str, str]]:
+        """Avoid printing every frame."""
+        return [
+            ("frames", f"[{len(self.frames)} frames]"),
+            ("ts_index", f"{self.ts_index}"),
+        ]
+
+
+class PathOptimizationData(FileData):
+    """Computed data for a path optimization (NEB, string, growing string, ...).
+
+    Like an optimization's frames, but each step is a whole path.
+
+    Attributes:
+        paths: The path at each iteration, the optimized one last.
+        final_path: `@property` The last path, or None when there are none.
+        energies: `@property` The energy of each frame of the final path.
+        structures: `@property` The structures of the final path.
+    """
+
+    paths: list[PathData] = []
+
+    @property
+    def final_path(self) -> PathData | None:
+        """The optimized (last) path, or None when there are no iterations."""
+        return self.paths[-1] if self.paths else None
+
+    @property
+    def structures(self) -> list[Structure]:
+        """The structures of the final path."""
+        return self.final_path.structures if self.final_path else []
+
+    @property
+    def energies(self) -> np.ndarray:
+        """The energies of the final path's frames, in Hartree."""
+        return self.final_path.energies if self.final_path else np.array([])
+
+    def to_xyz(self) -> str:
+        """Return the final path as a multi-structure `xyz` string."""
+        return to_multi_xyz(self.structures)
+
+    def return_result(self, calctype: CalcType) -> PathData | None:
+        """Return the primary result: the final path."""
+        return self.final_path
+
+    def __repr_args__(self) -> list[tuple[str, str]]:
+        """Avoid printing every path."""
+        return [("paths", f"[{len(self.paths)} paths]")]
 
 
 class ConformerSearchData(FileData):
     """Data from a conformer search calculation.
 
-    Conformers and rotamers are sorted by energy.
+    Conformers and rotamers are `Frame`s, sorted by energy (lowest first; frames
+    without an energy last). Constructing or loading with lists of structures and
+    separate energy arrays (``conformer_energies``, ``rotamer_energies``), the form
+    before frames, still works: each structure becomes a frame with its energy.
 
     Attributes:
-        conformers: The conformers found in the search.
-        conformer_energies: The energies for each conformer.
-        rotamers: The rotamers found in the search.
-        rotamer_energies: The energies for each rotamer.
+        conformers: The conformers found, each with what was computed for it.
+        rotamers: The rotamers found, each with what was computed for it.
+        structures: `@property` The conformers' structures.
+        energies: `@property` The conformers' energies.
+        conformer_energies: `@property` The conformers' energies in Hartree.
+        rotamer_energies: `@property` The rotamers' energies in Hartree.
     """
 
-    conformers: list[Structure] = []
-    conformer_energies: SerializableVector = Field(default_factory=lambda: np.array([]))
-    rotamers: list[Structure] = []
-    rotamer_energies: SerializableVector = Field(default_factory=lambda: np.array([]))
+    conformers: list[Frame] = []
+    rotamers: list[Frame] = []
 
-    @model_validator(mode="after")
-    def _energies_size(self) -> Self:
-        """Ensure the energies are the same size as the conformers and rotamers."""
-        if self.conformer_energies.size > 0 and (
-            self.conformer_energies.size != len(self.conformers)
-        ):
-            raise ValueError(
-                "The number of conformer energies must match the number of conformers."
-            )
-        if self.rotamer_energies.size > 0 and (
-            self.rotamer_energies.size != len(self.rotamers)
-        ):
-            raise ValueError(
-                "The number of rotamer energies must match the number of rotamers."
-            )
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def _frames_from_structures(cls, payload: Any) -> Any:
+        """Turn structures plus an energies array into frames."""
+        if not isinstance(payload, dict):
+            return payload
+        payload = dict(payload)
+        provenance = payload.get("provenance")
+        for kind in ("conformers", "rotamers"):
+            items = list(payload.get(kind, []))
+            energies = payload.pop(f"{kind[:-1]}_energies", None)
+            energies = [] if energies is None else list(np.asarray(energies).ravel())
+            if energies and len(energies) != len(items):
+                raise ValueError(
+                    f"The number of {kind[:-1]} energies must match the number of "
+                    f"{kind}."
+                )
+            if not items or not _is_structure(items[0]):
+                continue
+            payload[kind] = [
+                {
+                    "success": True,
+                    "structure": item,
+                    "results": {
+                        "provenance": provenance,
+                        "energy": float(energies[i]) if energies else None,
+                    },
+                }
+                for i, item in enumerate(items)
+            ]
+        return payload
 
     @model_validator(mode="after")
     def _sort_by_energy(self) -> Self:
-        """Sort conformers and rotamers by energy."""
-        if self.conformer_energies.size > 0:
-            sorted_indices = np.argsort(self.conformer_energies)
-            self.conformers[:] = [self.conformers[i] for i in sorted_indices]
-            self.conformer_energies[:] = self.conformer_energies[sorted_indices]
-
-        if self.rotamer_energies.size > 0:
-            sorted_indices = np.argsort(self.rotamer_energies)
-            self.rotamers[:] = [self.rotamers[i] for i in sorted_indices]
-            self.rotamer_energies[:] = self.rotamer_energies[sorted_indices]
-
+        """Sort conformers and rotamers by energy; frames without one go last."""
+        for frames in (self.conformers, self.rotamers):
+            frames.sort(
+                key=lambda f: (f.results.energy is None, f.results.energy or 0.0)
+            )
         return self
+
+    @staticmethod
+    def _energies(frames: list[Frame]) -> np.ndarray:
+        """Energies of frames; empty when none has one, `np.nan` where one is missing."""
+        if all(f.results.energy is None for f in frames):
+            return np.array([])
+        return np.array(
+            [np.nan if f.results.energy is None else f.results.energy for f in frames],
+            dtype=float,
+        )
+
+    @property
+    def conformer_energies(self) -> np.ndarray:
+        """The conformers' energies in Hartree, lowest first; empty if unknown."""
+        return self._energies(self.conformers)
+
+    @property
+    def rotamer_energies(self) -> np.ndarray:
+        """The rotamers' energies in Hartree, lowest first; empty if unknown."""
+        return self._energies(self.rotamers)
+
+    @property
+    def structures(self) -> list[Structure]:
+        """The conformers' structures, lowest energy first."""
+        return [frame.structure for frame in self.conformers]
+
+    @property
+    def energies(self) -> np.ndarray:
+        """The conformers' energies in Hartree, lowest first (shared interface)."""
+        return self.conformer_energies
+
+    def to_xyz(self) -> str:
+        """Return the conformers as a multi-structure `xyz` string."""
+        return to_multi_xyz(self.structures)
 
     @property
     def conformer_energies_relative(self) -> np.ndarray:
         """The relative energies for each conformer in the search."""
-        if self.conformer_energies.size == 0:
-            return np.array([])
-        return self.conformer_energies - self.conformer_energies.min()
+        energies = self.conformer_energies
+        return energies - np.nanmin(energies) if energies.size else energies
 
     @property
     def rotamer_energies_relative(self) -> np.ndarray:
         """The relative energies for each rotamer in the search."""
-        if self.rotamer_energies.size == 0:
-            return np.array([])
-        return self.rotamer_energies - self.rotamer_energies.min()
+        energies = self.rotamer_energies
+        return energies - np.nanmin(energies) if energies.size else energies
+
+
+def _is_structure(item: Any) -> bool:
+    """Whether an item is a structure (or its dict), not a frame."""
+    if isinstance(item, Structure):
+        return True
+    return isinstance(item, dict) and "symbols" in item and "structure" not in item
 
 
 class ScanData(FileData, CalcInfoData):
@@ -383,10 +652,29 @@ class ScanData(FileData, CalcInfoData):
     ----------
         energies: The energies for each step of the scan.
         structures: The Structure objects for each step of the scan.
-        trajectory: The ProgramOutput objects for each step of the scan.
+        points: One constrained optimization per scan point, as its full
+            `ProgramOutput` (each point's input carries its own constraint value).
+            Formerly `trajectory`, still accepted and readable as deprecated.
     """
 
-    trajectory: list[ProgramOutput[ProgramInput, OptimizationData]] = []
+    points: list[ProgramOutput[ProgramInput, OptimizationData]] = []
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_trajectory(cls, payload: Any) -> Any:
+        """Accept the former field name ``trajectory`` for ``points``."""
+        return _renamed(payload, "trajectory", "points")
+
+    @property
+    def trajectory(self) -> list[ProgramOutput[ProgramInput, OptimizationData]]:
+        """Deprecated name for `points`."""
+        warnings.warn(
+            ".trajectory has been renamed to .points. Please update your code "
+            "accordingly.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return self.points
 
     @property
     def energies(self) -> np.ndarray:
@@ -396,7 +684,7 @@ class ScanData(FileData, CalcInfoData):
                 output.results.final_energy
                 if output.results.final_energy is not None
                 else np.nan
-                for output in self.trajectory
+                for output in self.points
             ],
             dtype=float,
         )
@@ -404,18 +692,18 @@ class ScanData(FileData, CalcInfoData):
     @property
     def structures(self) -> list[Structure | None]:
         """The final structure at each scan point, or None for an empty point."""
-        return [output.results.final_structure for output in self.trajectory]
+        return [output.results.final_structure for output in self.points]
 
     def __repr_args__(self) -> list[tuple[str, str]]:
         """Avoid printing the entire collection of objects in representation."""
         return [
-            ("trajectory", "[...]"),
+            ("points", "[...]"),
             ("energies", "[...]"),
             ("structures", "[...]"),
         ]
 
     def to_xyz(self) -> str:
-        """Return the trajectory as an `xyz` string."""
+        """Return the final structure of each scan point as an `xyz` string."""
         structures = self.structures
         if any(structure is None for structure in structures):
             raise ValueError("Cannot export XYZ: a scan point has no final structure.")
@@ -444,7 +732,7 @@ class ScanData(FileData, CalcInfoData):
             **kwargs: Additional keyword arguments to pass to the json serializer.
 
         Note:
-            If the filepath has a `.xyz` extension, the trajectory will be saved to a
+            If the filepath has a `.xyz` extension, each scan point's final structure is saved to a
             multi-structure `xyz` file.
         """
         filepath = Path(filepath)
@@ -454,7 +742,14 @@ class ScanData(FileData, CalcInfoData):
         super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)
 
 
-StructuredData = SinglePointData | OptimizationData | ConformerSearchData | ScanData
+StructuredData = (
+    SinglePointData
+    | OptimizationData
+    | ConformerSearchData
+    | ScanData
+    | PathData
+    | PathOptimizationData
+)
 StructuredDataType = TypeVar("StructuredDataType", bound=StructuredData)
 Data = FileData | StructuredData
 DataType = TypeVar("DataType", bound=Data)
@@ -468,6 +763,8 @@ _DATA_TYPES: dict[CalcType, type[StructuredData]] = {
     CalcType.transition_state: OptimizationData,
     CalcType.conformer_search: ConformerSearchData,
     CalcType.scan: ScanData,
+    CalcType.irc: PathData,
+    CalcType.path_optimization: PathOptimizationData,
 }
 
 

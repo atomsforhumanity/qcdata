@@ -75,7 +75,7 @@ def test_correct_generic_instantiates_and_equality_checks_pass(prog_output, tmp_
 
     results_dict["input_data"]["calctype"] = "optimization"
     results_dict["results"] = OptimizationData(
-        provenance={"program": "qcdata-test-suite"}, trajectory=[wo_types]
+        provenance={"program": "qcdata-test-suite"}, frames=[wo_types]
     )
     wo_types_opt = ProgramOutput(**results_dict)
     w_types_opt = ProgramOutput[ProgramInput, OptimizationData](**results_dict)

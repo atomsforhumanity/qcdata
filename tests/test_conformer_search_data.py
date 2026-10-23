@@ -92,7 +92,6 @@ def test_conformer_search_results_sorting(water):
         conformer_energies=[-1.0, -2.0, -3.0],
     )
 
-    assert csr.conformers[0] is w3
-    assert csr.conformers[1] is w2
-    assert csr.conformers[2] is w1
+    assert csr.structures == [w3, w2, w1]
+    assert [f.results.energy for f in csr.conformers] == [-3.0, -2.0, -1.0]
     assert csr.conformer_energies.tolist() == [-3.0, -2.0, -1.0]

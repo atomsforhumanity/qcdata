@@ -4,7 +4,7 @@
 
 `program` is required; `program_version` is optional. Provenance is also required for manually constructed data and empty failure payloads. Callers must supply the program identity explicitly; qcdata does not infer it from `input_data.program`.
 
-Each trajectory entry has its own data provenance. For example, optimization data can identify geomeTRIC while gradient data identifies TeraChem. Runtime details belong in [`ExecutionInfo`](./execution.md).
+Each frame has its own data provenance. For example, optimization data can identify geomeTRIC while gradient data identifies TeraChem. Runtime details belong in [`ExecutionInfo`](./execution.md).
 
 ::: qcdata.Provenance
 

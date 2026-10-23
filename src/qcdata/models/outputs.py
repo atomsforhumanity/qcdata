@@ -4,16 +4,18 @@ from __future__ import annotations
 
 import sys
 import warnings
-from typing import Any, Generic, Literal, Self, get_args
+from typing import Any, Generic, Self, get_args
 
 from pydantic import ValidationInfo, field_validator, model_validator
 
-from .base_models import ExecutionInfo, QCDataBaseModel
+from .base_models import OutputBase
 from .data import (
     ConformerSearchData,
     DataType,
     FileData,
     OptimizationData,
+    PathData,
+    PathOptimizationData,
     ScanData,
     SinglePointData,
     StructuredData,
@@ -25,29 +27,20 @@ from .inputs import InputType as ProgramInputType
 __all__ = ["ProgramOutput"]
 
 
-class ProgramOutput(QCDataBaseModel, Generic[ProgramInputType, DataType]):
+class ProgramOutput(OutputBase, Generic[ProgramInputType, DataType]):
     """The core output object from a quantum chemistry calculation.
+
+    Success, logs, traceback, and execution come from `OutputBase`, shared with
+    `Frame`.
 
     Attributes:
         input_data: The input data for the calculation. Any of `qcdata.Inputs`.
-        success: Whether the calculation was successful.
         results: Scientific data returned by the calculation, including output files.
             Any of `qcdata.Data`.
-        logs: The logs from the calculation.
-        traceback: The traceback from the calculation, if it failed.
-        execution: Runtime information; defaults to an empty ExecutionInfo.
-        extras Dict[str, Any]: Additional information to bundle with the results. Use for
-            schema development and scratch space.
-        plogs str: `@property` Print the logs.
-        ptraceback str: `@property` Print the traceback.
     """
 
     input_data: ProgramInputType
-    success: Literal[True, False]
     results: DataType
-    logs: str | None = None
-    traceback: str | None = None
-    execution: ExecutionInfo = ExecutionInfo()
 
     @model_validator(mode="before")
     @classmethod
@@ -131,10 +124,6 @@ class ProgramOutput(QCDataBaseModel, Generic[ProgramInputType, DataType]):
     @model_validator(mode="after")
     def _validate_completion(self) -> Self:
         if not self.success:
-            if self.traceback is None:
-                raise ValueError(
-                    "A traceback must be provided for failed calculations."
-                )
             return self
 
         if isinstance(self.input_data, ProgramInput):
@@ -142,11 +131,18 @@ class ProgramOutput(QCDataBaseModel, Generic[ProgramInputType, DataType]):
                 primary = self.input_data.calctype.value
                 if getattr(self.results, primary) is None:
                     raise ValueError(f"Missing the primary result: {primary}.")
-            elif isinstance(self.results, (OptimizationData, ScanData)):
-                if not self.results.trajectory:
-                    raise ValueError(
-                        "Successful calculations require a nonempty trajectory."
-                    )
+            elif isinstance(self.results, OptimizationData):
+                if not self.results.frames:
+                    raise ValueError("Successful optimizations require frames.")
+            elif isinstance(self.results, PathOptimizationData):
+                if not self.results.paths:
+                    raise ValueError("Successful path optimizations require paths.")
+            elif isinstance(self.results, ScanData):
+                if not self.results.points:
+                    raise ValueError("Successful scans require points.")
+            elif isinstance(self.results, PathData):
+                if not self.results.frames:
+                    raise ValueError("Successful path calculations require frames.")
             elif isinstance(self.results, ConformerSearchData):
                 if not self.results.conformers:
                     raise ValueError(
@@ -154,30 +150,11 @@ class ProgramOutput(QCDataBaseModel, Generic[ProgramInputType, DataType]):
                     )
         return self
 
-    @property
-    def plogs(self) -> None:
-        """Print the logs."""
-        print(self.logs)
-
-    @property
-    def ptraceback(self) -> None:
-        """Print the traceback."""
-        print(self.traceback)
-
-    def __repr_args__(self) -> list[tuple[str, Any]]:
-        """Exclude logs and traceback from the repr and ensure success is first."""
-        args = super().__repr_args__()
-        filtered_args = [
-            (key, value if key not in {"logs", "traceback"} else "<...>")
-            for key, value in args
-        ]
-        success_arg = [(key, value) for key, value in filtered_args if key == "success"]
-        other_args = [(key, value) for key, value in filtered_args if key != "success"]
-        return success_arg + other_args
-
 
 ProgramOutput.model_rebuild()
 OptimizationData.model_rebuild()
+PathData.model_rebuild()
+PathOptimizationData.model_rebuild()
 ConformerSearchData.model_rebuild()
 ScanData.model_rebuild()
 
