@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.23.0] - 2026-10-23
+
 ### Added
 
 - `Frame`: one structure inside a larger calculation (an optimizer step, an IRC point, a path image) with what was computed there. It is a `ProgramOutput` without `input_data`, since the parent's input already holds the program, model, and keywords: `structure`, `results` (a `SinglePointData`, never `None`), `success`, `logs`, `traceback`, `execution`. `Frame.from_output(child_output)` records a child calculation; `ProgramInput.from_spec(parent_spec, frame.structure)` rebuilds a step's input.
@@ -762,7 +764,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - `SinglePointComputedProperties`
   - `Wavefunction`
 
-[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.22.0...HEAD
+[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.23.0...HEAD
+[0.23.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.23.0
 [0.22.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.22.0
 [0.21.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.21.0
 [0.20.2]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.20.2
