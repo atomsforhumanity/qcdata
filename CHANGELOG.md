@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.23.1] - 2026-10-23
+
 ### Changed
 
 - `Frame.from_output` accepts any `ProgramOutput` (its results are checked to be `SinglePointData` at runtime), so drivers need no casts for child outputs typed as `Data`.
@@ -769,7 +771,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - `SinglePointComputedProperties`
   - `Wavefunction`
 
-[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.23.0...HEAD
+[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.23.1...HEAD
+[0.23.1]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.23.1
 [0.23.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.23.0
 [0.22.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.22.0
 [0.21.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.21.0
