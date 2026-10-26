@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Changed
+
+- Moved documentation from `qcdata.docs.atomsforhumanity.org` to `qcdata.docs.afh.org`.
+
 ## [0.23.1] - 2026-10-23
 
 ### Changed

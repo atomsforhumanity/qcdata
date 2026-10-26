@@ -1,5 +1,5 @@
 site_name: Quantum Chemistry Data (qcdata)
-site_url: https://qcdata.docs.atomsforhumanity.org/
+site_url: https://qcdata.docs.afh.org/
 theme:
   name: material
   palette:

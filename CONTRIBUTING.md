@@ -75,7 +75,7 @@ Never commit `[tool.uv.sources]` entries that point qc* packages at local paths 
 
 3. The tag starts the Release workflow. Approve the waiting deployment to the `pypi` environment in the Actions tab; the workflow then publishes to PyPI and creates the GitHub release from the changelog section. The workflow refuses a tag that doesn't match the version in `pyproject.toml`.
 4. The same tag starts the Docs workflow, which builds the site and publishes it to
-   [qcdata.docs.atomsforhumanity.org](https://qcdata.docs.atomsforhumanity.org). Run it
+   [qcdata.docs.afh.org](https://qcdata.docs.afh.org). Run it
    by hand from the Actions tab ("Run workflow") to republish without a release.
 
 ## Documentation
