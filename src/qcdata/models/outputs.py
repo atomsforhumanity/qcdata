@@ -67,16 +67,6 @@ class ProgramOutput(OutputBase, Generic[ProgramInputType, DataType]):
             results_type = type(self.results)
             self.__class__ = self.__class__[input_type, results_type]  # type: ignore[index]
 
-    @property
-    def data(self) -> DataType:
-        """Deprecated access to results."""
-        warnings.warn(
-            ".data has been renamed to .results. Please update your code accordingly.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        return self.results
-
     @model_validator(mode="after")
     def _ensure_bound_program_spec(self) -> Self:
         """A structure-free specification is not a top-level calculation input."""

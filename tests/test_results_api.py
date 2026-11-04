@@ -39,12 +39,9 @@ def test_results_is_canonical(prog_output):
     assert "data" not in schema["properties"]
 
 
-def test_data_property_is_deprecated(prog_output):
-    with pytest.warns(
-        FutureWarning, match=r"\.data has been renamed to \.results"
-    ) as caught:
-        assert prog_output.data is prog_output.results
-    assert caught[0].filename == __file__
+def test_data_property_is_removed(prog_output):
+    """Read results as .results; the deprecated .data attribute is gone."""
+    assert not hasattr(prog_output, "data")
 
 
 @pytest.mark.parametrize(

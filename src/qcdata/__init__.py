@@ -28,6 +28,7 @@ __all__ = [  # noqa: F405
     "OutputBase",
     "Wavefunction",
     "ProgramSpec",
+    "INITIAL_CHAIN",
     "Inputs",
     "InputType",
     "Data",

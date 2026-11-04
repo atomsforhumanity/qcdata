@@ -703,9 +703,7 @@ def program_outputs(
                     **(conformer_rmsd_kwargs or {}),
                 )
                 conformers = [result.results.structures[i] for i in keep_indices]
-                energies_rel = result.results.conformer_energies_relative
-                if energies_rel.size:
-                    energies_rel = energies_rel[keep_indices]
+                energies_rel = result.results.conformer_energies_relative[keep_indices]
             else:
                 conformers = result.results.structures
                 energies_rel = result.results.conformer_energies_relative
@@ -715,7 +713,9 @@ def program_outputs(
                 f"Conformer {i}" for i in range(len(conformers))
             ]
             subtitles = ["Rel Energy: Unknown"] + [
-                f"Rel Energy: +{re * constants.HARTREE_TO_KCAL_PER_MOL:.3f} kcal/mol"
+                "Rel Energy: Unknown"
+                if np.isnan(re)
+                else f"Rel Energy: +{re * constants.HARTREE_TO_KCAL_PER_MOL:.3f} kcal/mol"
                 for re in energies_rel
             ]
             conf_viewer = generate_structure_viewer_html(
