@@ -15,6 +15,7 @@ from .base_models import CalcType, Files, Model
 from .structure import Structure
 
 __all__ = [
+    "INITIAL_CHAIN",
     "FileInput",
     "ProgramInput",
     "ProgramSpec",
@@ -104,8 +105,8 @@ class ProgramSpec(FileInput):
         )
 
 
-# Role in ``ProgramInput.structures`` holding the starting chain of a path optimization.
 INITIAL_CHAIN = "initial_chain"
+"""Role in ``ProgramInput.structures`` holding the starting chain of a path optimization."""
 # Calculation types whose subject is a chain of structures rather than one structure.
 CHAIN_CALCTYPES = frozenset({CalcType.path_optimization})
 

@@ -7,6 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from qcdata import (
+    INITIAL_CHAIN,
     CalcType,
     ConformerSearchData,
     Frame,
@@ -86,8 +87,7 @@ def test_optimization_trajectories_hold_frames(prog_output, water):
     del legacy["frames"]
     with pytest.warns(FutureWarning, match="'trajectory' has been renamed"):
         loaded = OptimizationData.model_validate(legacy)
-    with pytest.warns(FutureWarning, match="renamed to .frames"):
-        assert loaded.trajectory == loaded.frames
+    assert not hasattr(loaded, "trajectory")
     assert loaded.structures == [water, water]
     assert np.array_equal(loaded.energies, [1.0, 1.0])
 
@@ -99,7 +99,6 @@ def test_path_data_reads_like_any_series(water, tmp_path):
     assert path.transition_state is frames[1]
     assert path.forward_barrier == pytest.approx(0.5)
     assert path.reverse_barrier == pytest.approx(0.3)
-    assert path.return_result(CalcType.irc) == path.structures
     assert path.to_xyz().count("\n") == 3 * (len(water.symbols) + 2)
     path.save(tmp_path / "path.xyz")
     assert (tmp_path / "path.xyz").read_text() == path.to_xyz()
@@ -127,7 +126,6 @@ def test_path_optimization_keeps_every_iteration(water):
     assert data.final_path is last
     assert data.structures == last.structures
     assert np.array_equal(data.energies, last.energies)
-    assert data.return_result(CalcType.path_optimization) is last
     empty = PathOptimizationData(provenance=PROVENANCE)
     assert empty.final_path is None and empty.structures == []
 
@@ -157,7 +155,7 @@ def test_chain_inputs(water):
     inp = ProgramInput(
         program="neb",
         calctype="path_optimization",
-        structures={"initial_chain": chain},
+        structures={INITIAL_CHAIN: chain},
     )
     assert inp.structure is None and inp.initial_chain == chain
     with pytest.raises(ValueError, match="no single structure"):
@@ -259,7 +257,7 @@ def test_conformer_search_holds_frames(water):
     )
     assert all(type(f) is Frame for f in data.conformers + data.rotamers)
     assert data.conformers[0].results.energy == 0.1
-    assert data.rotamer_energies.size == 0
+    assert np.isnan(data.rotamer_energies).tolist() == [True]
     assert ConformerSearchData.model_validate_json(data.model_dump_json()) == data
 
 
@@ -270,8 +268,7 @@ def test_scan_points_rename(opt_output):
     with pytest.warns(FutureWarning, match="'trajectory' has been renamed"):
         scan = ScanData(provenance=PROVENANCE, trajectory=[opt_output])
     assert scan.points == [opt_output]
-    with pytest.warns(FutureWarning, match="renamed to .points"):
-        assert scan.trajectory == scan.points
+    assert not hasattr(scan, "trajectory")
 
 
 def test_from_output_and_from_spec_accept_wide_types(prog_output, water):
@@ -285,3 +282,23 @@ def test_from_output_and_from_spec_accept_wide_types(prog_output, water):
         spec, water, structures=MappingProxyType({"reference": water})
     )
     assert bound.structures == {"reference": water}
+
+
+def test_every_frame_collection_reads_and_saves_the_same_way(water, tmp_path):
+    """Optimizations, paths, path optimizations, and conformer searches share one
+    reading interface: one energy per frame (nan if unknown) and .xyz saving."""
+    frames = [_frame(_moved(water, 1.0), None), _frame(water, -1.0)]
+    path = PathData(provenance=PROVENANCE, frames=frames, ts_index=1)
+    collections = [
+        OptimizationData(provenance=PROVENANCE, frames=frames),
+        path,
+        PathOptimizationData(provenance=PROVENANCE, paths=[path]),
+        ConformerSearchData(provenance=PROVENANCE, conformers=frames),
+    ]
+    for data in collections:
+        assert len(data.energies) == len(data.structures) == 2
+        assert np.isnan(data.energies).sum() == 1
+        target = tmp_path / f"{type(data).__name__}.xyz"
+        data.save(target)
+        assert target.read_text() == data.to_xyz()
+        assert target.read_text().splitlines()[0].strip() == str(len(water.symbols))

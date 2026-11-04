@@ -6,9 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Added
+
+- `qcdata.INITIAL_CHAIN` (`"initial_chain"`), the `ProgramInput.structures` role holding a path optimization's chain, so codecs need not repeat the string.
+
+### Fixed
+
+- `ConformerSearchData.save("x.xyz")` and `PathOptimizationData.save("x.xyz")` wrote JSON into the `.xyz` file; they now write the structures, as 0.23.0 promised. Every result holding frames (`OptimizationData`, `PathData`, `PathOptimizationData`, `ConformerSearchData`) now shares one implementation of `structures`, `energies`, `to_xyz()`, and `save`.
+
 ### Changed
 
 - Moved documentation from `qcdata.docs.atomsforhumanity.org` to `qcdata.docs.afh.org`.
+- **Breaking:** `ConformerSearchData.energies`, `conformer_energies`, `rotamer_energies`, and their `*_relative` forms have one value per frame, `nan` where no energy is known, like every other result's `energies`. They were empty when no frame had an energy.
+
+### Removed
+
+- **Breaking:** `ProgramOutput.data`, `OptimizationData.trajectory`, and `ScanData.trajectory`, deprecated since 0.19.0 and 0.23.0. Read `.results`, `.frames`, and `.points`. Files saved with the old names still load, with a `FutureWarning`.
+
+- **Breaking:** `return_result()` on `SinglePointData`, `OptimizationData`, `PathData`, and `PathOptimizationData`. Nothing in the qc\* suite called it, it ignored its `calctype` argument everywhere but `SinglePointData`, and the other result types never had it. Read the field you need instead: `results.energy` (or `gradient`, `hessian`), `results.final_structure`, `results.structures`, `results.final_path`.
 
 ## [0.23.1] - 2026-10-23
 

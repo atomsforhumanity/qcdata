@@ -44,13 +44,13 @@ def test_relative_energies(water):
     w2 = copy.deepcopy(water)
     w3 = copy.deepcopy(water)
 
-    # No energies returns empty array
+    # Unknown energies are nan, one per conformer
     csr = ConformerSearchData(
         provenance={"program": "qcdata-test-suite"},
         conformers=[w1, w2, w3],
     )
 
-    np.testing.assert_array_equal(csr.conformer_energies_relative, np.array([]))
+    assert np.isnan(csr.conformer_energies_relative).tolist() == [True] * 3
 
     # Energies are relative to the lowest energy
     csr = ConformerSearchData(
@@ -62,13 +62,14 @@ def test_relative_energies(water):
         csr.conformer_energies_relative, np.array([0.0, 1.0, 2.0])
     )
 
-    # No energies returns empty array
+    # No conformers, no conformer energies; unknown rotamer energies are nan
     csr = ConformerSearchData(
         provenance={"program": "qcdata-test-suite"},
         rotamers=[w1, w2, w3],
     )
 
     np.testing.assert_array_equal(csr.conformer_energies_relative, np.array([]))
+    assert np.isnan(csr.rotamer_energies_relative).tolist() == [True] * 3
 
     # Energies are relative to the lowest energy
     csr = ConformerSearchData(
