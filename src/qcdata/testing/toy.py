@@ -43,7 +43,9 @@ from ..program import (
     Request,
     Resources,
     RunContext,
+    check_session_calctype,
     failed_frame,
+    session_calctypes,
 )
 
 __all__ = ["ToyProgram", "ToySession", "program"]
@@ -265,13 +267,17 @@ class ToySession:
     so drivers and runners can test lineage handling.
     """
 
-    def __init__(self, plan: Plan, structure: Structure):
+    def __init__(
+        self, plan: Plan, structure: Structure, calctypes: frozenset[CalcType]
+    ):
         """Open the session.
 
         Args:
             plan: The pinned plan.
             structure: The atoms, charge, and multiplicity of every request.
+            calctypes: The calctypes the session may run.
         """
+        self.calctypes = calctypes
         self.program = NAME
         self.program_version = _version.__version__
         self._plan = plan
@@ -306,6 +312,7 @@ class ToySession:
         """
         if self._closed:
             raise RuntimeError("The session is closed.")
+        check_session_calctype(calctype, self.calctypes)
         wanted = set(outputs)
         if wanted - {"pair_energies"}:
             raise ProgramError.of(
@@ -480,14 +487,24 @@ class ToyProgram:
         return [self.compute(inp, ctx) for inp in inputs]
 
     def open_session(
-        self, spec: ProgramSpec, structure: Structure, ctx: RunContext
+        self,
+        spec: ProgramSpec,
+        structure: Structure,
+        ctx: RunContext,
+        calctypes: frozenset[CalcType] | None = None,
     ) -> ToySession:
-        """Open a session pinned to the spec's settings.
+        """Open a session pinned to the spec's settings, for the given calctypes.
 
         Raises:
             ProgramError: The spec cannot run.
         """
-        return ToySession(_resolve(spec), structure)
+        allowed = session_calctypes(spec, calctypes)
+        unsupported = allowed - CALCTYPES
+        if unsupported:
+            raise ProgramError.of(
+                "unsupported", f"{NAME} sessions cannot run {sorted(unsupported)}"
+            )
+        return ToySession(_resolve(spec), structure, allowed)
 
 
 #: The object to register under the ``qcdata.programs`` entry points.

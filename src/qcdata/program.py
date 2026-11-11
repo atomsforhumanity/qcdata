@@ -64,6 +64,8 @@ __all__ = [
     "Session",
     "ComputeSession",
     "failed_frame",
+    "session_calctypes",
+    "check_session_calctype",
     "find_program",
     "local_context",
     "available_programs",
@@ -266,8 +268,60 @@ class Compute(Protocol):
     ) -> list[ProgramOutput[ProgramInput, Data]]: ...
 
 
-#: Opens a child session: (spec, structure, threads) -> Session.
-OpenSession = Callable[[ProgramSpec, Structure, int | None], "Session"]
+#: Opens a child session: (spec, structure, threads, calctypes) -> Session.
+OpenSession = Callable[
+    [ProgramSpec, Structure, int | None, "frozenset[CalcType] | None"], "Session"
+]
+
+_LOWER = {
+    CalcType.energy: (CalcType.energy,),
+    CalcType.gradient: (CalcType.energy, CalcType.gradient),
+    CalcType.hessian: (CalcType.energy, CalcType.gradient, CalcType.hessian),
+}
+
+
+def session_calctypes(
+    spec: ProgramSpec, calctypes: Iterable[CalcType | str] | None = None
+) -> frozenset[CalcType]:
+    """The calculation types a session may run.
+
+    The declared ones (default: the spec's calctype), each with the lower derivatives
+    it implies: a gradient session also returns energies, a Hessian session also
+    gradients. A session checks its keywords against these at opening (a setting that
+    applies to none of them is a ``not_applicable`` input error) and refuses requests
+    of other types.
+
+    Args:
+        spec: The session's spec.
+        calctypes: The calctypes declared at opening.
+
+    Returns:
+        The allowed calctypes.
+    """
+    declared = {CalcType(c) for c in calctypes} if calctypes else {spec.calctype}
+    allowed: set[CalcType] = set()
+    for c in declared:
+        allowed.update(_LOWER.get(c, (c,)))
+    return frozenset(allowed)
+
+
+def check_session_calctype(
+    calctype: CalcType | str, allowed: frozenset[CalcType]
+) -> None:
+    """Refuse a request of a calctype the session was not opened for.
+
+    Raises:
+        ProgramError: Kind ``input``, code ``not_applicable``.
+    """
+    if CalcType(calctype) not in allowed:
+        raise ProgramError(
+            ErrorInfo(
+                kind=ErrorKind.input,
+                code="not_applicable",
+                message=f"This session was opened for {sorted(c.value for c in allowed)}, "
+                f"not {CalcType(calctype).value}; open it with calctypes= that include it.",
+            )
+        )
 
 
 @dataclass
@@ -298,7 +352,12 @@ class RunContext:
     progress: Callable[[Any], None] | None = None
 
     def session(
-        self, spec: ProgramSpec, structure: Structure, *, threads: int | None = None
+        self,
+        spec: ProgramSpec,
+        structure: Structure,
+        *,
+        threads: int | None = None,
+        calctypes: Iterable[CalcType | str] | None = None,
     ) -> Session:
         """Open a session for a child program under this calculation's grant.
 
@@ -308,6 +367,7 @@ class RunContext:
                 geometry.
             threads: This session's share of the grant (a driver with 16 threads and
                 8 tasks gives each session 2). None: the child's own settings.
+            calctypes: The calctypes the session may run (see `session_calctypes`).
 
         Returns:
             The session; close it (or use it as a context manager) when done.
@@ -315,10 +375,11 @@ class RunContext:
         Raises:
             RuntimeError: The runner provides neither sessions nor a compute callback.
         """
+        allowed = session_calctypes(spec, calctypes)
         if self.open_session is not None:
-            return self.open_session(spec, structure, threads)
+            return self.open_session(spec, structure, threads, allowed)
         if self.compute is not None:
-            return ComputeSession(self.compute, spec, structure)
+            return ComputeSession(self.compute, spec, structure, calctypes=allowed)
         raise RuntimeError(
             "This calculation computes child calculations, but its runner provided "
             "neither sessions nor a compute callback."
@@ -504,9 +565,18 @@ class SessionProgram(Program, Protocol):
     """A program that keeps state between geometries (``capabilities().sessions``)."""
 
     def open_session(
-        self, spec: ProgramSpec, structure: Structure, ctx: RunContext
+        self,
+        spec: ProgramSpec,
+        structure: Structure,
+        ctx: RunContext,
+        calctypes: frozenset[CalcType] | None = None,
     ) -> Session:
         """Open a session at `structure`'s atoms and first geometry.
+
+        ``calctypes`` are the calculation types the session may run (None: see
+        `session_calctypes`). The keywords are checked against them: a setting that
+        applies to none of them is an input error, and so is a later request of
+        another type.
 
         Raises:
             ProgramError: The spec cannot run (kind ``input`` or ``unsupported``).
@@ -537,6 +607,7 @@ class ComputeSession:
         compute: Computes one input (or a list) and returns outputs, failed or not.
         spec: The program, model, and keywords.
         structure: The atoms, charge, and multiplicity.
+        calctypes: The calctypes the session may run (see `session_calctypes`).
     """
 
     def __init__(
@@ -544,16 +615,19 @@ class ComputeSession:
         compute: Callable[..., Any],
         spec: ProgramSpec,
         structure: Structure,
+        calctypes: Iterable[CalcType | str] | None = None,
     ):
         """Create the session."""
         self._compute = compute
         self._spec = spec
         self._structure = structure
+        self.calctypes = session_calctypes(spec, calctypes)
         self.program = spec.program
         self.program_version = ""
         self._closed = False
 
     def _input(self, positions: np.ndarray, calctype: CalcType) -> ProgramInput:
+        check_session_calctype(calctype, self.calctypes)
         geometry = np.asarray(positions, dtype=float).reshape(-1, 3)
         if geometry.shape != np.asarray(self._structure.geometry).shape:
             raise ProgramError.of(
@@ -748,12 +822,17 @@ def local_context(
         return [compute_one(i) for i in inputs]
 
     def open_session(
-        spec: ProgramSpec, structure: Structure, share: int | None
+        spec: ProgramSpec,
+        structure: Structure,
+        share: int | None,
+        calctypes: frozenset[CalcType] | None,
     ) -> Session:
         program = lookup(spec.program)
         if isinstance(program, SessionProgram) and program.capabilities().sessions:
-            return program.open_session(spec, structure, RunContext(threads=share))
-        return ComputeSession(compute, spec, structure)
+            return program.open_session(
+                spec, structure, RunContext(threads=share), calctypes
+            )
+        return ComputeSession(compute, spec, structure, calctypes=calctypes)
 
     return RunContext(
         threads=threads,

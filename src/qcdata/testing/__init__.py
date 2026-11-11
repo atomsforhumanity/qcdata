@@ -306,7 +306,29 @@ def _check_session(
     positions = np.asarray(inp.structure.geometry, dtype=float)
     nan = np.full_like(positions, np.nan)
     ran.append("session")
-    with program.open_session(inp, inp.structure, context) as session:
+    declared = {inp.calctype} | (
+        {CalcType.hessian} if CalcType.hessian in caps.calctypes else set()
+    )
+    ran.append("session refuses calctypes it was not opened for")
+    narrow = program.open_session(
+        inp, inp.structure, context, frozenset({CalcType.energy})
+    )
+    try:
+        if CalcType.gradient in caps.calctypes:
+            try:
+                narrow.compute(positions, CalcType.gradient)
+                failures.append("session: ran a calctype it was not opened for")
+            except ProgramError as e:
+                if e.error.kind != ErrorKind.input:
+                    failures.append(
+                        f"session: a request outside its calctypes must be an input "
+                        f"error, not {e.error.kind}"
+                    )
+    finally:
+        narrow.close()
+    with program.open_session(
+        inp, inp.structure, context, frozenset(declared)
+    ) as session:
         if session.program != program.name or not session.program_version:
             failures.append("session: program and program_version must be set")
         try:

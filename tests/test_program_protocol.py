@@ -183,9 +183,11 @@ def test_run_context_sessions():
     assert isinstance(ctx.session(spec, ARGON3), ComputeSession)
     opened = []
 
-    def open_session(spec, structure, threads):
+    def open_session(spec, structure, threads, calctypes):
         opened.append(threads)
-        return program.open_session(spec, structure, RunContext(threads=threads))
+        return program.open_session(
+            spec, structure, RunContext(threads=threads), calctypes
+        )
 
     ctx = RunContext(threads=16, open_session=open_session)
     with ctx.session(spec, ARGON3, threads=2) as s:
@@ -352,3 +354,36 @@ def test_toy_sessions_fail_on_request():
         assert e.value.error.kind is ErrorKind.convergence
         frame = s.compute_many([Request(np.asarray(ARGON3.geometry))])[0]
         assert not frame.success and frame.error.kind is ErrorKind.convergence
+
+
+def test_sessions_run_only_the_calctypes_they_were_opened_for():
+    from qcdata.program import session_calctypes
+
+    spec = ProgramSpec(program="toy", calctype="gradient", model={"method": "lj"})
+    assert session_calctypes(spec) == {CalcType.energy, CalcType.gradient}
+    assert CalcType.gradient in session_calctypes(spec, ["hessian"])
+    x = np.asarray(ARGON3.geometry)
+    with program.open_session(spec, ARGON3, RunContext()) as s:
+        assert s.compute(x, "energy").results.energy is not None  # lower derivative
+        with pytest.raises(ProgramError) as e:
+            s.compute(x, "hessian")
+        assert e.value.error.kind is ErrorKind.input
+        assert e.value.error.code == "not_applicable"
+        frame = s.compute_many([Request(x, CalcType.hessian)])[0]
+        assert not frame.success and frame.error.code == "not_applicable"
+    with program.open_session(
+        spec, ARGON3, RunContext(), frozenset({CalcType.gradient, CalcType.hessian})
+    ) as s:
+        assert s.compute(x, "hessian").results.hessian is not None
+
+    def compute(inputs, previous=None):
+        return program.compute(inputs, RunContext())
+
+    plain = ComputeSession(compute, spec, ARGON3)
+    with pytest.raises(ProgramError) as e:
+        plain.compute(x, "hessian")
+    assert e.value.error.code == "not_applicable"
+    ctx = RunContext(compute=compute)
+    assert (
+        ctx.session(spec, ARGON3, calctypes=["hessian"]).compute(x, "hessian").success
+    )
