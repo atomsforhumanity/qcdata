@@ -216,6 +216,11 @@ class Session(Protocol):
   `polarizability`, `orbitals`, `density`); unsupported ones fail with kind `unsupported`.
 - Atoms, charge, multiplicity, model and approximations are fixed for the session's
   lifetime; anything else is a new session.
+- **Native sessions matter for fast engines.** The generic `ComputeSession` (one stateless
+  calculation per request, no warm start) is correct but pays per-call overhead: qcopt
+  measured an HCN TS search + IRC on axtb at 0.6 s with in-process evaluation and 20 s
+  through `ComputeSession` over axtb's codec. It is fine for DFT children; engines that
+  drivers step through at sub-millisecond cost need sessions of their own.
 
 Contract:
 
