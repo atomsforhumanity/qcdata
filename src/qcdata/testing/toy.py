@@ -456,7 +456,7 @@ class ToyProgram:
         start = time.perf_counter()
         plan = None
         try:
-            plan = self.plan(inp)
+            plan = ctx.plan if ctx.plan is not None else self.plan(inp)
             s = plan.resolved.settings
             if "fail" in s:
                 raise ProgramError.of(s["fail"], "failed on request (keyword fail)")

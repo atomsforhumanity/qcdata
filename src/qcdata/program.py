@@ -339,6 +339,9 @@ class RunContext:
         scratch_dir: A directory the calculation may write to, if one was given.
         make_scratch: Makes a scratch directory on first use of `scratch`, so a run
             that never writes files never pays for one.
+        plan: The plan the runner already made for this input (to schedule it or to
+            key it in a store), if any. A program may use it instead of planning
+            again; it is exactly what ``program.plan(input)`` returned.
         compute: Computes child calculations (drivers only).
         open_session: Opens child sessions; use `session`.
         progress: Receives streaming updates (any JSON-serializable value), if the
@@ -350,6 +353,7 @@ class RunContext:
     memory_gib: float | None = None
     scratch_dir: Path | None = None
     make_scratch: Callable[[], Path] | None = None
+    plan: Plan | None = None
     compute: Compute | None = None
     open_session: OpenSession | None = None
     progress: Callable[[Any], None] | None = None
