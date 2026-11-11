@@ -139,8 +139,16 @@ xz, yy, yz, zz); every spherical function and the x^l component unit-normalized.
 
 ### Warnings
 
-`ProgramWarning(code, message, path)`: `code` is stable snake_case, defined in the
-program's documentation; `path` is the dotted settings key concerned, if any.
+`ProgramWarning(code, message, path)`: `code` is stable snake_case; `path` is the dotted
+settings key concerned, if any. Codes every program shares:
+
+| code | meaning |
+|---|---|
+| `not_applicable` | a setting of another calculation type (`freq.*` in a gradient run), so one keyword set serves a driver's gradients and Hessians |
+| `no_effect` | a setting made irrelevant by the other values given |
+| `deprecated_key` | an old key still accepted; the message names the new one |
+
+Programs define further codes in their own documentation.
 
 ### Errors
 
