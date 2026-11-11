@@ -23,7 +23,7 @@ that a session survives a failed request. Schemas and keywords are validated wit
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 import numpy as np
@@ -45,6 +45,7 @@ from ..program import (
     Request,
     RunContext,
     SessionProgram,
+    local_context,
 )
 
 __all__ = ["check_program", "ConformanceError"]
@@ -80,6 +81,7 @@ def check_program(
     program: Program,
     inputs: Sequence[ProgramInput],
     *,
+    children: Mapping[str, Program] | None = None,
     energy_tol: float = 1e-8,
 ) -> list[str]:
     """Check that a program meets the AFH program contract.
@@ -88,6 +90,9 @@ def check_program(
         program: The program object (what its ``qcdata.programs`` entry point loads).
         inputs: Small inputs the program can compute quickly, covering the calctypes
             to check; the first one also exercises sessions and batches.
+        children: Programs a driver's inputs name as subprograms, ahead of the
+            installed ones; drivers (``capabilities().driver``) run under
+            `qcdata.program.local_context` with them.
         energy_tol: Tolerance (Eh) for energy components adding up and for sessions
             and batches agreeing with plain computes.
 
@@ -122,6 +127,9 @@ def check_program(
         isinstance(caps, Capabilities) and bool(caps.calctypes),
         repr(caps),
     )
+
+    def ctx() -> RunContext:
+        return local_context(children) if caps.driver else RunContext()
 
     validators: dict[CalcType, Callable[[Any], list[str]] | None] = {}
     for calctype in sorted(caps.calctypes):
@@ -186,7 +194,7 @@ def check_program(
                 e.error.kind == ErrorKind.input,
                 f"kind {e.error.kind}",
             )
-        bad_out = program.compute(bad, RunContext())
+        bad_out = program.compute(bad, ctx())
         check(
             f"{tag}: unknown key fails compute with kind input",
             not bad_out.success
@@ -196,7 +204,7 @@ def check_program(
         )
 
         # The calculation and its standard fields.
-        out = program.compute(inp, RunContext())
+        out = program.compute(inp, ctx())
         if not check(
             f"{tag}: compute succeeds",
             isinstance(out, ProgramOutput) and out.success,
@@ -219,17 +227,17 @@ def check_program(
             failures.extend(_check_single_point(tag, inp, results, energy_tol, ran))
 
     first = inputs[0]
-    reference = program.compute(first, RunContext())
+    reference = program.compute(first, ctx())
     if caps.sessions:
         failures.extend(
-            _check_session(program, first, reference, caps, energy_tol, ran)
+            _check_session(program, first, reference, caps, energy_tol, ran, ctx())
         )
     if caps.batches:
         name = "batch agrees with compute"
         if not isinstance(program, BatchProgram):
             failures.append(f"{name}: batches claimed but no compute_batch")
         else:
-            outs = program.compute_batch([first, first], RunContext())
+            outs = program.compute_batch([first, first], ctx())
             ran.append(name)
             if len(outs) != 2 or not all(o.success for o in outs):
                 failures.append(f"{name}: {outs!r}")
@@ -289,6 +297,7 @@ def _check_session(
     caps: Capabilities,
     tol: float,
     ran: list[str],
+    context: RunContext,
 ) -> list[str]:
     failures: list[str] = []
     if not isinstance(program, SessionProgram):
@@ -297,7 +306,7 @@ def _check_session(
     positions = np.asarray(inp.structure.geometry, dtype=float)
     nan = np.full_like(positions, np.nan)
     ran.append("session")
-    with program.open_session(inp, inp.structure, RunContext()) as session:
+    with program.open_session(inp, inp.structure, context) as session:
         if session.program != program.name or not session.program_version:
             failures.append("session: program and program_version must be set")
         try:

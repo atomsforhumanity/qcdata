@@ -143,12 +143,21 @@ along two axes without changing how scripts read.
 
 **The calculation store** (`qccompute.Store`):
 
-- **Key:** a hash of the canonical calculation: program, program version, calctype, model,
-  structure (atoms, positions, charge, multiplicity), subprogram specs recursively, and the
-  settings. For native programs, the settings come from `plan().resolved.settings`, minus
-  keys whose schema says `x-concern: resource`. This follows linus's rule: identity comes
-  from the resolved settings, where memory- or backend-dependent choices appear resolved.
+- **Key:** a hash of the canonical calculation: program, the program's *numerics
+  identity*, calctype, model, structure (atoms, positions, charge, multiplicity),
+  subprogram specs recursively, and the settings. For native programs, the settings come
+  from `plan().resolved.settings`, minus keys whose schema says `x-concern: resource`. This
+  follows linus's rule: identity comes from the resolved settings, where memory- or
+  backend-dependent choices (precision per card class, DF storage) appear resolved.
   External programs use their raw keywords.
+- **Numerics identity, not version** (linus's lesson from a year of its reference store). A
+  version is too coarse and too fine at once: most bumps do not change numbers, and some
+  changes the version does not track do (glibc 2.36 vs 2.43 moved linus results at
+  round-off through erf/erfc). Programs publish an optional `numerics_id()`. linus's is its
+  numerics epoch plus a platform/libm class; axtb's includes its conventions and the
+  eigensolver library. It defaults to the version. The exact version and commit go in
+  provenance, not the key. Reuse is then broad across releases, and never across builds
+  that compute different bits.
 - **Value:** the `ProgramOutput` (compressed JSON; large arrays later as sidecars). The
   index is SQLite: key, program, method, formula, calctype, success, wall time, campaign
   tags, created.
@@ -210,12 +219,22 @@ separate `qcnet` package.
 keyed by lineage, typed results. This is already agreed; linus's IFACE refactor and axtb 0.2
 carry it. They also adopt the file-level `run`/`plan`/`schema` contract.
 
-**qcopt (L2).** Becomes a `Program` whose children are sessions (`ctx.session`). The
-per-program evaluators and `FunctionEvaluator` go, so qcopt runs over any engine, local or
-remote, with frames that carry provenance (already agreed for 0.4). It is the natural home
-for path methods: FSM, NEB, string and GSM are already planned for qcopt, and mepd's
-`pathminimizers/` could move there over time. A reaction-path calctype (FSM-TS: path, TS,
-pseudo-IRC) would make mepd's default elementary-step search a single cacheable job.
+**qcopt (L2).** Becomes a `Program` whose children are sessions (`ctx.session`). This is
+prototyped on qcopt's design-0.3 against these branches: it passes `check_program`, and
+the 77 golden trajectories are bit for bit. The per-program evaluators go. qcopt keeps
+its Evaluator protocol and `FunctionEvaluator`, so it can still optimize on a plain
+Python function: model surfaces, tests, an in-process ML potential, and mepd's engines
+until they are programs. qcopt is the natural home for path methods:
+- NEB and string methods fit its generator/lockstep design: each image is a request of a
+  round and a lineage of its session.
+- FSM-TS composes from what exists: the path, a TS search from a guide direction (the
+  path tangent), and the IRC. As a reaction-path calctype it would make mepd's default
+  elementary-step search a single cacheable job.
+- GSM through the external binary stays in mepd; a native growing string would be new
+  work.
+
+The order is after qcopt 0.4, one calctype at a time, each benchmarked against mepd's
+current implementation on the Reaction-QM set before mepd switches. **[Colton, Jan]**
 
 **mepd (L3/L4).** The biggest gains, with incremental steps that each pay on their own.
 **[Jan]**
@@ -228,8 +247,9 @@ pseudo-IRC) would make mepd's default elementary-step search a single cacheable 
    included). About 9k lines of adapters and parsers go, along with the
    `GXTBCalculator` name checks.
 2. **qcopt through `Program`.** TS searches, IRCs and minimizations become `ProgramInput`
-   jobs (`program="qcopt"`, `subprograms=[engine spec]`), not evaluator callbacks, so they
-   can be cached and dispatched.
+   jobs (`program="qcopt"`, `subprograms=[engine spec]`) instead of `FunctionEvaluator`
+   callbacks over mepd's engines, so they can be cached and dispatched.
+   (`FunctionEvaluator` itself stays in qcopt for Python-function surfaces.)
 3. **One network schema.** `ExpansionResult`, `summary.json`, `Pot`, `NetworkModel` and the
    workspace become `qcdata.ReactionNetwork`. The live views and the landing read it; the
    kinetics read `Energies` under a `Protocol`.

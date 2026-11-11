@@ -318,6 +318,8 @@ class ToySession:
                 "input", f"expected {len(self._structure.symbols)} atoms, got {len(x)}"
             )
         s = self._plan.resolved.settings
+        if "fail" in s:
+            raise ProgramError.of(s["fail"], "failed on request (keyword fail)")
         values = _lj(x, s["epsilon"], s["sigma"], CalcType(calctype))
         if CalcType(calctype) == CalcType.hessian:
             values["gradient"] = _lj(x, s["epsilon"], s["sigma"], CalcType.gradient)[

@@ -23,7 +23,7 @@ Design: ``docs/design/program-interface.md``; names and units: ``docs/convention
 
 from __future__ import annotations
 
-from collections.abc import Callable, Hashable, Iterable, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from importlib.metadata import entry_points
 from pathlib import Path
@@ -65,6 +65,7 @@ __all__ = [
     "ComputeSession",
     "failed_frame",
     "find_program",
+    "local_context",
     "available_programs",
 ]
 
@@ -88,6 +89,8 @@ class Capabilities(QCDataBaseModel):
             mutable state); the runner then runs them side by side in threads instead
             of one at a time.
         gpu: Whether it can use GPUs.
+        driver: Whether it computes child calculations (its input's subprograms)
+            through `RunContext.compute` or `RunContext.session`.
     """
 
     calctypes: frozenset[CalcType]
@@ -97,6 +100,7 @@ class Capabilities(QCDataBaseModel):
     in_process: bool = True
     thread_safe: bool = False
     gpu: bool = False
+    driver: bool = False
 
 
 class Resources(QCDataBaseModel):
@@ -480,6 +484,10 @@ class Program(Protocol):
         """
         ...
 
+    # Optional: ``numerics_id() -> str`` names the program's numerics identity (what
+    # determines its bits: a numerics epoch, platform/libm class, eigensolver library) for
+    # calculation stores to key on; the version is used when absent.
+
     def compute(
         self, inp: ProgramInput, ctx: RunContext
     ) -> ProgramOutput[ProgramInput, Data]:
@@ -684,6 +692,80 @@ class ComputeSession:
     ) -> None:
         """Close the session."""
         self.close()
+
+
+def local_context(
+    programs: Mapping[str, Program] | None = None, *, threads: int | None = None
+) -> RunContext:
+    """A context that runs a driver's children in this process, one at a time.
+
+    For calling a driver directly (tests, notebooks) without a runner. Children run
+    through the given programs, else the installed ones (`find_program`): sessions of
+    their own when they have them, else a `ComputeSession` over their `compute`.
+    qccompute provides the full runner (parallel children, codecs, the cluster).
+
+    Args:
+        programs: Programs by name, ahead of the installed ones.
+        threads: Threads granted to the driver; children get the same.
+
+    Returns:
+        The context.
+    """
+    known = dict(programs or {})
+
+    def lookup(name: str) -> Program:
+        program = known.get(name) or find_program(name)
+        if program is None:
+            raise ProgramError.of(
+                "environment", f"No program {name!r} is installed or given."
+            )
+        return program
+
+    def child_context() -> RunContext:
+        return local_context(known, threads=threads)
+
+    def compute_one(inp: ProgramInput) -> ProgramOutput[ProgramInput, Data]:
+        try:
+            program = lookup(inp.program)
+        except ProgramError as e:
+            from .models import Provenance
+
+            return ProgramOutput(
+                input_data=inp,
+                success=False,
+                traceback=e.error.message,
+                error=e.error,
+                results=SinglePointData(provenance=Provenance(program=inp.program))
+                if inp.calctype
+                in (CalcType.energy, CalcType.gradient, CalcType.hessian)
+                else _empty_results(inp),
+            )
+        return program.compute(inp, child_context())
+
+    def compute(inputs: Any, previous: Any = None) -> Any:
+        if isinstance(inputs, ProgramInput):
+            return compute_one(inputs)
+        return [compute_one(i) for i in inputs]
+
+    def open_session(
+        spec: ProgramSpec, structure: Structure, share: int | None
+    ) -> Session:
+        program = lookup(spec.program)
+        if isinstance(program, SessionProgram) and program.capabilities().sessions:
+            return program.open_session(spec, structure, RunContext(threads=share))
+        return ComputeSession(compute, spec, structure)
+
+    return RunContext(
+        threads=threads,
+        compute=compute,  # type: ignore[arg-type]
+        open_session=open_session,
+    )
+
+
+def _empty_results(inp: ProgramInput) -> Any:
+    from .models import Provenance, get_data_type
+
+    return get_data_type(inp.calctype)(provenance=Provenance(program=inp.program))
 
 
 def available_programs() -> list[str]:

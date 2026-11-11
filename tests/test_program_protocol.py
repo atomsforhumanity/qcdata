@@ -231,3 +231,124 @@ def test_accuracy_of_a_bare_number_targets_the_highest_derivative():
     assert Accuracy.of(None, CalcType.hessian) is None
     a = Accuracy(energy=1e-8, gradient=1e-5)
     assert Accuracy.of(a, CalcType.hessian) is a
+
+
+class FiniteDifference(ToyProgram):
+    """A driver: its subprogram's gradient by central differences, through a session."""
+
+    name = "fd"
+
+    def capabilities(self):
+        return (
+            super()
+            .capabilities()
+            .model_copy(update={"driver": True, "sessions": False, "batches": False})
+        )
+
+    def settings_schema(self, calctype):
+        return {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "step": {"type": "number", "default": 1e-4, "x-unit": "bohr"}
+            },
+        }
+
+    def plan(self, inp):
+        from qcdata import Resolved
+        from qcdata.program import Plan
+
+        if set(inp.keywords) - {"step"}:
+            raise ProgramError.of("input", "fd takes only 'step'")
+        return Plan(
+            resolved=Resolved(settings={"step": inp.keywords.get("step", 1e-4)})
+        )
+
+    def compute(self, inp, ctx):
+        from qcdata import ExecutionInfo, ProgramOutput, Provenance, SinglePointData
+
+        try:
+            plan = self.plan(inp)
+        except ProgramError as e:
+            return ProgramOutput(
+                input_data=inp,
+                success=False,
+                traceback=e.error.message,
+                error=e.error,
+                results=SinglePointData(provenance=Provenance(program="fd")),
+            )
+        step = plan.resolved.settings["step"]
+        child = inp.subprograms[0]
+        x = np.asarray(inp.structure.geometry, dtype=float).reshape(-1)
+        requests = []
+        for k in range(len(x)):
+            for sign in (1, -1):
+                d = np.zeros_like(x)
+                d[k] = sign * step
+                requests.append(
+                    Request((x + d).reshape(-1, 3), CalcType.energy, lineage=k)
+                )
+        with ctx.session(child, inp.structure) as s:
+            frames = s.compute_many(requests)
+            center = s.compute(x.reshape(-1, 3), CalcType.energy).results
+        energies = np.array([f.results.energy for f in frames])
+        return ProgramOutput(
+            input_data=inp,
+            success=True,
+            results=SinglePointData(
+                provenance=Provenance(program="fd", program_version=self.version()),
+                energy=center.energy,
+                gradient=(energies[0::2] - energies[1::2]) / (2 * step),
+            ),
+            resolved=plan.resolved,
+            execution=ExecutionInfo(timings={"total": 0.0}),
+        )
+
+
+def fd_input(child_program: str = "toy", **child_keywords: Any) -> ProgramInput:
+    return ProgramInput.model_validate(
+        {
+            "program": "fd",
+            "calctype": "gradient",
+            "structure": ARGON3,
+            "subprograms": [
+                {
+                    "program": child_program,
+                    "calctype": "energy",
+                    "model": {"method": "lj"},
+                    "keywords": child_keywords,
+                }
+            ],
+        }
+    )
+
+
+def test_drivers_conform_with_local_children():
+    ran = check_program(FiniteDifference(), [fd_input()], children={"toy": program})
+    assert "input 0 (gradient): compute succeeds" in ran
+
+
+def test_local_context_runs_children_in_process():
+    from qcdata.program import local_context
+
+    out = FiniteDifference().compute(fd_input(), local_context({"toy": program}))
+    exact = program.compute(toy_input("gradient"), RunContext())
+    assert np.allclose(out.results.gradient, exact.results.gradient, atol=1e-8)
+    ctx = local_context({})
+    missing = ctx.compute(toy_input().model_copy(update={"program": "no-such"}))
+    assert not missing.success and missing.error.kind is ErrorKind.environment
+
+
+def test_toy_sessions_fail_on_request():
+    spec = ProgramSpec(
+        program="toy",
+        calctype="gradient",
+        model={"method": "lj"},
+        keywords={"fail": "convergence"},
+    )
+    with program.open_session(spec, ARGON3, RunContext()) as s:
+        with pytest.raises(ProgramError) as e:
+            s.compute(np.asarray(ARGON3.geometry))
+        assert e.value.error.kind is ErrorKind.convergence
+        frame = s.compute_many([Request(np.asarray(ARGON3.geometry))])[0]
+        assert not frame.success and frame.error.kind is ErrorKind.convergence
