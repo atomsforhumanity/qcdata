@@ -12,7 +12,6 @@ from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
 from qcdata.helper_types import (
     SerializableMatrix,
     SerializableNDArray,
-    SerializableTensor3D,
     SerializableVector,
 )
 
@@ -126,22 +125,6 @@ class SinglePointData(FileData, CalcInfoData):
 
         wavefunction: Wavefunction data from the calculation.
 
-        freqs_wavenumber: Harmonic vibrational frequencies in wavenumbers (cm^-1),
-            negative for imaginary modes.
-        normal_modes_cartesian: n_vibmodes x n_atoms x 3 array of normal modes, one per
-            entry of ``freqs_wavenumber`` and in the same order. Each mode is a
-            Cartesian displacement (not mass-weighted) scaled to unit length, in the
-            input structure's frame and atom order; it is dimensionless. The sign of a
-            mode is arbitrary. Multiplying a mode by the square root of each atom's
-            mass and normalizing gives the eigenvector of the mass-weighted Hessian.
-        gibbs_free_energy: Gibbs free energy (i.e. thermochemical analysis) in Hartrees
-            of a system where translation / rotation / vibration degrees of freedom are
-            approximated using ideal gas / rigid rotor / harmonic oscillator
-            respectively, the electronic energy included.
-
-            When `vibrational_analysis` or `thermochemistry` are given, these three
-            fields are filled from them if absent: the vibrations of
-            `vibrational_analysis` and ``thermochemistry[0].total.gibbs``.
         scf_dipole_moment: The x, y, z component of the dipole moment of the structure
             in units of e a0 (NOT Debye!).
         atomic_charges: Partial charge on each atom in units of e, ordered like the
@@ -173,9 +156,10 @@ class SinglePointData(FileData, CalcInfoData):
         bond_orders_kind: ``mayer`` (sum (PS)_mn (PS)_nm over the AOs of two atoms,
             what xtb prints as "Wiberg"), ``wiberg`` (in an orthogonalized basis), ...
         vibrational_analysis: The harmonic analysis of the Hessian with the choices
-            behind it (masses, projection, symmetry), when the program made one.
+            behind it (masses, projection, symmetry), when the program made one: the
+            home of frequencies and normal modes.
         thermochemistry: Ideal-gas thermochemistry, one entry per temperature and
-            standard state.
+            standard state: the home of free energies.
     """
 
     energy: float | None = None
@@ -184,10 +168,6 @@ class SinglePointData(FileData, CalcInfoData):
     nuclear_repulsion_energy: float | None = None
 
     wavefunction: Wavefunction | None = None
-
-    freqs_wavenumber: list[float] = []
-    normal_modes_cartesian: SerializableTensor3D | None = None
-    gibbs_free_energy: float | None = None
 
     scf_dipole_moment: list[float] | None = None
 
@@ -208,29 +188,29 @@ class SinglePointData(FileData, CalcInfoData):
 
     @model_validator(mode="before")
     @classmethod
-    def _fill_from_analysis(cls, values: Any) -> Any:
-        """Fill the frequency fields from the vibrational analysis when absent."""
+    def _drop_empty_pre_024_fields(cls, values: Any) -> Any:
+        """Load files saved before 0.24, which wrote empty frequency fields.
+
+        Frequencies, normal modes and free energies now live only in
+        `vibrational_analysis` and `thermochemistry`. Empty old fields carry nothing
+        and are dropped; filled ones cannot be converted (their masses and model
+        are unknown) and are rejected with that reason.
+        """
         if not isinstance(values, dict):
             return values
-        analysis = values.get("vibrational_analysis")
-        thermo = values.get("thermochemistry") or []
-        if analysis is None and not thermo:
+        old = ("freqs_wavenumber", "normal_modes_cartesian", "gibbs_free_energy")
+        present = [k for k in old if k in values]
+        if not present:
             return values
-        values = dict(values)
-        if analysis is not None:
-            analysis = VibrationalAnalysis.model_validate(analysis)
-            values["vibrational_analysis"] = analysis
-            if not values.get("freqs_wavenumber"):
-                values["freqs_wavenumber"] = analysis.vibrational_frequencies.tolist()
-                if values.get("normal_modes_cartesian") is None:
-                    values["normal_modes_cartesian"] = (
-                        analysis.vibrational_modes_cartesian
-                    )
-        if thermo and values.get("gibbs_free_energy") is None:
-            first = Thermochemistry.model_validate(thermo[0])
-            if first.total.gibbs is not None:
-                values["gibbs_free_energy"] = first.total.gibbs
-        return values
+        filled = [k for k in present if values[k] not in (None, [], ())]
+        if filled:
+            raise ValueError(
+                f"{', '.join(filled)} were removed in qcdata 0.24: frequencies and normal "
+                "modes live in vibrational_analysis, free energies in thermochemistry. "
+                "Recompute the Hessian, or rebuild the analysis with "
+                "qcinf.vibrational_analysis."
+            )
+        return {k: v for k, v in values.items() if k not in old}
 
     @field_validator("scf_quadrupole_moment", "polarizability")
     @classmethod
@@ -253,17 +233,6 @@ class SinglePointData(FileData, CalcInfoData):
             n = int(round(np.sqrt(v.size)))
             return v.reshape((n, n))
         return None
-
-    @field_validator("normal_modes_cartesian")
-    @classmethod
-    def _validate_normal_modes_cartesian_shape(
-        cls, v: SerializableNDArray | None, info: ValidationInfo
-    ) -> np.ndarray | None:
-        if v is not None:
-            freqs = info.data.get("freqs_wavenumber")
-            n_normal_modes = len(freqs) if freqs else len(v)
-            return np.asarray(v).reshape(n_normal_modes, -1, 3)
-        return v
 
     @field_validator("gradient")
     @classmethod

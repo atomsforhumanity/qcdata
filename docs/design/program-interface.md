@@ -113,9 +113,10 @@ report goes into a typed field, not `extras`.
 | `thermochemistry` | `list[Thermochemistry]` | linus's proposal (one per temperature/pressure: ZPE, per-term E/H/S/Cv/Cp/G, corrections, entropy/enthalpy model, scale factor, excluded imaginary modes) |
 | `wavefunction.orbitals` | `Orbitals` | linus's proposal (`BasisSet` of `Shell`s with a named `AOConvention`, per-spin coefficients, energies, occupations); filled on request (`output.orbitals`) |
 
-The old `freqs_wavenumber`, `normal_modes_cartesian` and `gibbs_free_energy` stay, filled as
-views of `vibrational_analysis` and `thermochemistry[0]`, so mepd and today's codecs keep
-working. HOMO-LUMO gaps are a property computed from `wavefunction`, not a stored field.
+The old `freqs_wavenumber`, `normal_modes_cartesian` and `gibbs_free_energy` are
+**removed** (Colton, 2026-11-11: pre-v1, a final unified API rather than compatibility
+for the few pre-release users). Files saved before 0.24 still load when those fields are
+empty. HOMO-LUMO gaps are a property computed from `wavefunction`, not a stored field.
 
 ### 2.3 Trajectories (phase 4)
 
@@ -255,14 +256,13 @@ fields are filled where the program claims the capability, errors carry kinds,
 4. **Later.** Columnar trajectories, subprogram roles beyond calctype, GPU packing,
    session-aware batching, `qcinf.vibrational_analysis`.
 
-## 6. Decisions for Colton
+## 6. Decisions (Colton, 2026-11-11, relayed by the linus session)
 
-1. The protocol lives in qcdata (no new dependencies; programs depend on qcdata only),
-   rather than in qccompute or a new package. *Recommended.*
-2. One calctype `hessian` (with analysis) rather than adding `frequencies`. *Recommended.*
-3. Keep `freqs_wavenumber`, `normal_modes_cartesian`, `gibbs_free_energy` as compatibility
-   views (mepd uses them) rather than removing them now. *Recommended.*
-4. qccodec stays a separate package of external adapters (rather than folding into
-   qccompute now). *Recommended; revisit once the native path carries most work.*
-5. The shared settings names and the warnings-vs-errors rule (already pending from the
-   program sessions).
+1. The protocol lives in qcdata. **Approved.**
+2. One calctype `hessian` (with analysis); no `frequencies`. **Approved.**
+3. No compatibility views: the old frequency fields are removed. **Decided.**
+4. qccodec is for external programs only. **Approved.**
+5. The shared names and glossary. **Approved.** Settings strictness (D41): settings that
+   do not affect the calculation are errors; contingent settings are allowed and the
+   record says whether they fired; sessions check against the calctypes they were opened
+   for. See conventions.md rule 5.

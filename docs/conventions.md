@@ -44,7 +44,15 @@ Python keyword arguments spell it. The rules:
    reports what each `auto` became in `resolved.settings`, and why in `resolved.reasons`.
 4. Tolerances end in `_tol`, iteration limits are `max_iter`, units appear in names only
    exactly (`memory_gib`). Booleans only for two-state choices.
-5. Unknown keys are errors of kind `input`, with a did-you-mean suggestion.
+5. **Every setting given must affect the calculation** (Colton, 2026-11-11, linus D41).
+   Unknown keys, settings that do not apply to the calculation type, and settings made
+   irrelevant by other values are errors of kind `input` (codes `unknown_key`,
+   `not_applicable`, `no_effect`), with a did-you-mean suggestion where one exists.
+   *Contingent* settings, which apply only if something happens during the run (an SOSCF
+   or escalation threshold, a stability probe's gap, a level shift), are allowed; the
+   run's `record` says whether each one fired. A session checks its keywords against the
+   calculation types it was opened for (`open_session(..., calctypes=...)`), and a
+   request of another type fails with `not_applicable`.
 6. Each program publishes the JSON Schema of its settings (`settings_schema(calctype)`),
    with `x-unit`, `x-tier` (common, expert), `x-concern` (model, approximation,
    convergence, algorithm, resource, output) and `x-applies-to` on every key.
@@ -140,15 +148,23 @@ xz, yy, yz, zz); every spherical function and the x^l component unit-normalized.
 ### Warnings
 
 `ProgramWarning(code, message, path)`: `code` is stable snake_case; `path` is the dotted
-settings key concerned, if any. Codes every program shares:
+settings key concerned, if any. Settings problems are errors, not warnings (rule 5), so
+warnings report what happened during a run (a fallback taken, a probe fired, slow
+convergence). One shared code:
 
 | code | meaning |
 |---|---|
-| `not_applicable` | a setting of another calculation type (`freq.*` in a gradient run), so one keyword set serves a driver's gradients and Hessians |
-| `no_effect` | a setting made irrelevant by the other values given |
-| `deprecated_key` | an old key still accepted; the message names the new one |
+| `deprecated_key` | an old key still accepted during a program's own transition (axtb 0.2's flat keys); the message names the new one. Pre-v1 programs reject old keys instead |
 
 Programs define further codes in their own documentation.
+
+Shared error codes for settings (kind `input`):
+
+| code | meaning |
+|---|---|
+| `unknown_key` | not a setting of this program |
+| `not_applicable` | a setting of another calculation type, or a session request outside the calctypes it was opened for |
+| `no_effect` | made irrelevant by the other values given |
 
 ### Errors
 

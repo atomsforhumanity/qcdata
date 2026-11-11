@@ -226,7 +226,8 @@ def test_thermochemistry_corrections():
         _thermo(concentration=1.0)
 
 
-def test_frequency_fields_filled_from_analysis():
+def test_frequencies_live_only_in_the_analysis():
+    """Pre-v1: no compatibility copies; frequencies, modes and free energies have one home."""
     va = _water_analysis()
     sp = SinglePointData(
         provenance=PROV,
@@ -235,17 +236,23 @@ def test_frequency_fields_filled_from_analysis():
         vibrational_analysis=va,
         thermochemistry=[_thermo(), _thermo(temperature=310.0)],
     )
-    assert sp.freqs_wavenumber == [-30.0, 1600.0, 3700.0]
-    assert np.array_equal(sp.normal_modes_cartesian, va.normal_modes_cartesian)
-    assert sp.gibbs_free_energy == -75.996
     loaded = SinglePointData.model_validate_json(sp.model_dump_json())
     assert loaded == sp
+    assert loaded.vibrational_analysis.vibrational_frequencies.tolist() == [
+        -30.0,
+        1600.0,
+        3700.0,
+    ]
     assert loaded.thermochemistry[1].temperature == 310.0
-    # Values a program gives itself are kept.
-    own = SinglePointData(
-        provenance=PROV, gibbs_free_energy=-1.0, thermochemistry=[_thermo()]
+    # Files saved before 0.24 wrote the old fields empty: they still load.
+    old_empty = {"freqs_wavenumber": [], "normal_modes_cartesian": None}
+    assert (
+        SinglePointData.model_validate({"provenance": PROV, **old_empty}).energy is None
     )
-    assert own.gibbs_free_energy == -1.0
+    # Filled ones cannot be converted, and say where the data lives now.
+    with pytest.raises(ValidationError, match="vibrational_analysis"):
+        SinglePointData.model_validate({"provenance": PROV, "freqs_wavenumber": [1.0]})
+    assert "freqs_wavenumber" not in SinglePointData.model_fields
 
 
 # ------------------------------------------------------------------- orbitals

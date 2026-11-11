@@ -97,8 +97,12 @@ def test_serialized_scientific_arrays_match_schema(water):
         provenance={"program": "producer"},
         gradient=np.arange(9),
         hessian=np.eye(9),
-        freqs_wavenumber=[1.0, 2.0],
-        normal_modes_cartesian=np.arange(18).reshape(2, 3, 3),
+        vibrational_analysis={
+            "masses": [16.0, 1.0, 1.0],
+            "projection": "translations_rotations",
+            "frequencies": [1.0, 2.0],
+            "normal_modes_cartesian": np.arange(18).reshape(2, 3, 3),
+        },
         wavefunction=Wavefunction(scf_eigenvalues_a=[-1.0, -0.5]),
     )
     for obj in [water, data, ConformerSearchData(provenance={"program": "producer"})]:

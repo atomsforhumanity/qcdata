@@ -43,50 +43,6 @@ def test_single_point_success_casts_hessian_to_3n_by_3n(prog_input_factory):
     assert data.hessian.dtype == np.float64
 
 
-def test_single_point_data_normal_modes_cartesian_shape(prog_input_factory):
-    """Test that SinglePointData normal_modes_cartesian are n_modes x n_atoms x 3"""
-    pi_energy = prog_input_factory("energy")
-    n_atoms = len(pi_energy.structure.symbols)
-    n_atoms * 3
-    data = SinglePointData(
-        provenance={"program": "qcdata-test-suite"},
-        energy=-1.0,
-        freqs_wavenumber=[1.0, 2.0, 3.0],
-        normal_modes_cartesian=np.array(
-            [
-                -1.45413605e-07,
-                7.31568094e-02,
-                3.49777695e-34,
-                -4.00280118e-01,
-                -5.80603129e-01,
-                8.72597124e-50,
-                4.00282426e-01,
-                -5.80601321e-01,
-                -2.61779137e-49,
-                -8.40792347e-07,
-                4.64736028e-02,
-                -7.85031947e-33,
-                6.02403552e-01,
-                -3.68838662e-01,
-                -1.08372224e-49,
-                -6.02390207e-01,
-                -3.68828204e-01,
-                3.25116671e-49,
-                -6.99575075e-02,
-                -7.31659905e-07,
-                9.73449382e-38,
-                5.55204565e-01,
-                -4.35072838e-01,
-                1.17356863e-54,
-                5.55217962e-01,
-                4.35084451e-01,
-                -3.52070589e-54,
-            ]
-        ),
-    )
-    assert data.normal_modes_cartesian.shape == (3, 3, 3)
-
-
 def test_wavefunction_to_numpy():
     """Test that wavefunction converts to numpy array"""
     wavefunction = Wavefunction(
