@@ -1,5 +1,6 @@
 """The Program/Session protocol, its conformance suite, and the toy program."""
 
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -387,3 +388,17 @@ def test_sessions_run_only_the_calctypes_they_were_opened_for():
     assert (
         ctx.session(spec, ARGON3, calctypes=["hessian"]).compute(x, "hessian").success
     )
+
+
+def test_scratch_is_made_on_first_use_only():
+    made = []
+
+    def make():
+        made.append(1)
+        return Path("/tmp")
+
+    ctx = RunContext(make_scratch=make)
+    assert not made
+    assert ctx.scratch == Path("/tmp") and ctx.scratch == Path("/tmp")
+    assert made == [1]
+    assert RunContext().scratch is None

@@ -336,7 +336,9 @@ class RunContext:
             managed by a runner.
         gpus: Identifiers of the GPUs granted (as for ``CUDA_VISIBLE_DEVICES``).
         memory_gib: Host memory granted (GiB), if managed.
-        scratch: A directory the calculation may write to, if the runner made one.
+        scratch_dir: A directory the calculation may write to, if one was given.
+        make_scratch: Makes a scratch directory on first use of `scratch`, so a run
+            that never writes files never pays for one.
         compute: Computes child calculations (drivers only).
         open_session: Opens child sessions; use `session`.
         progress: Receives streaming updates (any JSON-serializable value), if the
@@ -346,10 +348,22 @@ class RunContext:
     threads: int | None = None
     gpus: tuple[str, ...] = ()
     memory_gib: float | None = None
-    scratch: Path | None = None
+    scratch_dir: Path | None = None
+    make_scratch: Callable[[], Path] | None = None
     compute: Compute | None = None
     open_session: OpenSession | None = None
     progress: Callable[[Any], None] | None = None
+
+    @property
+    def scratch(self) -> Path | None:
+        """A directory the calculation may write to, made on first use; None if none.
+
+        Returns:
+            The directory, or None when the caller provides none.
+        """
+        if self.scratch_dir is None and self.make_scratch is not None:
+            self.scratch_dir = self.make_scratch()
+        return self.scratch_dir
 
     def session(
         self,
