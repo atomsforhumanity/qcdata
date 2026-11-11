@@ -105,7 +105,7 @@ def test_error_slot_only_on_failures(energy_input):
         ErrorInfo(kind="not_a_kind", message="x")
 
 
-def test_frames_keep_warnings_and_errors_but_not_run_records(energy_input):
+def test_frames_keep_warnings_errors_and_records_but_not_settings(energy_input):
     out = ProgramOutput(
         input_data=energy_input,
         success=False,
@@ -119,6 +119,8 @@ def test_frames_keep_warnings_and_errors_but_not_run_records(energy_input):
     frame = Frame.from_output(out)
     assert frame.error.kind is ErrorKind.convergence
     assert frame.warnings[0].code == "w"
+    assert frame.record == {"r": 1}
+    assert not hasattr(frame, "resolved")
     saved = OptimizationData(provenance=PROV, frames=[out]).model_dump(mode="json")
     saved["frames"] = [out.model_dump(mode="json")]  # a ProgramOutput saved as a step
     loaded = OptimizationData.model_validate(saved)

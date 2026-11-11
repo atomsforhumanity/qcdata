@@ -39,15 +39,11 @@ class ProgramOutput(OutputBase, Generic[ProgramInputType, DataType]):
             Any of `qcdata.Data`.
         resolved: The settings the calculation actually used, with every ``"auto"``
             replaced, and the reasons; passed back as keywords they reproduce the run.
-        record: What happened during the run (fallbacks, escalations, residuals
-            reached), shaped by the program's published record schema. Diagnostic:
-            not stable across program versions, unlike `results` and `resolved`.
     """
 
     input_data: ProgramInputType
     results: DataType
     resolved: Resolved | None = None
-    record: dict[str, Any] = {}
 
     @model_validator(mode="before")
     @classmethod

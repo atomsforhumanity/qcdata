@@ -344,6 +344,7 @@ class Frame(OutputBase):
                 "execution": value.execution,
                 "warnings": value.warnings,
                 "error": value.error,
+                "record": value.record,
                 "structure": value.input_data.structure,
             }
         if isinstance(value, dict) and "data" in value and "results" not in value:
@@ -356,9 +357,8 @@ class Frame(OutputBase):
             del value["data"]
         if isinstance(value, dict) and "input_data" in value:
             value = dict(value)
-            # What only a whole calculation reports; its parent keeps its own.
+            # A whole calculation's settings; its parent keeps its own.
             value.pop("resolved", None)
-            value.pop("record", None)
             input_data = value.pop("input_data")
             if "structure" not in value:
                 value["structure"] = (

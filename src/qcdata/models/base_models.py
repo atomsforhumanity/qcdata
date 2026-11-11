@@ -532,6 +532,10 @@ class OutputBase(QCDataBaseModel):
             through (a setting that had no effect, a fallback taken).
         error: Why the calculation failed, as a kind and a code callers can branch on;
             only on failures. Partial results stay in `results`.
+        record: What happened during the run (fallbacks, escalations, residuals
+            reached, a warm start taken), shaped by the program's published record
+            schema. Diagnostic: not stable across program versions, unlike `results`
+            and `resolved`.
         plogs str: `@property` Print the logs.
         ptraceback str: `@property` Print the traceback.
     """
@@ -542,6 +546,7 @@ class OutputBase(QCDataBaseModel):
     execution: ExecutionInfo = ExecutionInfo()
     warnings: list[ProgramWarning] = []
     error: ErrorInfo | None = None
+    record: dict[str, Any] = {}
 
     @model_validator(mode="after")
     def _require_traceback_on_failure(self) -> Self:
@@ -560,7 +565,7 @@ class OutputBase(QCDataBaseModel):
         data = handler(self)
         if not isinstance(data, dict):
             return data
-        trailing = ("warnings", "error", "logs", "traceback", "execution")
+        trailing = ("warnings", "error", "record", "logs", "traceback", "execution")
         head = {k: data[k] for k in ("success",) if k in data}
         body = {k: v for k, v in data.items() if k not in head and k not in trailing}
         tail = {k: data[k] for k in trailing if k in data}

@@ -87,7 +87,7 @@ packs a `PythonInput` that calls themselves and whose decode unpacks it again).
 | `resolved` | `Resolved \| None` | `settings`: the complete settings tree with every `auto` replaced, itself a valid `keywords` that reproduces the run; `reasons`: path → why |
 | `warnings` | `list[Warning]` | `code` (stable, snake_case), `message`, optional `path` (the settings key concerned) |
 | `error` | `ErrorInfo \| None` | on failure: `kind` (below), `message`, optional `code` (stable snake_case within a kind, e.g. `max_iter`, `energy_rose`, `not_first_order_saddle`: callers branch on it instead of parsing text), optional `program` (the child that failed), optional `cause: ErrorInfo` (the child's own error, for kind `program`) |
-| `record` | `dict` | what happened during the run (fallbacks, escalations, residuals reached, per-phase decisions); JSON, shaped by the program's published result schema; diagnostic, not stable across versions |
+| `record` | `dict` | (also on each `Frame`) what happened during the run (fallbacks, escalations, residuals reached, per-phase decisions); JSON, shaped by the program's published result schema; diagnostic, not stable across versions |
 | `execution.timings` | `dict[str, float]` | seconds per phase (keys are the program's; `total` for the whole call, drivers also `children` and their own time), on `ExecutionInfo` beside `wall_time` |
 | `results.provenance` | `Provenance` | gains `program_commit` (and keeps `program`, `program_version`) |
 
