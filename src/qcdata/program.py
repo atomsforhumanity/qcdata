@@ -654,8 +654,13 @@ class ComputeSession:
                 f"has {len(self._structure.symbols)}",
             )
         structure = self._structure.model_copy(update={"geometry": geometry})
-        spec = self._spec.model_copy(update={"calctype": CalcType(calctype)})
-        return ProgramInput.from_spec(spec, structure)
+        # The spec and structure are already valid: build the input without
+        # validating them again (this runs once per step of a driver).
+        return ProgramInput.model_construct(
+            _fields_set=self._spec.model_fields_set | {"calctype", "structure"},
+            **{**self._spec.__dict__, "calctype": CalcType(calctype)},
+            structure=structure,
+        )
 
     def _frame(self, out: ProgramOutput[Any, Any]) -> Frame:
         """The frame of a successful output; raise the failure of a failed one."""
@@ -667,7 +672,18 @@ class ComputeSession:
                 kind=ErrorKind.internal, message=out.traceback or "failed"
             )
             raise ProgramError(error, out.results)
-        return Frame.from_output(out)
+        return Frame.model_construct(  # a valid output makes a valid frame
+            _fields_set={"structure", "results", "success", "warnings", "record"},
+            structure=out.input_data.structure,
+            results=out.results,
+            success=True,
+            logs=out.logs,
+            traceback=None,
+            execution=out.execution,
+            warnings=out.warnings,
+            error=None,
+            record=out.record,
+        )
 
     def _complete(self, frame: Frame, positions: np.ndarray) -> Frame:
         """Add the energy and gradient to a Hessian computed without them."""
