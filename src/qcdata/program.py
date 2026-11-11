@@ -80,8 +80,10 @@ class Capabilities(QCDataBaseModel):
         in_process: Whether it may run in the runner's own process (it neither writes
             to the process's stdout/stderr file descriptors nor changes process-global
             state); otherwise the runner uses a worker process.
-        thread_safe_sessions: Whether separate sessions may compute concurrently from
-            different threads (the program releases the GIL and shares no state).
+        thread_safe: Whether separate calculations and sessions may run concurrently
+            in threads of one process (the program releases the GIL and shares no
+            mutable state); the runner then runs them side by side in threads instead
+            of one at a time.
         gpu: Whether it can use GPUs.
     """
 
@@ -90,7 +92,7 @@ class Capabilities(QCDataBaseModel):
     sessions: bool = False
     batches: bool = False
     in_process: bool = True
-    thread_safe_sessions: bool = False
+    thread_safe: bool = False
     gpu: bool = False
 
 

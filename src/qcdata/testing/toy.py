@@ -365,7 +365,7 @@ class ToyProgram:
             sessions=True,
             batches=True,
             in_process=True,
-            thread_safe_sessions=True,
+            thread_safe=True,
         )
 
     def settings_schema(self, calctype: CalcType) -> dict[str, Any]:
