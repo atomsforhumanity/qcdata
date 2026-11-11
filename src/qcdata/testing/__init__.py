@@ -28,7 +28,14 @@ from typing import Any
 
 import numpy as np
 
-from ..models import CalcType, ErrorKind, ProgramInput, ProgramOutput, SinglePointData
+from ..models import (
+    CalcType,
+    ErrorKind,
+    Frame,
+    ProgramInput,
+    ProgramOutput,
+    SinglePointData,
+)
 from ..program import (
     BatchProgram,
     Capabilities,
@@ -288,41 +295,72 @@ def _check_session(
         return ["sessions claimed but no open_session"]
     assert inp.structure is not None
     positions = np.asarray(inp.structure.geometry, dtype=float)
+    nan = np.full_like(positions, np.nan)
     ran.append("session")
     with program.open_session(inp, inp.structure, RunContext()) as session:
         if session.program != program.name or not session.program_version:
             failures.append("session: program and program_version must be set")
         try:
-            r = session.compute(positions, inp.calctype)
+            frame = session.compute(positions, inp.calctype, lineage="a")
         except ProgramError as e:
             return failures + [f"session: compute failed: {e}"]
+        if not isinstance(frame, Frame) or not frame.success:
+            return failures + [
+                f"session: compute must return a successful Frame: {frame!r}"
+            ]
+        if not np.allclose(frame.structure.geometry, positions):
+            failures.append(
+                "session: the frame's structure is not the evaluated geometry"
+            )
+        energy = frame.results.energy
         if reference.success and reference.results.energy is not None:
-            if r.energy is None or not math.isclose(
-                r.energy, reference.results.energy, abs_tol=tol
+            if energy is None or not math.isclose(
+                energy, reference.results.energy, abs_tol=tol
             ):
                 failures.append(
-                    f"session: energy {r.energy} differs from compute's "
+                    f"session: energy {energy} differs from compute's "
                     f"{reference.results.energy}"
                 )
         ran.append("session survives a failed request")
         try:
-            session.compute(np.full_like(positions, np.nan), inp.calctype)
+            session.compute(nan, inp.calctype, lineage="a")
             failures.append("session: non-finite positions were accepted")
         except ProgramError:
             pass
         try:
-            session.compute(positions, inp.calctype)
+            again = session.compute(positions, inp.calctype, lineage="a")
+            if energy is not None and not math.isclose(
+                again.results.energy or math.nan, energy, abs_tol=tol
+            ):
+                failures.append("session: results changed after a failed request")
         except ProgramError as e:
             failures.append(f"session: unusable after a failed request: {e}")
         ran.append("session compute_many")
         many = session.compute_many(
-            [Request(positions, inp.calctype), Request(positions, inp.calctype)]
+            [
+                Request(positions, inp.calctype, lineage="a"),
+                Request(nan, inp.calctype, lineage="b"),
+                Request(positions, inp.calctype, lineage="b"),
+            ]
         )
-        if len(many) != 2 or not all(isinstance(m, SinglePointData) for m in many):
-            failures.append(f"session: compute_many returned {many!r}")
+        if len(many) != 3 or not all(isinstance(m, Frame) for m in many):
+            failures.append(
+                f"session: compute_many must return one Frame per request: {many!r}"
+            )
+        elif not (many[0].success and many[2].success) or many[1].success:
+            failures.append("session: compute_many must fail only the bad request")
+        elif many[1].error is None:
+            failures.append("session: a failed frame must carry its error")
+        ran.append("session reset")
+        session.reset("a")
+        session.reset()
+        try:
+            session.compute(positions, inp.calctype)
+        except ProgramError as e:
+            failures.append(f"session: unusable after reset: {e}")
         if CalcType.hessian in caps.calctypes:
             ran.append("session hessian includes gradient")
-            h = session.compute(positions, CalcType.hessian)
+            h = session.compute(positions, CalcType.hessian).results
             if h.energy is None or h.gradient is None or h.hessian is None:
                 failures.append(
                     "session: a hessian request must return energy and gradient"

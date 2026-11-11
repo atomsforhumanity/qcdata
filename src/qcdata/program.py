@@ -23,7 +23,7 @@ Design: ``docs/design/program-interface.md``; names and units: ``docs/convention
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Sequence
 from dataclasses import dataclass
 from importlib.metadata import entry_points
 from pathlib import Path
@@ -37,6 +37,7 @@ from .models import (
     Data,
     ErrorInfo,
     ErrorKind,
+    Frame,
     ProgramInput,
     ProgramOutput,
     ProgramSpec,
@@ -52,6 +53,7 @@ __all__ = [
     "Capabilities",
     "Resources",
     "Plan",
+    "Accuracy",
     "Request",
     "ProgramError",
     "Compute",
@@ -61,6 +63,7 @@ __all__ = [
     "BatchProgram",
     "Session",
     "ComputeSession",
+    "failed_frame",
     "find_program",
     "available_programs",
 ]
@@ -133,6 +136,43 @@ class Plan(QCDataBaseModel):
 
 
 @dataclass(frozen=True)
+class Accuracy:
+    """How accurate a session's result must be, absolute and in atomic units.
+
+    A program maps the targets onto its convergence settings with its own error model
+    (linus: SCF orbital-gradient and response tolerances); explicit convergence settings
+    of the session act as floors, so a request may tighten them, never loosen them.
+
+    Attributes:
+        energy: Target error of the energy (Eh).
+        gradient: Target error of the gradient components (Eh/bohr).
+        hessian: Target error of the Hessian elements (Eh/bohr^2).
+    """
+
+    energy: float | None = None
+    gradient: float | None = None
+    hessian: float | None = None
+
+    @classmethod
+    def of(cls, value: Accuracy | float | None, calctype: CalcType) -> Accuracy | None:
+        """Read a request's accuracy: a bare number targets its highest derivative.
+
+        Args:
+            value: An `Accuracy`, a number, or None.
+            calctype: The request's calculation type.
+
+        Returns:
+            The accuracy, or None for the session's own settings.
+        """
+        if value is None or isinstance(value, Accuracy):
+            return value
+        name = {"energy": "energy", "gradient": "gradient", "hessian": "hessian"}.get(
+            CalcType(calctype).value, "energy"
+        )
+        return cls(**{name: float(value)})
+
+
+@dataclass(frozen=True)
 class Request:
     """One evaluation of a session.
 
@@ -140,15 +180,22 @@ class Request:
         positions: Atomic positions (bohr), n_atoms x 3, atoms as the session's
             structure.
         calctype: ``energy``, ``gradient`` or ``hessian``.
-        accuracy: Target accuracy of this request, by quantity (``{"gradient":
-            1e-4}`` in Eh/bohr, ``{"energy": 1e-7}`` in Eh); the program maps it onto
-            its convergence settings and may only tighten them. None: the session's
-            settings.
+        accuracy: Target accuracy of this request (a bare number targets the
+            calctype's highest derivative). None: the session's settings.
+        lineage: Which earlier evaluations this one continues: the session keeps
+            warm-start and extrapolation history per lineage, so NEB images, IRC
+            branches and parallel tasks each start from their own previous geometry.
+            None: the nearest earlier geometry.
+        outputs: Optional outputs that do not change the surface but may cost extra
+            (``dipole``, ``ir``, ``polarizability``, ``orbitals``, ``density``, ...);
+            a program rejects ones it does not support with kind ``unsupported``.
     """
 
     positions: np.ndarray
     calctype: CalcType = CalcType.gradient
-    accuracy: Mapping[str, float] | None = None
+    accuracy: Accuracy | float | None = None
+    lineage: Hashable | None = None
+    outputs: frozenset[str] = frozenset()
 
 
 class ProgramError(Exception):
@@ -279,16 +326,20 @@ class Session(Protocol):
     """The same program and molecule at many geometries, warm-started.
 
     Opened by `SessionProgram.open_session` (or ``qccompute.session``). The session pins
-    the model and approximations (method, basis, grids, precision), so all its
-    evaluations lie on one potential energy surface; a request may vary only how
-    tightly it converges (`Request.accuracy`). It knows the first geometry from
-    continuations. Contract:
+    the atoms, charge, multiplicity, model and approximations (method, basis, grids,
+    precision) for its lifetime, so all its evaluations lie on one potential energy
+    surface; anything else needs a new session. A request may vary only how tightly it
+    converges (`Request.accuracy`), which history it continues (`Request.lineage`) and
+    which optional outputs it adds (`Request.outputs`). Contract:
 
-    - A failed request raises `ProgramError` and leaves the session usable: a driver
-      may retry a smaller step on the same session.
+    - Results are `Frame` objects: the structure evaluated, its `SinglePointData`, and
+      the request's own ``warnings`` and ``record`` (an SCF escalation, a stability
+      probe, a fallback), ready to store in a trajectory. ``program`` and
+      ``program_version`` are the session's.
+    - A failed request raises `ProgramError` from `compute` (and is a failed `Frame`
+      from `compute_many`) and leaves the session usable, with the lineage's history
+      untouched: a driver may retry a smaller step on the same session.
     - A ``hessian`` request returns the energy and gradient too.
-    - Results are `SinglePointData`; frames take ``program`` and ``program_version``
-      from the session.
 
     Attributes:
         program: The program's name.
@@ -303,33 +354,44 @@ class Session(Protocol):
         positions: np.ndarray,
         calctype: CalcType = CalcType.gradient,
         *,
-        accuracy: Mapping[str, float] | None = None,
-    ) -> SinglePointData:
+        accuracy: Accuracy | float | None = None,
+        lineage: Hashable | None = None,
+        outputs: Iterable[str] = (),
+    ) -> Frame:
         """Evaluate one geometry.
 
         Args:
             positions: Atomic positions (bohr), n_atoms x 3.
             calctype: ``energy``, ``gradient`` or ``hessian``.
             accuracy: See `Request.accuracy`.
+            lineage: See `Request.lineage`.
+            outputs: See `Request.outputs`.
 
         Returns:
-            The results at this geometry.
+            The evaluation, successful.
 
         Raises:
             ProgramError: The evaluation failed; the session stays usable.
         """
         ...
 
-    def compute_many(
-        self, requests: Sequence[Request]
-    ) -> list[SinglePointData | ProgramError]:
-        """Evaluate many geometries (finite differences, path images).
+    def compute_many(self, requests: Sequence[Request]) -> list[Frame]:
+        """Evaluate many geometries (finite differences, path images, IRC branches).
 
         Args:
             requests: The evaluations.
 
         Returns:
-            One entry per request, in order: its results, or its `ProgramError`.
+            One frame per request, in order; a failed request is a failed frame with
+            its ``error``.
+        """
+        ...
+
+    def reset(self, lineage: Hashable | None = None) -> None:
+        """Drop warm-start and extrapolation history, after a large jump or a failure.
+
+        Args:
+            lineage: The lineage to reset; None resets every lineage.
         """
         ...
 
@@ -353,6 +415,29 @@ class Session(Protocol):
     ) -> None:
         """Close the session."""
         ...
+
+
+def failed_frame(structure: Structure, error: ProgramError, program: str) -> Frame:
+    """The failed `Frame` of a session request, for `Session.compute_many`.
+
+    Args:
+        structure: The structure that was evaluated.
+        error: The request's failure.
+        program: The session's program, for the empty results' provenance.
+
+    Returns:
+        A frame with ``success=False``, the error, and any partial results.
+    """
+    from .models import Provenance
+
+    results = error.results or SinglePointData(provenance=Provenance(program=program))
+    return Frame(
+        structure=structure,
+        results=results,
+        success=False,
+        traceback=error.error.message,
+        error=error.error,
+    )
 
 
 @runtime_checkable
@@ -472,7 +557,8 @@ class ComputeSession:
         spec = self._spec.model_copy(update={"calctype": CalcType(calctype)})
         return ProgramInput.from_spec(spec, structure)
 
-    def _results(self, out: ProgramOutput[Any, Any]) -> SinglePointData:
+    def _frame(self, out: ProgramOutput[Any, Any]) -> Frame:
+        """The frame of a successful output; raise the failure of a failed one."""
         version = out.results.provenance.program_version
         if version and not self.program_version:
             self.program_version = version
@@ -481,68 +567,102 @@ class ComputeSession:
                 kind=ErrorKind.internal, message=out.traceback or "failed"
             )
             raise ProgramError(error, out.results)
-        return out.results
+        return Frame.from_output(out)
+
+    def _complete(self, frame: Frame, positions: np.ndarray) -> Frame:
+        """Add the energy and gradient to a Hessian computed without them."""
+        if frame.results.gradient is not None:
+            return frame
+        gradient = self._frame(
+            self._compute(self._input(positions, CalcType.gradient))
+        ).results
+        results = frame.results.model_copy(
+            update={"gradient": gradient.gradient, "energy": gradient.energy}
+        )
+        return frame.model_copy(update={"results": results})
 
     def compute(
         self,
         positions: np.ndarray,
         calctype: CalcType = CalcType.gradient,
         *,
-        accuracy: Mapping[str, float] | None = None,
-    ) -> SinglePointData:
+        accuracy: Accuracy | float | None = None,
+        lineage: Hashable | None = None,
+        outputs: Iterable[str] = (),
+    ) -> Frame:
         """Evaluate one geometry; see `Session.compute`.
 
         Args:
             positions: Atomic positions (bohr).
             calctype: ``energy``, ``gradient`` or ``hessian``.
             accuracy: Ignored: a stateless session runs its spec's settings.
+            lineage: Ignored: a stateless session keeps no history.
+            outputs: Not supported; must be empty.
 
         Returns:
-            The results.
+            The evaluation.
 
         Raises:
-            ProgramError: The calculation failed.
+            ProgramError: The calculation failed, or outputs were requested.
         """
         if self._closed:
             raise RuntimeError("The session is closed.")
+        if tuple(outputs):
+            raise ProgramError.of(
+                "unsupported",
+                "A session over compute takes optional outputs from the spec's "
+                "keywords, not per request.",
+            )
         calctype = CalcType(calctype)
-        results = self._results(self._compute(self._input(positions, calctype)))
-        if calctype == CalcType.hessian and results.gradient is None:
-            gradient = self._results(
-                self._compute(self._input(positions, CalcType.gradient))
-            )
-            results = results.model_copy(
-                update={"gradient": gradient.gradient, "energy": gradient.energy}
-            )
-        return results
+        frame = self._frame(self._compute(self._input(positions, calctype)))
+        if calctype == CalcType.hessian:
+            frame = self._complete(frame, positions)
+        return frame
 
-    def compute_many(
-        self, requests: Sequence[Request]
-    ) -> list[SinglePointData | ProgramError]:
+    def compute_many(self, requests: Sequence[Request]) -> list[Frame]:
         """Evaluate many geometries in one call to the callback.
 
         Args:
             requests: The evaluations.
 
         Returns:
-            Results or the `ProgramError` of each request, in order.
+            One frame per request, in order; failures as failed frames.
         """
         if self._closed:
             raise RuntimeError("The session is closed.")
-        out: list[SinglePointData | ProgramError] = []
+        frames: list[Frame | None] = [None] * len(requests)
         inputs: list[ProgramInput] = []
-        for r in requests:
-            inputs.append(self._input(r.positions, r.calctype))
-        outputs = self._compute(inputs) if inputs else []
-        for r, o in zip(requests, outputs, strict=True):
+        positions: list[int] = []
+        for i, r in enumerate(requests):
             try:
-                results = self._results(o)
-                if r.calctype == CalcType.hessian and results.gradient is None:
-                    results = self.compute(r.positions, CalcType.hessian)
-                out.append(results)
+                if r.outputs:
+                    raise ProgramError.of(
+                        "unsupported", "per-request outputs need a program session"
+                    )
+                inputs.append(self._input(r.positions, r.calctype))
+                positions.append(i)
             except ProgramError as e:
-                out.append(e)
-        return out
+                frames[i] = failed_frame(
+                    self._structure.model_copy(
+                        update={"geometry": np.asarray(r.positions, dtype=float)}
+                    ),
+                    e,
+                    self.program,
+                )
+        outputs = self._compute(inputs) if inputs else []
+        for i, inp, out in zip(positions, inputs, outputs, strict=True):
+            assert inp.structure is not None
+            try:
+                frame = self._frame(out)
+                if requests[i].calctype == CalcType.hessian:
+                    frame = self._complete(frame, requests[i].positions)
+                frames[i] = frame
+            except ProgramError as e:
+                frames[i] = failed_frame(inp.structure, e, self.program)
+        return [f for f in frames if f is not None]
+
+    def reset(self, lineage: Hashable | None = None) -> None:
+        """Nothing to reset: a stateless session keeps no history."""
 
     def plan(self) -> Plan:
         """Not known to a stateless session: the spec's keywords, unresolved."""

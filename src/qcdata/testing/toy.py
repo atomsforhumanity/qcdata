@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import difflib
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from types import TracebackType
 from typing import Any
 
@@ -26,6 +26,7 @@ from ..models import (
     ErrorInfo,
     ErrorKind,
     ExecutionInfo,
+    Frame,
     ProgramInput,
     ProgramOutput,
     ProgramSpec,
@@ -35,12 +36,14 @@ from ..models import (
     Structure,
 )
 from ..program import (
+    Accuracy,
     Capabilities,
     Plan,
     ProgramError,
     Request,
     Resources,
     RunContext,
+    failed_frame,
 )
 
 __all__ = ["ToyProgram", "ToySession", "program"]
@@ -255,20 +258,25 @@ def _failure(
 
 
 class ToySession:
-    """A Lennard-Jones session: settings pinned at opening, evaluations counted."""
+    """A Lennard-Jones session: settings pinned at opening, history kept per lineage.
 
-    def __init__(self, plan: Plan, natoms: int):
+    The potential needs no warm start, but the session keeps what a real program
+    would (the last geometry of each lineage) and reports it in each frame's record,
+    so drivers and runners can test lineage handling.
+    """
+
+    def __init__(self, plan: Plan, structure: Structure):
         """Open the session.
 
         Args:
             plan: The pinned plan.
-            natoms: Number of atoms of every request.
+            structure: The atoms, charge, and multiplicity of every request.
         """
         self.program = NAME
         self.program_version = _version.__version__
         self._plan = plan
-        self._natoms = natoms
-        self._evaluations = 0
+        self._structure = structure
+        self._history: dict[Hashable, np.ndarray] = {}
         self._closed = False
 
     def compute(
@@ -276,27 +284,38 @@ class ToySession:
         positions: np.ndarray,
         calctype: CalcType = CalcType.gradient,
         *,
-        accuracy: Mapping[str, float] | None = None,
-    ) -> SinglePointData:
+        accuracy: Accuracy | float | None = None,
+        lineage: Hashable | None = None,
+        outputs: Iterable[str] = (),
+    ) -> Frame:
         """Evaluate one geometry; see `qcdata.program.Session.compute`.
 
         Args:
             positions: Atomic positions (bohr).
             calctype: ``energy``, ``gradient`` or ``hessian``.
             accuracy: Ignored: the potential is exact.
+            lineage: The history this evaluation continues.
+            outputs: ``pair_energies`` puts every pair's energy in the record.
 
         Returns:
-            The results; a hessian also has the energy and gradient.
+            The frame; a hessian also has the energy and gradient.
 
         Raises:
-            ProgramError: The geometry cannot be evaluated; the session stays usable.
+            ProgramError: The geometry cannot be evaluated; the session stays usable
+                and the lineage's history is unchanged.
         """
         if self._closed:
             raise RuntimeError("The session is closed.")
-        x = np.asarray(positions, dtype=float).reshape(-1, 3)
-        if len(x) != self._natoms:
+        wanted = set(outputs)
+        if wanted - {"pair_energies"}:
             raise ProgramError.of(
-                "input", f"expected {self._natoms} atoms, got {len(x)}"
+                "unsupported",
+                f"{NAME} has no outputs {sorted(wanted - {'pair_energies'})}",
+            )
+        x = np.asarray(positions, dtype=float).reshape(-1, 3)
+        if len(x) != len(self._structure.symbols):
+            raise ProgramError.of(
+                "input", f"expected {len(self._structure.symbols)} atoms, got {len(x)}"
             )
         s = self._plan.resolved.settings
         values = _lj(x, s["epsilon"], s["sigma"], CalcType(calctype))
@@ -304,27 +323,61 @@ class ToySession:
             values["gradient"] = _lj(x, s["epsilon"], s["sigma"], CalcType.gradient)[
                 "gradient"
             ]
-        self._evaluations += 1
-        return _single_point(values)
+        previous = self._history.get(lineage)
+        record: dict[str, Any] = {
+            "warm_start": previous is not None,
+            "step_from_previous": None
+            if previous is None
+            else float(np.linalg.norm(x - previous)),
+        }
+        if "pair_energies" in wanted:
+            record["pair_energies"] = values["pairs"]
+        self._history[lineage] = x  # only after success: failures leave history alone
+        return Frame(
+            structure=self._structure.model_copy(update={"geometry": x}),
+            results=_single_point(values),
+            success=True,
+            record=record,
+        )
 
-    def compute_many(
-        self, requests: Sequence[Request]
-    ) -> list[SinglePointData | ProgramError]:
-        """Evaluate many geometries; failures are returned in place.
+    def compute_many(self, requests: Sequence[Request]) -> list[Frame]:
+        """Evaluate many geometries; failures are failed frames, in place.
 
         Args:
             requests: The evaluations.
 
         Returns:
-            Results or the `ProgramError` of each request, in order.
+            One frame per request, in order.
         """
-        out: list[SinglePointData | ProgramError] = []
+        frames: list[Frame] = []
         for r in requests:
             try:
-                out.append(self.compute(r.positions, r.calctype, accuracy=r.accuracy))
+                frames.append(
+                    self.compute(
+                        r.positions,
+                        r.calctype,
+                        accuracy=r.accuracy,
+                        lineage=r.lineage,
+                        outputs=r.outputs,
+                    )
+                )
             except ProgramError as e:
-                out.append(e)
-        return out
+                structure = self._structure.model_copy(
+                    update={"geometry": np.asarray(r.positions, dtype=float)}
+                )
+                frames.append(failed_frame(structure, e, NAME))
+        return frames
+
+    def reset(self, lineage: Hashable | None = None) -> None:
+        """Forget the history of one lineage, or of all.
+
+        Args:
+            lineage: The lineage; None forgets every lineage.
+        """
+        if lineage is None:
+            self._history.clear()
+        else:
+            self._history.pop(lineage, None)
 
     def plan(self) -> Plan:
         """The pinned plan."""
@@ -432,7 +485,7 @@ class ToyProgram:
         Raises:
             ProgramError: The spec cannot run.
         """
-        return ToySession(_resolve(spec), len(structure.symbols))
+        return ToySession(_resolve(spec), structure)
 
 
 #: The object to register under the ``qcdata.programs`` entry points.

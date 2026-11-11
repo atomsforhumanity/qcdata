@@ -195,12 +195,27 @@ evaluator (`qcopt`'s `AxtbEvaluator`, `linus.evaluator.QcoptEvaluator`) and qcco
 class Session(Protocol):
     program: str
     program_version: str
-    def compute(self, positions, calctype: CalcType, *, accuracy=None) -> SinglePointData: ...
-    def compute_many(self, requests: list[Request]) -> list[SinglePointData]: ...
-        # Request(positions, calctype, accuracy=None): finite differences, NEB images
+    def compute(self, positions, calctype, *, accuracy=None, lineage=None, outputs=()) -> Frame: ...
+    def compute_many(self, requests: list[Request]) -> list[Frame]: ...
+        # Request(positions, calctype, accuracy, lineage, outputs): finite differences,
+        # NEB images, IRC branches; a failed request is a failed Frame in place
+    def reset(self, lineage=None) -> None: ...   # drop warm-start history
     def plan(self) -> Plan: ...   # pinned for the session's lifetime (linus D38)
     def close(self) -> None: ...  # also a context manager
 ```
+
+- **Results are `Frame`s** (structure, `SinglePointData`, and the request's own
+  `warnings` and `record`: an SCF escalation, a stability probe, a fallback), ready to store
+  in a trajectory without building full `ProgramOutput`s.
+- **`lineage`** keys the warm-start and extrapolation history, so NEB images, IRC branches
+  and parallel tasks each continue from their own previous geometry (None: the nearest).
+  A failed request leaves its lineage's history untouched; `reset` drops it after a jump.
+- **`accuracy`** is an `Accuracy(energy, gradient, hessian)` in atomic units, or a bare
+  number for the calctype's highest derivative; explicit session settings are floors.
+- **`outputs`** are per-request extras that do not change the surface (`dipole`, `ir`,
+  `polarizability`, `orbitals`, `density`); unsupported ones fail with kind `unsupported`.
+- Atoms, charge, multiplicity, model and approximations are fixed for the session's
+  lifetime; anything else is a new session.
 
 Contract:
 

@@ -67,8 +67,8 @@ def test_toy_gradient_and_hessian_are_derivatives():
         for k in range(9):
             d = np.zeros(9)
             d[k] = step
-            plus = s.compute((x.reshape(-1) + d).reshape(-1, 3), "gradient")
-            minus = s.compute((x.reshape(-1) - d).reshape(-1, 3), "gradient")
+            plus = s.compute((x.reshape(-1) + d).reshape(-1, 3), "gradient").results
+            minus = s.compute((x.reshape(-1) - d).reshape(-1, 3), "gradient").results
             fd_g = (plus.energy - minus.energy) / (2 * step)
             fd_h = (plus.gradient - minus.gradient).reshape(-1) / (2 * step)
             assert fd_g == pytest.approx(g[k], abs=1e-9)
@@ -139,15 +139,21 @@ def test_compute_session_over_a_program():
     x = np.asarray(ARGON3.geometry)
     with ComputeSession(compute, spec, ARGON3) as s:
         assert isinstance(s, Session)
-        r = s.compute(x)
+        frame = s.compute(x)
+        r = frame.results
         assert s.program_version  # learned from the first result
         assert r.gradient.shape == (3, 3)
+        assert np.allclose(frame.structure.geometry, x)
         with pytest.raises(ProgramError) as e:
             s.compute(np.full_like(x, np.nan))
         assert e.value.error.kind is ErrorKind.numerical
-        assert s.compute(x).energy == r.energy  # still usable
+        assert s.compute(x).results.energy == r.energy  # still usable
         many = s.compute_many([Request(x), Request(np.full_like(x, np.nan))])
-        assert isinstance(many[0], type(r)) and isinstance(many[1], ProgramError)
+        assert many[0].success and not many[1].success
+        assert many[1].error.kind is ErrorKind.numerical
+        with pytest.raises(ProgramError) as e:
+            s.compute(x, outputs=["dipole"])
+        assert e.value.error.kind is ErrorKind.unsupported
         with pytest.raises(ProgramError, match="atoms"):
             s.compute(x[:2])
     with pytest.raises(RuntimeError, match="closed"):
@@ -165,7 +171,7 @@ def test_compute_session_completes_hessians_without_gradients():
 
     spec = ProgramSpec(program="toy", calctype="hessian", model={"method": "lj"})
     s = ComputeSession(no_gradient, spec, ARGON3)
-    h = s.compute(np.asarray(ARGON3.geometry), "hessian")
+    h = s.compute(np.asarray(ARGON3.geometry), "hessian").results
     assert h.gradient is not None and h.hessian is not None
 
 
@@ -196,3 +202,32 @@ def test_program_error_shorthand():
     e = ProgramError.of("convergence", "SCF", code="max_iter")
     assert e.error.code == "max_iter" and e.results is None
     assert "convergence: SCF" in str(e)
+
+
+def test_toy_session_keeps_history_per_lineage():
+    x = np.asarray(ARGON3.geometry)
+    y = x + 0.1
+    with program.open_session(toy_input(), ARGON3, RunContext()) as s:
+        assert s.compute(x, lineage="left").record["warm_start"] is False
+        right = s.compute(y, lineage="right")
+        assert right.record["warm_start"] is False
+        left = s.compute(y, lineage="left")
+        assert left.record["step_from_previous"] == pytest.approx(np.linalg.norm(y - x))
+        with pytest.raises(ProgramError):
+            s.compute(np.full_like(x, np.nan), lineage="left")
+        assert s.compute(y, lineage="left").record["step_from_previous"] == 0.0
+        s.reset("left")
+        assert s.compute(y, lineage="left").record["warm_start"] is False
+        assert s.compute(y, lineage="right").record["warm_start"] is True
+        pairs = s.compute(x, outputs={"pair_energies"}).record["pair_energies"]
+        assert len(pairs) == 3
+
+
+def test_accuracy_of_a_bare_number_targets_the_highest_derivative():
+    from qcdata.program import Accuracy
+
+    assert Accuracy.of(1e-4, CalcType.gradient) == Accuracy(gradient=1e-4)
+    assert Accuracy.of(1e-7, CalcType.energy) == Accuracy(energy=1e-7)
+    assert Accuracy.of(None, CalcType.hessian) is None
+    a = Accuracy(energy=1e-8, gradient=1e-5)
+    assert Accuracy.of(a, CalcType.hessian) is a
