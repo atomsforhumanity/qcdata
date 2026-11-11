@@ -33,6 +33,10 @@ __all__ = [
     "Provenance",
     "ExecutionInfo",
     "OutputBase",
+    "ErrorKind",
+    "ErrorInfo",
+    "ProgramWarning",
+    "Resolved",
     "Model",
     "CalcType",
     "LengthUnit",
@@ -388,11 +392,14 @@ class Provenance(QCDataBaseModel):
         program: The scientific program associated with the data. For empty failure
             results, this identifies the intended producer even if execution never began.
         program_version: The program version, if known.
+        program_commit: The source revision of the program (e.g. a git commit), if
+            known; distinguishes development builds that share a version.
         extras: Additional information about the origin of the data.
     """
 
     program: str
     program_version: str | None = None
+    program_commit: str | None = None
 
 
 class ExecutionInfo(QCDataBaseModel):
@@ -406,6 +413,9 @@ class ExecutionInfo(QCDataBaseModel):
         hostname: The hostname of the machine where the program ran.
         host_cpu: The number of logical CPUs on the host, not the allocated CPU count.
         host_mem_gib: The host's total memory in GiB, not the allocated memory.
+        timings: Wall-clock seconds per phase of the calculation. The keys are the
+            program's; ``total`` is the whole call, and drivers report ``children``
+            (time inside child calculations) beside their own phases.
         extras: Additional execution information.
     """
 
@@ -414,6 +424,96 @@ class ExecutionInfo(QCDataBaseModel):
     hostname: str | None = None
     host_cpu: int | None = None
     host_mem_gib: float | None = None
+    timings: dict[str, float] = {}
+
+
+class ErrorKind(StrEnum):
+    """Why a calculation failed, in one vocabulary across programs.
+
+    Attributes:
+        input: Settings or a structure the program cannot run as given (an unknown key,
+            a bad value, an unknown basis set or method).
+        unsupported: A valid request the program does not implement, or a setting it
+            cannot honour that would change the result.
+        convergence: An iterative procedure (SCF, response equations, an optimization)
+            did not converge; the results reached are attached.
+        numerical: A numerical failure: non-finite values, singular matrices.
+        resource: Not enough memory, disk, or another resource as set up.
+        backend: The hardware backend failed (no usable GPU, a device error).
+        program: A child calculation failed; `ErrorInfo.cause` holds its error.
+        timeout: The calculation ran out of time (set by the runner).
+        environment: The program could not be run at all: not installed, no licence,
+            the process died (set by the runner).
+        internal: A bug in the program: a broken invariant or a crash.
+    """
+
+    input = "input"
+    unsupported = "unsupported"
+    convergence = "convergence"
+    numerical = "numerical"
+    resource = "resource"
+    backend = "backend"
+    program = "program"
+    timeout = "timeout"
+    environment = "environment"
+    internal = "internal"
+
+
+class ErrorInfo(QCDataBaseModel):
+    """A structured description of a failure.
+
+    The Python traceback stays in `ProgramOutput.traceback`; this is what a caller
+    branches on.
+
+    Attributes:
+        kind: The kind of failure.
+        message: A human-readable explanation.
+        code: A stable snake_case code that refines `kind` (e.g. ``max_iter``,
+            ``energy_rose``, ``not_first_order_saddle``), defined and documented by the
+            program. Callers branch on it instead of parsing `message`.
+        program: The program that failed, when it is a child of the calculation (kind
+            ``program``) or differs from the top-level program.
+        cause: The child's own error, for kind ``program``: "the gradient failed because
+            the SCF did not converge" stays structured through drivers.
+    """
+
+    kind: ErrorKind
+    message: str
+    code: str | None = None
+    program: str | None = None
+    cause: "ErrorInfo | None" = None
+
+
+class ProgramWarning(QCDataBaseModel):
+    """Something the program wants the caller to know about a calculation that ran.
+
+    Attributes:
+        code: A stable snake_case code, defined and documented by the program.
+        message: A human-readable explanation.
+        path: The settings key the warning concerns, as a dotted path (``scf.max_iter``),
+            if any.
+    """
+
+    code: str
+    message: str
+    path: str | None = None
+
+
+class Resolved(QCDataBaseModel):
+    """The settings a calculation actually used.
+
+    Attributes:
+        settings: The program's complete settings tree with every ``"auto"`` replaced,
+            in the shape of `ProgramInput.keywords`. Passed back as keywords, it
+            reproduces the run. Result identity (caching, deduplication) is computed
+            from these, never from the raw resource keywords, since memory and backend
+            choices that can change numbers appear here resolved.
+        reasons: Why each automatic choice was made, keyed by dotted settings path
+            (``"grid.xc": "calctype hessian: linus:3"``).
+    """
+
+    settings: dict[str, Any] = {}
+    reasons: dict[str, str] = {}
 
 
 class OutputBase(QCDataBaseModel):
@@ -428,6 +528,10 @@ class OutputBase(QCDataBaseModel):
         logs: The program's output, kept for failures and on request otherwise.
         traceback: Why it failed; required when `success` is False.
         execution: Runtime information; defaults to an empty ExecutionInfo.
+        warnings: What the program wants the caller to know about a run that went
+            through (a setting that had no effect, a fallback taken).
+        error: Why the calculation failed, as a kind and a code callers can branch on;
+            only on failures. Partial results stay in `results`.
         plogs str: `@property` Print the logs.
         ptraceback str: `@property` Print the traceback.
     """
@@ -436,12 +540,16 @@ class OutputBase(QCDataBaseModel):
     logs: str | None = None
     traceback: str | None = None
     execution: ExecutionInfo = ExecutionInfo()
+    warnings: list[ProgramWarning] = []
+    error: ErrorInfo | None = None
 
     @model_validator(mode="after")
     def _require_traceback_on_failure(self) -> Self:
         """A failure must say why."""
         if not self.success and self.traceback is None:
             raise ValueError("A traceback must be provided for failed calculations.")
+        if self.success and self.error is not None:
+            raise ValueError("A successful calculation has no error.")
         return self
 
     @model_serializer(mode="wrap")
@@ -452,7 +560,7 @@ class OutputBase(QCDataBaseModel):
         data = handler(self)
         if not isinstance(data, dict):
             return data
-        trailing = ("logs", "traceback", "execution")
+        trailing = ("warnings", "error", "logs", "traceback", "execution")
         head = {k: data[k] for k in ("success",) if k in data}
         body = {k: v for k, v in data.items() if k not in head and k not in trailing}
         tail = {k: data[k] for k in trailing if k in data}

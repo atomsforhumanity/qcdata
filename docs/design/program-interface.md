@@ -1,7 +1,8 @@
 # The AFH program interface: one way to run programs, one shape for their data
 
-Status: **draft proposal** (2026-11-11), from the qc* stack, after replies from the linus,
-axtb and qcopt sessions. Items marked **[Colton]** need a decision.
+Status: **draft proposal** (2026-11-11), from the qc* stack, agreed in substance by the
+linus, axtb and qcopt sessions (their amendments are folded in). Phase 1 is implemented on
+the qcdata branch `program-interface`. Items marked **[Colton]** need a decision.
 
 ## Why
 
@@ -56,9 +57,11 @@ packs a `PythonInput` that calls themselves and whose decode unpacks it again).
   `method`/`basis`; `structure` gives positions (bohr), numbers, charge and multiplicity.
   The native tree may not repeat them.
 - **Resource keys** (`threads`, `memory_gib`, `backend`, `device_memory_gib`) stay keywords
-  (as agreed), but their schema entries carry `x-concern: "resource"`. qccompute reads them
-  for scheduling and leaves them out of any result-identity hash, since they must not
-  change the numbers.
+  (as agreed), and their schema entries carry `x-concern: "resource"`; qccompute reads them
+  for scheduling. Memory and backend can change numbers at round-off (linus picks its DF
+  storage from the memory budget; capped GPU runs may take FP32 paths), so **result
+  identity is computed from `resolved.settings`**, where every such choice appears resolved,
+  never from the raw resource keys.
 - **One shared vocabulary** for settings that mean the same in several programs lives in
   qcdata's docs (`docs/conventions.md`), which is the single place for names and units
   (axtb's request 6). The starting list is what the three programs already agreed:
@@ -77,15 +80,15 @@ packs a `PythonInput` that calls themselves and whose decode unpacks it again).
 
 ## 2. Outputs
 
-### 2.1 Slots every output has (`ProgramOutput`)
+### 2.1 Slots every output has (`ProgramOutput`; `warnings` and `error` also on each `Frame`)
 
 | field | type | meaning |
 |---|---|---|
 | `resolved` | `Resolved \| None` | `settings`: the complete settings tree with every `auto` replaced, itself a valid `keywords` that reproduces the run; `reasons`: path → why |
 | `warnings` | `list[Warning]` | `code` (stable, snake_case), `message`, optional `path` (the settings key concerned) |
-| `error` | `ErrorInfo \| None` | on failure: `kind` (below), `message`, optional `program` (the child that failed) |
+| `error` | `ErrorInfo \| None` | on failure: `kind` (below), `message`, optional `code` (stable snake_case within a kind, e.g. `max_iter`, `energy_rose`, `not_first_order_saddle`: callers branch on it instead of parsing text), optional `program` (the child that failed), optional `cause: ErrorInfo` (the child's own error, for kind `program`) |
 | `record` | `dict` | what happened during the run (fallbacks, escalations, residuals reached, per-phase decisions); JSON, shaped by the program's published result schema; diagnostic, not stable across versions |
-| `execution.timings` | `dict[str, float]` | seconds per phase, `total` for the whole call (on `ExecutionInfo`, beside `wall_time`) |
+| `execution.timings` | `dict[str, float]` | seconds per phase (keys are the program's; `total` for the whole call, drivers also `children` and their own time), on `ExecutionInfo` beside `wall_time` |
 | `results.provenance` | `Provenance` | gains `program_commit` (and keeps `program`, `program_version`) |
 
 `ErrorKind` (`StrEnum`): `input`, `unsupported`, `convergence`, `numerical`, `resource`,
@@ -100,13 +103,13 @@ report goes into a typed field, not `extras`.
 
 | field | type | meaning |
 |---|---|---|
-| `energy_components` | `dict[str, float]` | Eh; they add up to `energy`. Standard keys: `nuclear_repulsion`, `one_electron`, `coulomb`, `exchange`, `xc`, `dispersion`, `solvation_electrostatic`, `solvation_cds`, `repulsion`, `electrostatic`, `halogen_bond`, `hydrogen_bond`, ... (listed in conventions.md; programs may add their own keys) |
+| `energy_components` | `dict[str, float]` | Eh; a true partition: they add up to `energy`; what a component contains is the program's, and a hierarchy of overlapping terms goes in `record`. Standard keys: `nuclear_repulsion`, `one_electron`, `coulomb`, `exchange`, `xc`, `dispersion`, `vv10`, `solvation_electrostatic`, `solvation_cds`, `repulsion`, `electrostatic`, `halogen_bond`, `hydrogen_bond`, ... (listed in conventions.md; programs may add their own keys) |
 | `scf_iterations` | `int` | |
-| `scf_quadrupole_moment` | 3 × 3 | e·bohr², traced, about the coordinate origin |
+| `scf_quadrupole_moment` | 3 × 3 | e·bohr², about the coordinate origin, with `quadrupole_kind`: `traceless` (Buckingham ½Σq(3rᵢrⱼ − r²δᵢⱼ)) or `second_moment` (Σq rᵢrⱼ); programs convert other forms to one of these |
 | `polarizability` | 3 × 3 | e² bohr² / Eh |
-| `atomic_charges_kind` | `str` | `mulliken`, `eeq`, `cm5`, `hirshfeld`, ... (charges are not comparable without it) |
-| `bond_orders` | n × n | with `bond_orders_kind` (`wiberg`, `mayer`) |
-| `vibrational_analysis` | `VibrationalAnalysis` | linus's proposal (masses, projection, frequencies, modes, reduced masses, force constants, IR intensities, dipole derivatives, rotor type, moments, rotational constants, point group, symmetry number, n_imaginary) |
+| `atomic_charges_kind` | `str` | `mulliken`, `lowdin`, `eeq`, `eeqbc`, `cm5`, `hirshfeld`, ... (charges are not comparable without it) |
+| `bond_orders` | n × n | with `bond_orders_kind`: `mayer` (Σ(PS)μν(PS)νμ, what xtb prints as "Wiberg") or `wiberg` (orthogonalized basis) |
+| `vibrational_analysis` | `VibrationalAnalysis` | linus's proposal (masses, projection, all modes with `external` flags, imaginary frequencies negative and stored without a cutoff, reduced masses, force constants, IR intensities, dipole derivatives, rotor type, moments, rotational constants, point group, symmetry number); `n_imaginary(cutoff)` is a method |
 | `thermochemistry` | `list[Thermochemistry]` | linus's proposal (one per temperature/pressure: ZPE, per-term E/H/S/Cv/Cp/G, corrections, entropy/enthalpy model, scale factor, excluded imaginary modes) |
 | `wavefunction.orbitals` | `Orbitals` | linus's proposal (`BasisSet` of `Shell`s with a named `AOConvention`, per-spin coefficients, energies, occupations); filled on request (`output.orbitals`) |
 
@@ -125,7 +128,8 @@ frequency analysis made with a different method than the frames (qcopt's final c
 ### 2.4 Published schema
 
 `qcdata.output_schema(calctype)` gives the JSON Schema of the outputs; each program's
-`result_schema()` gives the shape of its `record` and `resolved.settings`. Viewers and
+`settings_schema(calctype)` gives the shape of `keywords` and `resolved.settings`, and its
+`record_schema(calctype)` the shape of `record`. Viewers and
 apps generate from these, as the programs generate their docs.
 
 ## 3. Running: the Program protocol
@@ -145,8 +149,10 @@ class Program(Protocol):
     def version(self) -> str: ...
     def capabilities(self) -> Capabilities: ...
         # calctypes, methods (optional), sessions, batches, in_process (safe to call in the
-        # runner's process), gpu
+        # runner's process), thread_safe_sessions (separate sessions may compute
+        # concurrently from threads), gpu
     def settings_schema(self, calctype: CalcType) -> dict: ...
+    def record_schema(self, calctype: CalcType) -> dict: ...
     def plan(self, inp: ProgramInput) -> Plan: ...
         # dry run: validates (raises InputError with did-you-mean), resolves every auto,
         # returns Plan(resolved=Resolved, resources=Resources(threads, memory_gib, gpus,
@@ -167,7 +173,8 @@ qccompute), filled by qccompute when it runs the program:
   the machine's count);
 - `scratch`: a directory;
 - `compute`: the child callback (one input or a list, `previous=`), qccodec #94's shape;
-- `session(spec, structure)`: open a child session (below);
+- `session(spec, structure, threads=None)`: open a child session (below) with a share
+  of the grant (qcopt with 16 threads and 8 tasks gives each session 2);
 - `progress(...)`: optional streaming updates.
 
 qccompute finds programs in `qcdata.programs` first and then in `qccodec.codecs`; a
@@ -184,11 +191,26 @@ evaluator (`qcopt`'s `AxtbEvaluator`, `linus.evaluator.QcoptEvaluator`) and qcco
 
 ```python
 class Session(Protocol):
+    program: str
+    program_version: str
     def compute(self, positions, calctype: CalcType, *, accuracy=None) -> SinglePointData: ...
     def compute_many(self, requests: list[Request]) -> list[SinglePointData]: ...
+        # Request(positions, calctype, accuracy=None): finite differences, NEB images
     def plan(self) -> Plan: ...   # pinned for the session's lifetime (linus D38)
-    def close(self) -> None: ...
+    def close(self) -> None: ...  # also a context manager
 ```
+
+Contract:
+
+- **A failed request raises `ProgramError`** (`error: ErrorInfo`, partial `SinglePointData`
+  if any) **and leaves the session usable**: an optimizer retries a smaller step on the
+  same session, and one failed gradient does not end the other tasks of a round.
+- **A `hessian` request returns energy and gradient too**, so drivers never pair a Hessian
+  with a separate gradient call (the stateless fallback computes both when the program
+  needs two runs).
+- Frames get `program`/`program_version` from the session, not from every result.
+- A driver's `Plan.resources` is the maximum over its children's plans (qccompute asks
+  them); its own work is light.
 
 - The session pins the model and approximations (method, basis, grids, aux basis,
   precision) so all its evaluations are on one surface; a request may vary only convergence

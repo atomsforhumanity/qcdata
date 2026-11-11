@@ -100,12 +100,17 @@ nav:
   - Getting Started:
       - Welcome to qcdata: index.md
       - Why use qcdata?: why.md
+      - Conventions: conventions.md
+      - The program interface (design): design/program-interface.md
   - API Documentation:
       - Overview: api/overview.md
       - Structure: api/structure.md
       - Inputs: api/inputs.md
       - Outputs: api/outputs.md
       - Data: api/data.md
+      - Outcome: api/outcome.md
+      - Vibrations: api/vibrations.md
+      - Orbitals: api/orbitals.md
       - Utilities: api/utils.md
       - Visualizations:
           - View: api/view.md

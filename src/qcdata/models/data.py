@@ -18,8 +18,10 @@ from qcdata.helper_types import (
 
 from .base_models import CalcType, Files, OutputBase, Provenance, QCDataBaseModel
 from .inputs import ProgramInput
+from .orbitals import Orbitals
 from .structure import Structure
 from .utils import to_multi_xyz
+from .vibrations import Thermochemistry, VibrationalAnalysis
 
 if TYPE_CHECKING:
     from .outputs import ProgramOutput
@@ -62,12 +64,15 @@ class Wavefunction(QCDataBaseModel):
         scf_eigenvalues_b: The SCF beta-spin orbital eigenvalues.
         scf_occupations_a: The SCF alpha-spin orbital occupations.
         scf_occupations_b: The SCF beta-spin orbital occupations.
+        orbitals: The molecular orbitals with the basis set they expand in, when the
+            input asked for them (they are large: nao x nmo per spin).
     """
 
     scf_eigenvalues_a: SerializableVector | None = None
     scf_eigenvalues_b: SerializableVector | None = None
     scf_occupations_a: SerializableVector | None = None
     scf_occupations_b: SerializableVector | None = None
+    orbitals: Orbitals | None = None
 
     @field_validator(
         "scf_eigenvalues_a",
@@ -132,18 +137,45 @@ class SinglePointData(FileData, CalcInfoData):
         gibbs_free_energy: Gibbs free energy (i.e. thermochemical analysis) in Hartrees
             of a system where translation / rotation / vibration degrees of freedom are
             approximated using ideal gas / rigid rotor / harmonic oscillator
-            respectively.
+            respectively, the electronic energy included.
+
+            When `vibrational_analysis` or `thermochemistry` are given, these three
+            fields are filled from them if absent: the vibrations of
+            `vibrational_analysis` and ``thermochemistry[0].total.gibbs``.
         scf_dipole_moment: The x, y, z component of the dipole moment of the structure
             in units of e a0 (NOT Debye!).
         atomic_charges: Partial charge on each atom in units of e, ordered like the
             structure's atoms. The partitioning scheme (Mulliken, Lowdin, CM5, ...)
-            is the program's; parsers record it in ``extras`` when it is not the
-            program's default.
+            is the program's; `atomic_charges_kind` names it.
+        atomic_charges_kind: The partitioning scheme of `atomic_charges`:
+            ``mulliken``, ``lowdin``, ``eeq``, ``eeqbc``, ``cm5``, ``hirshfeld``, ...
         point_charge_gradient: n_charges x 3 gradient of the energy with respect
             to the positions of external point charges, in `Hartrees/Bohr`, ordered
             like the point charges given to the calculation (QM/MM electrostatic
             embedding).
 
+        energy_components: Terms of the energy (Hartrees) that add up to `energy`: a
+            partition, never overlapping terms. Standard keys are listed in the
+            conventions (``nuclear_repulsion``, ``one_electron``, ``coulomb``,
+            ``exchange``, ``xc``, ``vv10``, ``dispersion``, ``solvation_electrostatic``,
+            ``solvation_cds``, ...); what a component contains is the program's (a
+            tight-binding ``electronic`` term is not a DFT one). A hierarchy of
+            sub-terms, if a program has one, belongs in the output's ``record``.
+        scf_iterations: Number of SCF iterations of the final SCF.
+        scf_quadrupole_moment: 3 x 3 quadrupole moment (e bohr^2) about the coordinate
+            origin, in the form `quadrupole_kind` names; programs with another form
+            convert to one of those.
+        quadrupole_kind: ``traceless``: Buckingham's
+            (1/2) sum q (3 r_i r_j - r^2 delta_ij); ``second_moment``: sum q r_i r_j.
+        polarizability: 3 x 3 static dipole polarizability (e^2 bohr^2 / Hartree).
+        bond_orders: n_atoms x n_atoms bond orders, in the form `bond_orders_kind`
+            names.
+        bond_orders_kind: ``mayer`` (sum (PS)_mn (PS)_nm over the AOs of two atoms,
+            what xtb prints as "Wiberg"), ``wiberg`` (in an orthogonalized basis), ...
+        vibrational_analysis: The harmonic analysis of the Hessian with the choices
+            behind it (masses, projection, symmetry), when the program made one.
+        thermochemistry: Ideal-gas thermochemistry, one entry per temperature and
+            standard state.
     """
 
     energy: float | None = None
@@ -160,7 +192,67 @@ class SinglePointData(FileData, CalcInfoData):
     scf_dipole_moment: list[float] | None = None
 
     atomic_charges: SerializableVector | None = None
+    atomic_charges_kind: str | None = None
     point_charge_gradient: SerializableMatrix | None = None
+
+    energy_components: dict[str, float] = {}
+    scf_iterations: int | None = None
+    scf_quadrupole_moment: SerializableMatrix | None = None
+    quadrupole_kind: str | None = None
+    polarizability: SerializableMatrix | None = None
+    bond_orders: SerializableMatrix | None = None
+    bond_orders_kind: str | None = None
+
+    vibrational_analysis: VibrationalAnalysis | None = None
+    thermochemistry: list[Thermochemistry] = []
+
+    @model_validator(mode="before")
+    @classmethod
+    def _fill_from_analysis(cls, values: Any) -> Any:
+        """Fill the frequency fields from the vibrational analysis when absent."""
+        if not isinstance(values, dict):
+            return values
+        analysis = values.get("vibrational_analysis")
+        thermo = values.get("thermochemistry") or []
+        if analysis is None and not thermo:
+            return values
+        values = dict(values)
+        if analysis is not None:
+            analysis = VibrationalAnalysis.model_validate(analysis)
+            values["vibrational_analysis"] = analysis
+            if not values.get("freqs_wavenumber"):
+                values["freqs_wavenumber"] = analysis.vibrational_frequencies.tolist()
+                if values.get("normal_modes_cartesian") is None:
+                    values["normal_modes_cartesian"] = (
+                        analysis.vibrational_modes_cartesian
+                    )
+        if thermo and values.get("gibbs_free_energy") is None:
+            first = Thermochemistry.model_validate(thermo[0])
+            if first.total.gibbs is not None:
+                values["gibbs_free_energy"] = first.total.gibbs
+        return values
+
+    @field_validator("scf_quadrupole_moment", "polarizability")
+    @classmethod
+    def _validate_three_by_three(
+        cls, v: SerializableNDArray | None
+    ) -> np.ndarray | None:
+        """Validate a Cartesian tensor is 3 x 3."""
+        if v is not None:
+            return np.asarray(v, dtype=float).reshape(3, 3)
+        return None
+
+    @field_validator("bond_orders")
+    @classmethod
+    def _validate_bond_orders_shape(
+        cls, v: SerializableNDArray | None
+    ) -> np.ndarray | None:
+        """Validate bond orders are square."""
+        if v is not None:
+            v = np.asarray(v, dtype=float)
+            n = int(round(np.sqrt(v.size)))
+            return v.reshape((n, n))
+        return None
 
     @field_validator("normal_modes_cartesian")
     @classmethod
@@ -250,6 +342,8 @@ class Frame(OutputBase):
                 "logs": value.logs,
                 "traceback": value.traceback,
                 "execution": value.execution,
+                "warnings": value.warnings,
+                "error": value.error,
                 "structure": value.input_data.structure,
             }
         if isinstance(value, dict) and "data" in value and "results" not in value:
@@ -262,6 +356,9 @@ class Frame(OutputBase):
             del value["data"]
         if isinstance(value, dict) and "input_data" in value:
             value = dict(value)
+            # What only a whole calculation reports; its parent keeps its own.
+            value.pop("resolved", None)
+            value.pop("record", None)
             input_data = value.pop("input_data")
             if "structure" not in value:
                 value["structure"] = (

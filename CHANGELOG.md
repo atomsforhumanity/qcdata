@@ -9,6 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 
 - `qcdata.INITIAL_CHAIN` (`"initial_chain"`), the `ProgramInput.structures` role holding a path optimization's chain, so codecs need not repeat the string.
+- The typed slots of the AFH program interface (`docs/design/program-interface.md`), so that applications read the same fields whichever program produced a result, instead of program-specific `extras`:
+  - On every output (`ProgramOutput` and `Frame`): `warnings` (`ProgramWarning`: `code`, `message`, `path`) and, on failures, `error` (`ErrorInfo`: `kind` from the shared `ErrorKind` vocabulary, `message`, a program-defined `code`, the failing child `program`, and its `cause`). A successful output with an `error` is rejected.
+  - On `ProgramOutput`: `resolved` (`Resolved`: the settings with every `"auto"` replaced, which reproduce the run, and the `reasons`) and `record` (what happened during the run, shaped by the program's record schema).
+  - `ExecutionInfo.timings` (seconds per phase) and `Provenance.program_commit`.
+  - On `SinglePointData`: `energy_components` (a partition of `energy`), `scf_iterations`, `scf_quadrupole_moment` with `quadrupole_kind`, `polarizability`, `atomic_charges_kind`, `bond_orders` with `bond_orders_kind`, `vibrational_analysis` (`VibrationalAnalysis`: masses, projection, all modes with external flags, reduced masses, force constants, IR intensities, dipole derivatives, rotor, moments, rotational constants, point group, symmetry number) and `thermochemistry` (a list of `Thermochemistry`, one per temperature and standard state, with per-term `ThermoTerm`s and the entropy and enthalpy models). `freqs_wavenumber`, `normal_modes_cartesian` and `gibbs_free_energy` are filled from them when not given.
+  - `Wavefunction.orbitals`: `Orbitals` (per-spin coefficients, energies, occupations) in a `BasisSet` of `Shell`s with a named `AOConvention` (`SphericalOrder`, `CartesianOrder`, `CartesianNormalization`; `Orbitals.with_convention` converts between PySCF, CCA, Molden and TREXIO orders). Contributed from linus.
 
 ### Fixed
 
