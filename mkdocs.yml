@@ -111,6 +111,7 @@ nav:
       - Outcome: api/outcome.md
       - Vibrations: api/vibrations.md
       - Orbitals: api/orbitals.md
+      - Programs and sessions: api/program.md
       - Utilities: api/utils.md
       - Visualizations:
           - View: api/view.md
