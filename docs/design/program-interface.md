@@ -2,7 +2,8 @@
 
 Status: **draft proposal** (2026-11-11), from the qc* stack, agreed in substance by the
 linus, axtb and qcopt sessions (their amendments are folded in). Phase 1 is implemented on
-the qcdata branch `program-interface`. Items marked **[Colton]** need a decision.
+the qcdata branch `program-interface`; phase 2 on qcdata `program-protocol` and qccompute
+`native-programs` (the qccodec adapter that wraps a Codec as a Program is still to do). Items marked **[Colton]** need a decision.
 
 ## Why
 
