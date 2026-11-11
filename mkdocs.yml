@@ -102,6 +102,7 @@ nav:
       - Why use qcdata?: why.md
       - Conventions: conventions.md
       - The program interface (design): design/program-interface.md
+      - The AFH stack (design): design/architecture.md
   - API Documentation:
       - Overview: api/overview.md
       - Structure: api/structure.md
