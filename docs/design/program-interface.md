@@ -213,9 +213,8 @@ class Session(Protocol):
 - **`accuracy`** is an `Accuracy(energy, gradient, hessian)` in atomic units, or a bare
   number for the calctype's highest derivative; explicit session settings are floors.
 - **`outputs`** are per-request extras that do not change the surface (`dipole`, `ir`,
-  `polarizability`, `orbitals`, `density`, `vibrational_analysis`, `thermochemistry`);
-  unsupported ones fail with kind `unsupported`. A name that fills a `SinglePointData`
-  field is that field's name.
+  `polarizability`, `orbitals`, `density`); unsupported ones fail with kind
+  `unsupported`. A name that fills a `SinglePointData` field is that field's name.
 - Atoms, charge, multiplicity, model and approximations are fixed for the session's
   lifetime; anything else is a new session.
 - **Native sessions matter for every engine.** The generic `ComputeSession` (one stateless
@@ -249,11 +248,9 @@ Contract:
   engines do).
 - **A `hessian` request returns energy and gradient too**, so drivers never pair a Hessian
   with a separate gradient call (the stateless fallback computes both when the program
-  needs two runs). It need not run the vibrational analysis or thermochemistry: those
-  come when `outputs` asks for `vibrational_analysis` or `thermochemistry`, so an
-  optimizer uses one session for gradients and Hessians and sets no program's `freq.*`
-  keyword. A stateless `hessian` calculation runs the analysis as its program's defaults
-  say (linus: on, `freq.analysis: off` for the Hessian alone).
+  needs two runs). It behaves as a stateless `hessian` does (D42): linus runs the
+  vibrational analysis by default, which costs milliseconds, so drivers set no `freq.*`
+  keyword.
 - Frames get `program`/`program_version` from the session, not from every result.
 - A driver's `Plan.resources` is the maximum over its children's plans (qccompute asks
   them); its own work is light.
