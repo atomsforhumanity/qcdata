@@ -141,23 +141,24 @@ on the cluster:
 `qccompute.compute(inputs)` already runs lists in parallel locally. The proposal grows it
 along two axes without changing how scripts read.
 
-**The calculation store** (`qccompute.Store`):
+**The calculation store** (qcstore, its own package depending on qcdata only; the AFH
+Stack Plan has the full design):
 
-- **Key:** a hash of the canonical calculation: program, the program's *numerics
-  identity*, calctype, model, structure (atoms, positions, charge, multiplicity),
-  subprogram specs recursively, and the settings. For native programs, the settings come
-  from `plan().resolved.settings`, minus keys whose schema says `x-concern: resource`. This
-  follows linus's rule: identity comes from the resolved settings, where memory- or
-  backend-dependent choices (precision per card class, DF storage) appear resolved.
-  External programs use their raw keywords.
+- **Key:** `qcdata.calculation_key(inp, key_context(inp))`, a hash of the input as given:
+  keys sorted, numbers normalized, fields at their default left out, coordinates rounded,
+  files by digest, subprograms recursively. Only `threads` and `memory_gib` are left out.
+  Spellings are not normalized, so a synonym or an explicit default costs a cache miss,
+  never a wrong hit. Programs are never consulted, so readers need none installed.
 - **Numerics identity, not version** (linus's lesson from a year of its reference store). A
   version is too coarse and too fine at once: most bumps do not change numbers, and some
   changes the version does not track do (glibc 2.36 vs 2.43 moved linus results at
-  round-off through erf/erfc). Programs publish an optional `numerics_id()`. linus's is its
-  numerics epoch plus a platform/libm class; axtb's includes its conventions and the
-  eigensolver library. It defaults to the version. The exact version and commit go in
-  provenance, not the key. Reuse is then broad across releases, and never across builds
-  that compute different bits.
+  round-off through erf/erfc). The store takes a `key_context` function, `inp →
+  dict[str, str]`, that reads static configuration (image digest, numerics epochs, GPU
+  class) and is mixed into the hash. For example, linus publishes `linus.NUMERICS_EPOCH`
+  (6 since linus `cae0bad`, when `jk` began defaulting to `df`). The store's
+  configuration says `{"linus": "6"}`, and the runner refuses to write when the installed
+  epoch disagrees. The exact version and commit go in provenance, not the key. Reuse is
+  then broad across releases, and never across builds that compute different bits.
 - **Value:** the `ProgramOutput` (compressed JSON; large arrays later as sidecars). The
   index is SQLite: key, program, method, formula, calctype, success, wall time, campaign
   tags, created.
