@@ -154,17 +154,18 @@ convergence). One shared code:
 
 | code | meaning |
 |---|---|
-| `deprecated_key` | an old key still accepted during a program's own transition (axtb 0.2's flat keys); the message names the new one. Pre-v1 programs reject old keys instead |
+| `deprecated_key` | after a program's 1.0, an old key still accepted for a stated period; the message names the new one. Before 1.0 a program rejects old keys (`unknown_key`) instead |
 
 Programs define further codes in their own documentation.
 
-Shared error codes for settings (kind `input`):
+Shared error codes (kind `input`):
 
 | code | meaning |
 |---|---|
 | `unknown_key` | not a setting of this program |
 | `not_applicable` | a setting of another calculation type, or a session request outside the calctypes it was opened for |
 | `no_effect` | made irrelevant by the other values given |
+| `not_modeled` | the structure's charge or multiplicity is one the method does not represent (GFN-FF given a radical, a neutral-only ML potential given an ion). The message names the property. A method never runs on, or silently ignores, a charge or multiplicity it cannot model |
 
 ### Errors
 
