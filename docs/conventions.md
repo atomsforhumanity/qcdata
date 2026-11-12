@@ -195,7 +195,7 @@ Shared error codes (kind `input`):
 | `program` | a child calculation failed; `cause` holds its error |
 | `timeout` | out of time (set by the runner) |
 | `environment` | the program could not run: not installed, no licence, process died (set by the runner) |
-| `internal` | a bug in the program |
+| `internal` | a bug in the program; on the codec path, any failure the codec does not classify (a reported failure, an unexplained exit, unreadable output) |
 
 `code` refines a kind with a program-defined name callers can branch on (qcopt:
 `max_iter`, `energy_rose`, `not_first_order_saddle`, `irc_incomplete`).
