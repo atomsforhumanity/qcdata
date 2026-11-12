@@ -39,7 +39,10 @@ Python keyword arguments spell it. The rules:
    group's name (`solvent.name`, not `solvent.solvent`).
 2. One canonical spelling across the CLI, JSON, Python and qcdata. Synonyms that encode
    another program's vocabulary (`rijcosx`, `rhf`) may be accepted on input but are never
-   echoed back.
+   echoed back. A group may take a scalar that stands for its main key (linus: `jk: "df"`
+   is `{"kind": "df"}`); the schema shows both forms and `resolved.settings` reports the
+   expanded one. The store keys the input as given, so the two forms are separate cache
+   entries: callers that store results use one.
 3. `"auto"` means the program decides; `null` or absent means the default. Every output
    reports what each `auto` became in `resolved.settings`, and why in `resolved.reasons`.
 4. Tolerances end in `_tol`, iteration limits are `max_iter`, units appear in names only
@@ -73,7 +76,7 @@ Settings that mean the same in several programs are spelled the same:
 | `scf.max_iter`, `scf.e_tol`, `scf.g_tol`, `scf.guess` | SCF iteration limit, energy and orbital-gradient tolerances, starting guess |
 | `solvent.name`, `solvent.model`, `solvent.eps` | implicit solvent: name, continuum model, permittivity |
 | `freq.temperature`, `freq.pressure`, `freq.scale`, `freq.imaginary_cutoff` | thermochemistry conditions, frequency scale factor, imaginary-mode cutoff (cm⁻¹) |
-| `output.orbitals`, `output.density`, `output.molden`, `output.bond_orders` | optional outputs |
+| `output.orbitals`, `output.density`, `output.molden`, `output.bond_orders` | optional outputs; `output.molden` is `off`, `spherical` or `cartesian` and returns `files["orbitals.molden"]` |
 | `convergence.max_iter`, `convergence.g_tol`, `convergence.e_tol`, `convergence.d_tol` | geometry optimizer convergence |
 
 A program that cannot honour a shared setting (axtb's SCF thresholds follow xtb's accuracy
@@ -81,9 +84,10 @@ factor; its ALPB/GBSA models are parametrized per solvent name, so no `solvent.e
 rejects it with kind `unsupported` rather than ignoring it.
 
 Resource keys (`threads`, `memory_gib`, `backend`, `device_memory_gib`) carry
-`x-concern: "resource"`. Result identity is computed from `resolved.settings`, never from
-these raw keys: memory and backend choices that can change numbers at round-off appear
-there resolved.
+`x-concern: "resource"`. The store's calculation key hashes the input as given, defaults
+omitted, leaving out only `threads` and `memory_gib`. A program that changes what a
+default computes (linus's `jk` becoming `df`) changes the numbers behind an unchanged key,
+so its runner's `key_context` names the new numerics epoch.
 
 ## Calculation types
 
