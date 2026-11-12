@@ -241,7 +241,10 @@ Contract:
 
 - **A failed request raises `ProgramError`** (`error: ErrorInfo`, partial `SinglePointData`
   if any) **and leaves the session usable**: an optimizer retries a smaller step on the
-  same session, and one failed gradient does not end the other tasks of a round.
+  same session, and one failed gradient does not end the other tasks of a round. The
+  session keeps the last good state of each lineage itself and commits a request's state
+  only on success: engines may drop or consume their state in a failed SCF (both axtb
+  engines do).
 - **A `hessian` request returns energy and gradient too**, so drivers never pair a Hessian
   with a separate gradient call (the stateless fallback computes both when the program
   needs two runs).
@@ -252,6 +255,14 @@ Contract:
 - The session pins the model and approximations (method, basis, grids, aux basis,
   precision) so all its evaluations are on one surface; a request may vary only convergence
   (`accuracy`, linus D38). The session knows first geometry vs continuation; no flag.
+  It also pins whatever the method derives from the structure it was opened with: GFN-FF's
+  topology is part of the surface, and re-deriving it at each geometry moved the energy
+  by up to 4.4e-2 Eh along a 600-atom trajectory (axtb study). A request's `accuracy` may
+  make the program rebuild internals (GFN2's integral cutoffs, under 65 µs); the lineage
+  state survives.
+- The shape both studies arrived at: one engine object per session (model, parameter
+  tables, topology, thread pool), shared by all lineages, plus a small state per lineage
+  (orbitals or charges, probe state) swapped in for each request.
 - `qccompute.session(spec, structure)` (a context manager) opens one: natively when the
   program supports sessions, else a stateless fallback over `compute` with `propagate_wfn`.
 - Inside a running program, `ctx.session(...)` opens child sessions under the parent's
