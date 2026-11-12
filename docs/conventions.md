@@ -200,6 +200,13 @@ Shared error codes (kind `input`):
 `code` refines a kind with a program-defined name callers can branch on (qcopt:
 `max_iter`, `energy_rose`, `not_first_order_saddle`, `irc_incomplete`).
 
+A driver reports any failure of a child as kind `program`, whether the child's plan
+refused its settings or its run failed. `program` names the child, `cause` holds the
+child's own `ErrorInfo`, and the message starts with the child and calctype
+(`linus (gradient): ...`). Callers follow `cause` to the first error that is not of kind
+`program` to learn what went wrong. A child that fails for one task of a round (a session
+that will not open, a failed request) fails that task only.
+
 ### Timings and provenance
 
 `execution.timings` holds seconds per phase (`total` for the whole call; drivers add

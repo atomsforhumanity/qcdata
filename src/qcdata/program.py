@@ -13,9 +13,11 @@ Programs that keep state between geometries (warm starts, a pinned grid) also im
 `SessionProgram.open_session`; programs that evaluate many inputs at once implement
 `BatchProgram.compute_batch`.
 
-Programs depend on qcdata only. qccompute discovers them (`find_program`), validates
-keywords against their schemas, schedules them by their plans' resources, and runs them in
-its own process or in workers. ``program.compute(inp, RunContext())`` also works without
+Programs depend on qcdata only. Everything finds them by name through `find_program`:
+qccompute, a driver planning its children, `local_context`. A program that is not an
+installed package (in a test, a notebook or a script) is added with `register_program`.
+qccompute validates keywords against their schemas, schedules them by their plans'
+resources, and runs them. ``program.compute(inp, RunContext())`` also works without
 qccompute.
 
 Design: ``docs/design/program-interface.md``; names and units: ``docs/conventions.md``.
@@ -23,9 +25,11 @@ Design: ``docs/design/program-interface.md``; names and units: ``docs/convention
 
 from __future__ import annotations
 
+import functools
+import threading
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from importlib.metadata import entry_points
+from importlib.metadata import EntryPoint, entry_points
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Protocol, overload, runtime_checkable
@@ -67,6 +71,8 @@ __all__ = [
     "session_calctypes",
     "check_session_calctype",
     "find_program",
+    "register_program",
+    "unregister_program",
     "local_context",
     "available_programs",
 ]
@@ -881,30 +887,81 @@ def _empty_results(inp: ProgramInput) -> Any:
     return get_data_type(inp.calctype)(provenance=Provenance(program=inp.program))
 
 
+_registered: dict[str, Program] = {}
+_installed: dict[str, Program | None] = {}
+_registry_lock = threading.Lock()
+
+
+@functools.cache
+def _entry_points() -> dict[str, EntryPoint]:
+    """The ``qcdata.programs`` entry points by name, read once per process."""
+    return {ep.name: ep for ep in entry_points(group=ENTRY_POINT_GROUP)}
+
+
+def register_program(program: Program) -> None:
+    """Make a program findable by name in this process, ahead of installed ones.
+
+    For programs that are not installed packages: in tests, notebooks and scripts. Drivers'
+    plans, `local_context` and qccompute all find it through `find_program`.
+
+    Args:
+        program: An object implementing `Program`.
+
+    Raises:
+        TypeError: The object does not implement `Program`.
+    """
+    if not isinstance(program, Program):
+        raise TypeError(f"{program!r} does not implement qcdata.program.Program.")
+    with _registry_lock:
+        _registered[program.name] = program
+
+
+def unregister_program(name: str) -> None:
+    """Forget a program added with `register_program`; installed programs stay.
+
+    Args:
+        name: The program's name.
+    """
+    with _registry_lock:
+        _registered.pop(name, None)
+
+
 def available_programs() -> list[str]:
-    """Names of the programs installed under the ``qcdata.programs`` entry points."""
-    return sorted(ep.name for ep in entry_points(group=ENTRY_POINT_GROUP))
+    """Names of the registered and installed programs."""
+    with _registry_lock:
+        registered = set(_registered)
+    return sorted(registered | set(_entry_points()))
 
 
 def find_program(name: str) -> Program | None:
-    """Load an installed program by name.
+    """The program of this name: registered in this process, else installed.
+
+    Installed programs are read from the ``qcdata.programs`` entry points and loaded
+    once per process.
 
     Args:
         name: The program's name, as in ``ProgramInput.program``.
 
     Returns:
-        The program object, or None if no installed package registers it.
+        The program object, or None if none is registered or installed.
 
     Raises:
-        TypeError: The registered object does not implement `Program`.
+        TypeError: The installed object does not implement `Program`.
     """
-    for ep in entry_points(group=ENTRY_POINT_GROUP):
-        if ep.name == name:
-            program = ep.load()
-            if not isinstance(program, Program):
-                raise TypeError(
-                    f"The qcdata.programs entry point {name!r} ({ep.value}) does not "
-                    "implement qcdata.program.Program."
-                )
-            return program
-    return None
+    with _registry_lock:
+        if name in _registered:
+            return _registered[name]
+        if name in _installed:
+            return _installed[name]
+    ep = _entry_points().get(name)
+    program: Program | None = None
+    if ep is not None:
+        loaded = ep.load()
+        if not isinstance(loaded, Program):
+            raise TypeError(
+                f"The qcdata.programs entry point {name!r} ({ep.value}) does not "
+                "implement qcdata.program.Program."
+            )
+        program = loaded
+    with _registry_lock:
+        return _installed.setdefault(name, program)

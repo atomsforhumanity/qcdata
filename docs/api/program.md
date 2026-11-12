@@ -33,4 +33,10 @@ only. Design: [the program interface](../design/program-interface.md).
 
 ::: qcdata.program.find_program
 
+::: qcdata.program.register_program
+
+::: qcdata.program.unregister_program
+
+::: qcdata.program.available_programs
+
 ::: qcdata.testing.check_program

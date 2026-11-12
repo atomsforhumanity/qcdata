@@ -18,6 +18,9 @@ from qcdata.program import (
     SessionProgram,
     available_programs,
     find_program,
+    local_context,
+    register_program,
+    unregister_program,
 )
 from qcdata.testing import ConformanceError, check_program
 from qcdata.testing.toy import ToyProgram, program
@@ -199,6 +202,46 @@ def test_run_context_sessions():
 def test_discovery_of_unregistered_programs():
     assert find_program("no-such-program") is None
     assert isinstance(available_programs(), list)
+
+
+def test_registered_programs_are_found_everywhere():
+    """One registry: what a test or notebook registers, a driver's plan finds too."""
+    toy = ToyProgram()
+    toy.name = "toy-registered"
+    register_program(toy)
+    try:
+        assert find_program("toy-registered") is toy
+        assert "toy-registered" in available_programs()
+        child = ProgramSpec(
+            program="toy-registered", calctype="energy", model={"method": "lj"}
+        )
+        with local_context().session(child, ARGON3) as s:
+            assert s.compute(np.asarray(ARGON3.geometry), CalcType.energy).success
+    finally:
+        unregister_program("toy-registered")
+    assert find_program("toy-registered") is None
+    with pytest.raises(TypeError, match="does not implement"):
+        register_program(object())  # type: ignore[arg-type]
+
+
+def test_installed_programs_are_read_once_per_process(monkeypatch):
+    from qcdata import program as module
+
+    calls = []
+
+    def counting(**kwargs):
+        calls.append(kwargs)
+        return []
+
+    monkeypatch.setattr(module, "entry_points", counting)
+    module._entry_points.cache_clear()
+    try:
+        assert find_program("not-installed-a") is None
+        assert find_program("not-installed-b") is None
+        available_programs()
+    finally:
+        module._entry_points.cache_clear()
+    assert len(calls) == 1
 
 
 def test_program_error_shorthand():
