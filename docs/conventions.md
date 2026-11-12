@@ -123,6 +123,15 @@ What a component contains is the program's: GFN2-xTB's `electronic` is not g-xTB
 program with a hierarchy of overlapping terms reports the partition here and the hierarchy
 in `record`.
 
+### Shared record keys
+
+`record` is shaped by each program's record schema. A few keys mean the same in every
+program that reports them:
+
+| key | type | meaning |
+|---|---|---|
+| `warm_start` | bool | on a session frame: the calculation started from its lineage's history (previous orbitals, charges, probe state), not from the input alone, so it can reach a different solution than a fresh calculation. Programs add their own detail beside it (linus: where the SCF guess came from) |
+
 ### Kinds
 
 Fields whose meaning depends on a scheme name it beside them:

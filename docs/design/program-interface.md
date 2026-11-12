@@ -216,11 +216,26 @@ class Session(Protocol):
   `polarizability`, `orbitals`, `density`); unsupported ones fail with kind `unsupported`.
 - Atoms, charge, multiplicity, model and approximations are fixed for the session's
   lifetime; anything else is a new session.
-- **Native sessions matter for fast engines.** The generic `ComputeSession` (one stateless
-  calculation per request, no warm start) is correct but pays per-call overhead: qcopt
-  measured an HCN TS search + IRC on axtb at 0.6 s with in-process evaluation and 20 s
-  through `ComputeSession` over axtb's codec. It is fine for DFT children; engines that
-  drivers step through at sub-millisecond cost need sessions of their own.
+- **Native sessions matter for every engine.** The generic `ComputeSession` (one stateless
+  calculation per request, no warm start) is correct, and in-process it adds about 13 µs
+  per request. What it loses is the state a program carries between steps. linus measured
+  this (bench/session: real BFGS optimizations, B3LYP/def2-SVP and TZVP, 3-39 atoms and a
+  radical, replayed four ways). Starting every gradient from scratch cost 1.1-1.4× the
+  session on 8 CPU cores (water 1.9×) and 1.6-2.1× on a GPU (water 3.8×). Almost all of
+  it comes from three things:
+  - the warm start (previous orbitals: about 15 → 10-11 SCF iterations);
+  - probe state carried across steps (+14-16% when lost, on molecules that trigger the
+    stability probe);
+  - on a GPU, a live process (0.3-0.8 s of CUDA start-up per gradient in a new process).
+
+  Re-creating the program object in a live process costs milliseconds, and caching
+  per-geometry setup would save 1-5%. So the state that matters is per-lineage, plus a
+  process that stays alive: runners keep GPU programs in one process (in-process calls,
+  one process per `qccompute run` shard, long-lived service workers), never a process per
+  calculation.
+- **A warm start can find a different solution** than a fresh start (linus: the radical's
+  UKS state came out 0.92 mEh lower). Every frame's record says whether it started from
+  its lineage's history (`warm_start`, conventions).
 
 Contract:
 
