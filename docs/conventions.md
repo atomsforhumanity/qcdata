@@ -205,7 +205,10 @@ refused its settings or its run failed. `program` names the child, `cause` holds
 child's own `ErrorInfo`, and the message starts with the child and calctype
 (`linus (gradient): ...`). Callers follow `cause` to the first error that is not of kind
 `program` to learn what went wrong. A child that fails for one task of a round (a session
-that will not open, a failed request) fails that task only.
+that will not open, a failed request) fails that task only. A child that is a Python
+callable rather than a program (qcopt's in-process evaluator) is reported the same way,
+with `program` None. Its `ProgramError` gives the cause; any other exception becomes a
+cause of kind `internal`, as qccompute treats a program's bug.
 
 ### Timings and provenance
 
