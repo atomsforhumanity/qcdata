@@ -513,15 +513,19 @@ class Resolved(QCDataBaseModel):
     Attributes:
         settings: The program's complete settings tree with every ``"auto"`` replaced,
             in the shape of `ProgramInput.keywords`. Passed back as keywords, it
-            reproduces the run. Result identity (caching, deduplication) is computed
-            from these, never from the raw resource keywords, since memory and backend
-            choices that can change numbers appear here resolved.
+            reproduces the run. Memory- and backend-dependent choices that can change
+            numbers (DF storage, precision per card class) appear here resolved.
         reasons: Why each automatic choice was made, keyed by dotted settings path
             (``"grid.xc": "calctype hessian: linus:3"``).
+        deferred: In a plan only: dotted paths of settings left ``"auto"`` because the
+            run decides them (``"jk.df_storage"`` from the free memory when the SCF
+            starts). A finished output's resolved settings have every ``"auto"``
+            replaced and nothing deferred.
     """
 
     settings: dict[str, Any] = {}
     reasons: dict[str, str] = {}
+    deferred: list[str] = []
 
 
 class OutputBase(QCDataBaseModel):
