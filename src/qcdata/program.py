@@ -569,10 +569,6 @@ class Program(Protocol):
         """
         ...
 
-    # Optional: ``numerics_id() -> str`` names the program's numerics identity (what
-    # determines its bits: a numerics epoch, platform/libm class, eigensolver library) for
-    # calculation stores to key on; the version is used when absent.
-
     def compute(
         self, inp: ProgramInput, ctx: RunContext
     ) -> ProgramOutput[ProgramInput, Data]:

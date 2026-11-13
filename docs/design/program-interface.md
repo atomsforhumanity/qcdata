@@ -212,9 +212,11 @@ class Session(Protocol):
   A failed request leaves its lineage's history untouched; `reset` drops it after a jump.
 - **`accuracy`** is an `Accuracy(energy, gradient, hessian)` in atomic units, or a bare
   number for the calctype's highest derivative; explicit session settings are floors.
-- **`outputs`** are per-request extras that do not change the surface (`dipole`, `ir`,
-  `polarizability`, `orbitals`, `density`); unsupported ones fail with kind
-  `unsupported`. A name that fills a `SinglePointData` field is that field's name.
+- **`outputs`** are per-request extras that do not change the surface; unsupported ones
+  fail with kind `unsupported`. A name that fills a top-level `SinglePointData` field is
+  that field's name (`scf_dipole_moment`, `polarizability`); others name what they add
+  (`ir`: the vibrational analysis's intensities and dipole derivatives; `orbitals`,
+  `density`: the wavefunction's).
 - Atoms, charge, multiplicity, model and approximations are fixed for the session's
   lifetime; anything else is a new session.
 - **Native sessions matter for every engine.** The generic `ComputeSession` (one stateless
