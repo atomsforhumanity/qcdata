@@ -132,12 +132,15 @@ class ProgramInput(ProgramSpec):
         given: Results already known at ``structure``, which the program may start
             from instead of computing them: an IRC starts from the transition state's
             energy, gradient and Hessian; an optimizer takes a given Hessian as its
-            initial one; an SCF starts from a given wavefunction. Their provenance says
-            which program and model produced them, so a program can check they match
-            its own. A program that cannot use a given field refuses the input
-            (``not_applicable``) rather than ignoring it, and its resolved settings
-            record what it used (``"given"``). Part of the input, so part of a stored
-            calculation's key.
+            initial one; an SCF starts from a given wavefunction. A record of what is
+            known, not a request: a program uses the fields it can, records each one
+            used in its resolved settings (``"given"``), and leaves the rest alone, so
+            ``given=frame.results`` works as it stands. It refuses the input
+            (``not_applicable``) when it can use none of the fields, or when a field
+            it would use does not fit (another basis; another program where the result
+            is reused as its own). ``provenance`` names only the producing program and
+            version; checking the model is the caller's, which knows the producing
+            input. Part of the input, so part of a stored calculation's key.
 
     Example:
         ```python
