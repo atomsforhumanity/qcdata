@@ -129,18 +129,18 @@ class ProgramInput(ProgramSpec):
         structures: Additional complete structures identified by role, such as a
             QM/MM environment, or a list of structures for a role that holds several
             in order, such as ``"initial_chain"``.
-        given: Results already known at ``structure``, which the program may start
-            from instead of computing them: an IRC starts from the transition state's
-            energy, gradient and Hessian; an optimizer takes a given Hessian as its
-            initial one; an SCF starts from a given wavefunction. A record of what is
+        given: Results already known at ``structure``, for the program to start
+            from: an optimizer or IRC takes a given Hessian as its starting Hessian; an
+            SCF starts from a given wavefunction. Starting points, never results: a
+            program does not report a given value as its own. A record of what is
             known, not a request: a program uses the fields it can, records each one
             used in its resolved settings (``"given"``), and leaves the rest alone, so
             ``given=frame.results`` works as it stands. It refuses the input
             (``not_applicable``) when it can use none of the fields, or when a field
-            it would use does not fit (another basis; another program where the result
-            is reused as its own). ``provenance`` names only the producing program and
-            version; checking the model is the caller's, which knows the producing
-            input. Part of the input, so part of a stored calculation's key.
+            it would use does not fit (another basis). ``provenance`` names only the
+            producing program and version; checking the model is the caller's, which
+            knows the producing input. Part of the input, so part of a stored
+            calculation's key.
 
     Example:
         ```python

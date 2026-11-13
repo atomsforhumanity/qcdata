@@ -169,13 +169,16 @@ settings (rule 5) applies to it differently:
   (`hessian.initial: "given"`, `scf.guess: "given"`). Fields it does not use, descriptive
   ones included (`calcinfo_*`, `scf_iterations`, `energy_components`), are left alone, so
   `given=frame.results` works as it stands.
+- Given values are starting points, never results: a program does not report a given
+  value as its own (qcopt computes the energy and gradient at a given TS and takes only
+  the Hessian). `provenance` names the producing program and version only, so reusing a
+  value as a result could silently mix methods (GFN2 and g-xTB are both "axtb").
 - It refuses the input (kind `input`, code `not_applicable`) when it can use none of the
   fields, or when a field it would use does not fit: other atoms (qcdata checks shapes),
-  another basis for a wavefunction, another program where the result is reused as the
-  program's own (an IRC's frame 0). A starting guess needs no match: a GFN2 Hessian is a
-  sound initial Hessian for a DFT transition-state search.
-- `provenance` names the producing program and version only. Checking the model is the
-  caller's, which knows the producing input (`qcopt.irc(ts_out)` does).
+  another basis for a wavefunction. A starting guess needs no match of program or
+  method: a GFN2 Hessian is a sound initial Hessian for a DFT transition-state search.
+- Checking the model is the caller's, which knows the producing input
+  (`qcopt.irc(ts_out)` passes the search's Hessian only when its spec matches).
 
 ### Warnings
 
