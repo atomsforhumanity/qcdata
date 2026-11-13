@@ -11,6 +11,7 @@ from pydantic import (
     model_validator,
 )
 
+from ..helper_types import FreeDict
 from .base_models import CalcType, Files, Model
 from .structure import Structure
 
@@ -69,7 +70,7 @@ class ProgramSpec(FileInput):
 
     calctype: CalcType
     model: Model | None = None
-    keywords: dict[str, Any] = {}
+    keywords: FreeDict = {}
     subprograms: list["ProgramSpec"] = []
 
     @field_validator("subprograms")

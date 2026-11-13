@@ -22,7 +22,7 @@ from pydantic import (
 )
 
 from .. import _version
-from ..helper_types import StrOrPath
+from ..helper_types import FreeDict, StrOrPath
 
 if TYPE_CHECKING:  # pragma: no cover
     from pydantic.typing import ReprArgs
@@ -70,7 +70,7 @@ class QCDataBaseModel(BaseModel, ABC):
             development and scratch space.
     """
 
-    extras: dict[str, Any] = {}
+    extras: FreeDict = {}
 
     @computed_field(repr=False)  # type: ignore[prop-decorator]
     @property
@@ -523,7 +523,7 @@ class Resolved(QCDataBaseModel):
             replaced and nothing deferred.
     """
 
-    settings: dict[str, Any] = {}
+    settings: FreeDict = {}
     reasons: dict[str, str] = {}
     deferred: list[str] = []
 
@@ -558,7 +558,7 @@ class OutputBase(QCDataBaseModel):
     execution: ExecutionInfo = ExecutionInfo()
     warnings: list[ProgramWarning] = []
     error: ErrorInfo | None = None
-    record: dict[str, Any] = {}
+    record: FreeDict = {}
 
     @model_validator(mode="after")
     def _require_traceback_on_failure(self) -> Self:

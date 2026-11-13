@@ -8,7 +8,7 @@ from typing import Any, Generic, Self, get_args
 
 from pydantic import ValidationInfo, field_validator, model_validator
 
-from .base_models import OutputBase, Resolved
+from .base_models import ErrorInfo, OutputBase, Resolved
 from .data import (
     ConformerSearchData,
     DataType,
@@ -62,6 +62,53 @@ class ProgramOutput(OutputBase, Generic[ProgramInputType, DataType]):
             payload = dict(payload)
             payload["results"] = payload.pop("data")
         return payload
+
+    @classmethod
+    def failure(
+        cls,
+        input_data: ProgramInputType,
+        error: ErrorInfo,
+        *,
+        results: Any = None,
+        traceback: str | None = None,
+        **fields: Any,
+    ) -> ProgramOutput[ProgramInputType, Any]:
+        """A failed output of the right shape for its input's calculation type.
+
+        Programs return this instead of building empty results by hand: an
+        ``optimization`` input needs `OptimizationData` results even when nothing ran.
+
+        Args:
+            input_data: The input that failed.
+            error: Why it failed.
+            results: Partial results, if any; else empty results of the calctype's
+                data type with the program's provenance.
+            traceback: The failure's details; defaults to the error's message.
+            **fields: Other output fields (``logs``, ``execution``, ``warnings``,
+                ``record``).
+
+        Returns:
+            The failed output.
+        """
+        from .base_models import Provenance
+        from .data import get_data_type
+        from .inputs import ProgramInput as _ProgramInput
+
+        if results is None:
+            data_type = (
+                get_data_type(input_data.calctype)
+                if isinstance(input_data, _ProgramInput)
+                else FileData
+            )
+            results = data_type(provenance=Provenance(program=input_data.program))
+        return ProgramOutput(
+            input_data=input_data,
+            results=results,
+            success=False,
+            error=error,
+            traceback=traceback or error.message,
+            **fields,
+        )
 
     def model_post_init(self, __context: Any) -> None:
         """Parameterize the class (if not set explicitly)."""

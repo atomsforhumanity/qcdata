@@ -111,3 +111,43 @@ def test_inputs_carry_results_given_at_their_structure():
             structure=h2,
             given=ts.model_copy(update={"hessian": np.eye(3)}),
         )
+
+
+def test_free_form_fields_carry_numpy_arrays_to_json():
+    import json
+
+    from qcdata import ProgramInput
+
+    h2 = Structure(symbols=["H", "H"], geometry=[[0.0, 0.0, 0.0], [0.0, 0.0, 1.4]])
+    frame = Frame(
+        structure=h2,
+        results=SinglePointData(
+            provenance=Provenance(program="linus"),
+            energy=-1.1,
+            extras={"gradient_components": {"xc": np.ones((2, 3))}},
+        ),
+        success=True,
+        record={"scf": {"history": np.arange(3.0), "n": np.int64(7)}},
+    )
+    data = json.loads(frame.model_dump_json())
+    assert data["results"]["extras"]["gradient_components"]["xc"] == [[1.0] * 3] * 2
+    assert data["record"]["scf"] == {"history": [0.0, 1.0, 2.0], "n": 7}
+    inp = ProgramInput(
+        program="x", calctype="energy", structure=h2, keywords={"w": np.array([1.0])}
+    )
+    assert json.loads(inp.model_dump_json())["keywords"] == {"w": [1.0]}
+
+
+def test_failed_outputs_take_the_shape_of_their_calctype():
+    from qcdata import OptimizationData, ProgramInput, ProgramOutput
+
+    h2 = Structure(symbols=["H", "H"], geometry=[[0.0, 0.0, 0.0], [0.0, 0.0, 1.4]])
+    opt = ProgramInput(program="linus", calctype="optimization", structure=h2)
+    error = ErrorInfo(kind=ErrorKind.unsupported, message="linus runs no optimizations")
+    out = ProgramOutput.failure(opt, error)
+    assert not out.success and isinstance(out.results, OptimizationData)
+    assert out.results.provenance.program == "linus" and out.traceback == error.message
+    sp = ProgramOutput.failure(
+        opt.model_copy(update={"calctype": "energy"}), error, logs="x"
+    )
+    assert isinstance(sp.results, SinglePointData) and sp.logs == "x"
