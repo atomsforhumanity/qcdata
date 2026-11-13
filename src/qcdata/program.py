@@ -898,6 +898,17 @@ def _entry_points() -> dict[str, EntryPoint]:
     return {ep.name: ep for ep in entry_points(group=ENTRY_POINT_GROUP)}
 
 
+def _require_program(obj: object, what: str) -> Program:
+    """`obj` if it implements `Program`; a class passes the protocol check, so refuse it."""
+    if isinstance(obj, type):
+        raise TypeError(
+            f"{what} is the class {obj.__qualname__}, not a program: use an instance."
+        )
+    if not isinstance(obj, Program):
+        raise TypeError(f"{what} does not implement qcdata.program.Program.")
+    return obj
+
+
 def register_program(program: Program) -> None:
     """Make a program findable by name in this process, ahead of installed ones.
 
@@ -908,10 +919,9 @@ def register_program(program: Program) -> None:
         program: An object implementing `Program`.
 
     Raises:
-        TypeError: The object does not implement `Program`.
+        TypeError: The object does not implement `Program`, or is a class.
     """
-    if not isinstance(program, Program):
-        raise TypeError(f"{program!r} does not implement qcdata.program.Program.")
+    _require_program(program, repr(program))
     with _registry_lock:
         _registered[program.name] = program
 
@@ -946,7 +956,7 @@ def find_program(name: str) -> Program | None:
         The program object, or None if none is registered or installed.
 
     Raises:
-        TypeError: The installed object does not implement `Program`.
+        TypeError: The installed object does not implement `Program`, or is a class.
     """
     with _registry_lock:
         if name in _registered:
@@ -956,12 +966,8 @@ def find_program(name: str) -> Program | None:
     ep = _entry_points().get(name)
     program: Program | None = None
     if ep is not None:
-        loaded = ep.load()
-        if not isinstance(loaded, Program):
-            raise TypeError(
-                f"The qcdata.programs entry point {name!r} ({ep.value}) does not "
-                "implement qcdata.program.Program."
-            )
-        program = loaded
+        program = _require_program(
+            ep.load(), f"The qcdata.programs entry point {name!r} ({ep.value})"
+        )
     with _registry_lock:
         return _installed.setdefault(name, program)

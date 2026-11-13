@@ -222,6 +222,25 @@ def test_registered_programs_are_found_everywhere():
     assert find_program("toy-registered") is None
     with pytest.raises(TypeError, match="does not implement"):
         register_program(object())  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="class ToyProgram, not a program"):
+        register_program(ToyProgram)  # type: ignore[arg-type]
+
+
+def test_entry_points_must_name_program_instances(monkeypatch):
+    """A Program class passes the protocol check; its first call would then fail
+    obscurely (version() missing self), so the entry point is refused at once."""
+    from importlib.metadata import EntryPoint
+
+    from qcdata import program as module
+
+    ep = EntryPoint("toy-class", "qcdata.testing.toy:ToyProgram", "qcdata.programs")
+    monkeypatch.setattr(module, "entry_points", lambda **kwargs: [ep])
+    module._entry_points.cache_clear()
+    try:
+        with pytest.raises(TypeError, match=r"'toy-class' .* is the class ToyProgram"):
+            find_program("toy-class")
+    finally:
+        module._entry_points.cache_clear()
 
 
 def test_installed_programs_are_read_once_per_process(monkeypatch):
