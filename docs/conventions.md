@@ -210,7 +210,8 @@ Shared error codes of other kinds, which runners and schedulers act on:
 |---|---|---|
 | `resource` | `host_memory` | out of host memory (a failed allocation, or the plan's need above the grant) |
 | `resource` | `device_memory` | out of GPU memory |
-| `environment` | `worker_died` | a worker process ended mid-request (a crash, a signal, an out-of-memory kill); set by the client, with the exit status and the tail of the worker's stderr in the message. A worker that exits on purpose (a poisoned GPU context) first answers the request in flight with its own error |
+| `backend` | `device_lost` | a GPU fault poisoned the device context (illegal address, launch failure, device assert, ECC error, launch timeout); nothing more can run in this process. A worker answers the request in flight with it and then exits; in process, the caller should not use the program again |
+| `environment` | `worker_died` | a worker process ended mid-request (a crash, a signal, an out-of-memory kill); set by the client, with the exit status and the tail of the worker's stderr in the message. A worker that exits on purpose answers the request in flight first (`device_lost`), so only later requests see `worker_died` |
 
 ### Errors
 
