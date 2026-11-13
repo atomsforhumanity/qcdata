@@ -44,6 +44,12 @@ __all__ = [  # noqa: F405
     "ErrorInfo",
     "ProgramWarning",
     "Resolved",
+    # One step of a session
+    "Accuracy",
+    "Lineage",
+    "Request",
+    "ProgramError",
+    "lineage_key",
     # Vibrations and thermochemistry
     "VibrationalAnalysis",
     "Thermochemistry",

@@ -101,8 +101,6 @@ nav:
       - Welcome to qcdata: index.md
       - Why use qcdata?: why.md
       - Conventions: conventions.md
-      - The program interface (design): design/program-interface.md
-      - The AFH stack (design): design/architecture.md
       - Wavefunctions and integrals (design): design/wavefunctions.md
   - API Documentation:
       - Overview: api/overview.md
@@ -113,7 +111,7 @@ nav:
       - Outcome: api/outcome.md
       - Vibrations: api/vibrations.md
       - Orbitals: api/orbitals.md
-      - Programs and sessions: api/program.md
+      - Session steps: api/steps.md
       - Utilities: api/utils.md
       - Visualizations:
           - View: api/view.md

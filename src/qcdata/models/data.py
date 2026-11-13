@@ -145,6 +145,8 @@ class SinglePointData(FileData, CalcInfoData):
             tight-binding ``electronic`` term is not a DFT one). A hierarchy of
             sub-terms, if a program has one, belongs in the output's ``record``.
         scf_iterations: Number of SCF iterations of the final SCF.
+        scf_s_squared: Expectation value of S^2 of the SCF reference (dimensionless);
+            S(S+1) for a pure spin state, so the excess is the spin contamination.
         scf_quadrupole_moment: 3 x 3 quadrupole moment (e bohr^2) about the coordinate
             origin, in the form `quadrupole_kind` names; programs with another form
             convert to one of those.
@@ -177,6 +179,7 @@ class SinglePointData(FileData, CalcInfoData):
 
     energy_components: dict[str, float] = {}
     scf_iterations: int | None = None
+    scf_s_squared: float | None = None
     scf_quadrupole_moment: SerializableMatrix | None = None
     quadrupole_kind: str | None = None
     polarizability: SerializableMatrix | None = None

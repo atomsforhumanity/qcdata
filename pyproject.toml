@@ -54,9 +54,6 @@ all = [
     "rdkit>=2022.3.3",
     "qcinf>=0.4.1",
 ]
-testing = [
-    "jsonschema>=4.18",
-]
 
 [dependency-groups]
 dev = [

@@ -1,8 +1,8 @@
 # Outcome: resolved settings, warnings, errors
 
 Every output says what the calculation decided and, if it failed, why, in the same fields
-whichever program produced it. `warnings` and `error` are on `ProgramOutput` and on each
-`Frame`; `resolved` and `record` only on `ProgramOutput`. The vocabularies are in
+whichever program produced it. `warnings`, `error` and `record` are on `ProgramOutput` and
+on each `Frame`; `resolved` only on `ProgramOutput`. The vocabularies are in
 [Conventions](../conventions.md#errors).
 
 ::: qcdata.Resolved

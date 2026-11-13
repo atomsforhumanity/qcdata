@@ -416,6 +416,11 @@ class ExecutionInfo(QCDataBaseModel):
         timings: Wall-clock seconds per phase of the calculation. The keys are the
             program's; ``total`` is the whole call, and drivers report ``children``
             (time inside child calculations) beside their own phases.
+        threads: CPU threads the calculation ran with. Some programs' results depend
+            on it at round-off, so it is recorded with every result.
+        peak_memory_gib: Peak host memory the calculation used (GiB), as measured.
+        peak_device_memory_gib: Peak GPU memory the calculation used (GiB), as
+            measured; schedulers compare it with the plan's estimate.
         extras: Additional execution information.
     """
 
@@ -425,6 +430,9 @@ class ExecutionInfo(QCDataBaseModel):
     host_cpu: int | None = None
     host_mem_gib: float | None = None
     timings: dict[str, float] = {}
+    threads: int | None = None
+    peak_memory_gib: float | None = None
+    peak_device_memory_gib: float | None = None
 
 
 class ErrorKind(StrEnum):

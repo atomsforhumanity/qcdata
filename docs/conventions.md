@@ -3,8 +3,8 @@
 The names, units and rules that every AFH program (linus, axtb, qcopt, ...) and every qc*
 codec share, so that inputs look alike and outputs can be read the same way whichever
 program produced them. This page is the single place for them; a program's own documentation
-covers only what is specific to it. Design background: [the program
-interface](design/program-interface.md).
+covers only what is specific to it. How programs are run (the program and session
+protocol, plans, workers) is qccompute's: see its program interface design.
 
 !!! note "Status"
     The settings names below are what the linus, axtb and qcopt sessions agreed on
@@ -134,7 +134,8 @@ program that reports them:
 
 | key | type | meaning |
 |---|---|---|
-| `warm_start` | bool | on a session frame: the calculation started from its lineage's history (previous orbitals, charges, probe state), not from the input alone, so it can reach a different solution than a fresh calculation. Programs add their own detail beside it (linus: where the SCF guess came from) |
+| `warm_start` | bool or null | on a session frame: the calculation started from its lineage's history (previous orbitals, charges, probe state), not from the input alone, so it can reach a different solution than a fresh calculation; null when the method keeps no lineage state (GFN-FF). Programs add their own detail beside it (linus: where the SCF guess came from, and the lineage it was seeded from) |
+| `accuracy` | object | on a request with an `Accuracy`: `target` (the targets as resolved: `energy`, `gradient`, `hessian`), `thresholds` (the program's own convergence thresholds used, under its own names) and, where the program has one, `estimate` (an error estimate per field) |
 
 ### Kinds
 
@@ -168,6 +169,8 @@ convergence). One shared code:
 | code | meaning |
 |---|---|
 | `deprecated_key` | after a program's 1.0, an old key still accepted for a stated period; the message names the new one. Before 1.0 a program rejects old keys (`unknown_key`) instead |
+| `resource_capped` | a resource request in the keywords (`threads`, `memory_gib`, ...) above what the runner granted; the program used the grant (it uses the smaller of request and grant, or the grant alone when nothing was requested) |
+| `backend_fallback` | the calculation ran on another backend than first chosen (a GPU out of memory, so the CPU), which `backend: auto` allows; an explicit backend fails instead |
 
 Programs define further codes in their own documentation.
 
@@ -179,6 +182,14 @@ Shared error codes (kind `input`):
 | `not_applicable` | a setting of another calculation type, or a session request outside the calctypes it was opened for |
 | `no_effect` | made irrelevant by the other values given |
 | `not_modeled` | the structure's charge or multiplicity is one the method does not represent (GFN-FF given a radical, a neutral-only ML potential given an ion). The message names the property. A method never runs on, or silently ignores, a charge or multiplicity it cannot model |
+
+Shared error codes of other kinds, which runners and schedulers act on:
+
+| kind | code | meaning |
+|---|---|---|
+| `resource` | `host_memory` | out of host memory (a failed allocation, or the plan's need above the grant) |
+| `resource` | `device_memory` | out of GPU memory |
+| `environment` | `worker_died` | a worker process ended mid-request (a crash, a signal, an out-of-memory kill); set by the client, with the exit status and the tail of the worker's stderr in the message. A worker that exits on purpose (a poisoned GPU context) first answers the request in flight with its own error |
 
 ### Errors
 
