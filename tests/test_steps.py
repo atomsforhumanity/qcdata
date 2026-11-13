@@ -87,3 +87,27 @@ def test_program_errors_carry_the_failed_frame_and_pickle():
     assert back.error == error and back.frame == frame and back.results == partial
     assert str(ProgramError.of("input", "bad", code="unknown_key")) == "input: bad"
     assert ProgramError.of("numerical", "nan").frame is None
+
+
+def test_inputs_carry_results_given_at_their_structure():
+    from qcdata import ProgramInput
+
+    h2 = Structure(symbols=["H", "H"], geometry=[[0.0, 0.0, 0.0], [0.0, 0.0, 1.4]])
+    ts = SinglePointData(
+        provenance=Provenance(program="linus"),
+        energy=-1.1,
+        gradient=np.zeros((2, 3)),
+        hessian=np.eye(6),
+    )
+    irc = ProgramInput(program="qcopt", calctype="irc", structure=h2, given=ts)
+    back = ProgramInput.model_validate_json(irc.model_dump_json())
+    assert np.array_equal(back.given.hessian, ts.hessian)
+    assert back.given.provenance.program == "linus"
+    assert ProgramInput(program="x", calctype="energy", structure=h2).given is None
+    with pytest.raises(ValidationError, match=r"given.hessian has shape \(3, 3\)"):
+        ProgramInput(
+            program="qcopt",
+            calctype="irc",
+            structure=h2,
+            given=ts.model_copy(update={"hessian": np.eye(3)}),
+        )

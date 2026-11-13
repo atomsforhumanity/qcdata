@@ -144,6 +144,7 @@ class ProgramOutput(OutputBase, Generic[ProgramInputType, DataType]):
         return self
 
 
+ProgramInput.model_rebuild(_types_namespace={"SinglePointData": SinglePointData})
 ProgramOutput.model_rebuild()
 OptimizationData.model_rebuild()
 PathData.model_rebuild()

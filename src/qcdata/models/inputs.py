@@ -2,7 +2,7 @@
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 from pydantic import (
     FieldSerializationInfo,
@@ -13,6 +13,9 @@ from pydantic import (
 
 from .base_models import CalcType, Files, Model
 from .structure import Structure
+
+if TYPE_CHECKING:
+    from .data import SinglePointData
 
 __all__ = [
     "INITIAL_CHAIN",
@@ -126,6 +129,15 @@ class ProgramInput(ProgramSpec):
         structures: Additional complete structures identified by role, such as a
             QM/MM environment, or a list of structures for a role that holds several
             in order, such as ``"initial_chain"``.
+        given: Results already known at ``structure``, which the program may start
+            from instead of computing them: an IRC starts from the transition state's
+            energy, gradient and Hessian; an optimizer takes a given Hessian as its
+            initial one; an SCF starts from a given wavefunction. Their provenance says
+            which program and model produced them, so a program can check they match
+            its own. A program that cannot use a given field refuses the input
+            (``not_applicable``) rather than ignoring it, and its resolved settings
+            record what it used (``"given"``). Part of the input, so part of a stored
+            calculation's key.
 
     Example:
         ```python
@@ -149,6 +161,27 @@ class ProgramInput(ProgramSpec):
 
     structure: Structure | None = None
     structures: dict[str, Structure | list[Structure]] = {}
+    given: "SinglePointData | None" = None
+
+    @model_validator(mode="after")
+    def _check_given(self) -> Self:
+        """Given results belong to ``structure``: the same atoms, in its shapes."""
+        if self.given is None:
+            return self
+        if self.structure is None:
+            raise ValueError(
+                "given results belong to a structure; this input has none."
+            )
+        n = len(self.structure.symbols)
+        shapes = {"gradient": (n, 3), "hessian": (3 * n, 3 * n)}
+        for name, shape in shapes.items():
+            value = getattr(self.given, name)
+            if value is not None and value.shape != shape:
+                raise ValueError(
+                    f"given.{name} has shape {value.shape}; the structure's {n} atoms "
+                    f"need {shape}."
+                )
+        return self
 
     @model_validator(mode="after")
     def _check_structures_for_calctype(self) -> Self:
