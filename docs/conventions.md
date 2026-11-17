@@ -101,10 +101,23 @@ runs, so a number would have no single quantity to aim at.
   convergence settings are floors: a target may tighten them, never loosen them.
 - It is part of the input, so of the [calculation key](#calculation-key): a tighter
   target is another calculation.
-- A program with no convergence settings (a force field, an ML potential) refuses the
-  keyword (kind `input`, code `no_effect`) but accepts a request's target, recording it
-  as met with no thresholds. A program whose convergence settings take no targets yet
-  refuses the keyword with kind `unsupported`, like any shared setting it cannot honour.
+- A program with no convergence settings (a force field, an ML potential, a
+  `FunctionProgram`) accepts a target, as the keyword or a session request's alike, and
+  records it as met: no thresholds, and a convergence error of exactly zero for each
+  target. So a session can pass a request's target on as the keyword.
+- A program whose convergence settings take no targets yet refuses a target with kind
+  `unsupported`, like any shared setting it cannot honour.
+
+The record of a target met with no thresholds, for `{"gradient": 1e-6}`:
+
+```json
+"record": {"accuracy": {"target": {"gradient": 1e-06}, "thresholds": {},
+                        "estimate": {"gradient": 0.0}}}
+```
+
+`target` holds the targets given, `thresholds` is empty, and `estimate` gives `0.0` for
+each target, so a reader checks any program the same way: each `estimate` at or below its
+`target`.
 
 `Accuracy.from_keywords(keywords)` reads it the same way in every program, and refuses a
 bare number, an unknown key (`unknown_key`) and an object with no target (`no_effect`).
@@ -214,7 +227,7 @@ program that reports them:
 | key | type | meaning |
 |---|---|---|
 | `warm_start` | bool or null | on a session frame: the calculation started from its lineage's history (previous orbitals, charges, probe state), not from the input alone, so it can reach a different solution than a fresh calculation; null when the method keeps no lineage state (GFN-FF). Programs add their own detail beside it (linus: where the SCF guess came from, and the lineage it was seeded from) |
-| `accuracy` | object | on a calculation with an [accuracy target](#accuracy-targets) (the keyword's or a request's): `target` (the targets as resolved: `energy`, `gradient`, `hessian`), `thresholds` (the program's own convergence thresholds used, under its own names; empty for a program with none) and, where the program has one, `estimate` (an error estimate per field) |
+| `accuracy` | object | on a calculation with an [accuracy target](#accuracy-targets) (the keyword's or a request's): `target` (the targets as resolved: `energy`, `gradient`, `hessian`), `thresholds` (the program's own convergence thresholds used, under its own names; empty for a program with none) and, where the program has one, `estimate` (an error estimate per field; `0.0` for each target of a program with no convergence settings) |
 
 ### Kinds
 

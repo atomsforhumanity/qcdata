@@ -91,8 +91,10 @@ class Accuracy(QCDataBaseModel):
     every session request that gives none. A request's `Request.accuracy` replaces it
     for that request. The keyword is part of the input, so of its calculation key: a
     tighter target is another calculation. A program with no convergence settings (a
-    force field, an ML potential) refuses the keyword as ``no_effect`` but accepts a
-    request's target, recording it as met with no thresholds.
+    force field, an ML potential) accepts a target, keyword or request alike, and
+    records it as met: empty ``thresholds`` and an ``estimate`` of 0.0 per target. A
+    program whose convergence settings take no targets yet refuses it with kind
+    ``unsupported``.
 
     Attributes:
         energy: Target error of the energy (Eh).
