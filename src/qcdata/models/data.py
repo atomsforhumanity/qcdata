@@ -191,8 +191,15 @@ class SinglePointData(FileData, CalcInfoData):
 
         wavefunction: Wavefunction data from the calculation.
 
-        scf_dipole_moment: The x, y, z component of the dipole moment of the structure
-            in units of e a0 (NOT Debye!).
+        dipole_moment: The x, y, z components of the dipole moment (e bohr, not
+            Debye) of the method's charge distribution, electrons and nuclei, whatever
+            the method: an SCF density, a force field's or tight-binding model's
+            charges (GFN-FF's EEQ charges), an ML potential's prediction.
+        quadrupole_moment: 3 x 3 quadrupole moment (e bohr^2) of the method's charge
+            distribution, electrons and nuclei, about the coordinate origin, whatever
+            the method: Buckingham's traceless tensor
+            (1/2) sum q (3 r_i r_j - r^2 delta_ij). Programs with another form convert
+            to it.
         atomic_charges: Partial charge on each atom in units of e, ordered like the
             structure's atoms. The partitioning scheme (Mulliken, Lowdin, CM5, ...)
             is the program's; `atomic_charges_kind` names it.
@@ -235,10 +242,6 @@ class SinglePointData(FileData, CalcInfoData):
         scf_iterations: Number of SCF iterations of the final SCF.
         scf_s_squared: Expectation value of S^2 of the SCF reference (dimensionless);
             S(S+1) for a pure spin state, so the excess is the spin contamination.
-        scf_quadrupole_moment: 3 x 3 quadrupole moment (e bohr^2) of the electrons and
-            nuclei about the coordinate origin: Buckingham's traceless tensor
-            (1/2) sum q (3 r_i r_j - r^2 delta_ij). Programs with another form convert
-            to it.
         polarizability: 3 x 3 static dipole polarizability (e^2 bohr^2 / Hartree).
         bond_orders: n_atoms x n_atoms bond orders, in the form `bond_orders_kind`
             names.
@@ -258,7 +261,8 @@ class SinglePointData(FileData, CalcInfoData):
 
     wavefunction: Wavefunction | None = None
 
-    scf_dipole_moment: list[float] | None = None
+    dipole_moment: list[float] | None = None
+    quadrupole_moment: SerializableMatrix | None = None
 
     atomic_charges: SerializableVector | None = None
     atomic_charges_kind: str | None = None
@@ -274,7 +278,6 @@ class SinglePointData(FileData, CalcInfoData):
     energy_components: dict[str, float] = {}
     scf_iterations: int | None = None
     scf_s_squared: float | None = None
-    scf_quadrupole_moment: SerializableMatrix | None = None
     polarizability: SerializableMatrix | None = None
     bond_orders: SerializableMatrix | None = None
     bond_orders_kind: str | None = None
@@ -282,7 +285,7 @@ class SinglePointData(FileData, CalcInfoData):
     vibrational_analysis: VibrationalAnalysis | None = None
     thermochemistry: list[Thermochemistry] = []
 
-    @field_validator("scf_quadrupole_moment", "polarizability")
+    @field_validator("quadrupole_moment", "polarizability")
     @classmethod
     def _validate_three_by_three(
         cls, v: SerializableNDArray | None

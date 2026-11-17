@@ -135,7 +135,7 @@ class Request(QCDataBaseModel):
             None is the default lineage.
         outputs: Optional outputs that do not change the surface but may cost extra.
             A name that fills a top-level `SinglePointData` field is that field's name
-            (``scf_dipole_moment``, ``polarizability``); others name what they add
+            (``dipole_moment``, ``polarizability``); others name what they add
             (``ir``). The wavefunction's parts are ``orbitals``, ``overlap``,
             ``hamiltonian`` and ``core_hamiltonian``; a program fills in what one
             implies (``hamiltonian`` brings ``overlap`` and ``orbitals``), as the

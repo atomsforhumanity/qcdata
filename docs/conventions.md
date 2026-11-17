@@ -202,10 +202,12 @@ Fields whose meaning depends on a scheme name it beside them:
 
 Fields with one definition have no kind:
 
-- `scf_quadrupole_moment` is Buckingham's traceless tensor, ½Σq(3rᵢrⱼ − r²δᵢⱼ) about the
-  coordinate origin, electrons and nuclei. tblite's molecular quadrupole, which the
-  g-xTB 2.0.1 program prints, counts the off-diagonal charge and dipole parts twice and is
-  not a tensor.
+- `dipole_moment` and `quadrupole_moment` are the moments of the method's charge
+  distribution, electrons and nuclei, whatever the method: an SCF density, a force
+  field's or tight-binding model's charges (GFN-FF's EEQ charges), an ML potential's
+  prediction. The quadrupole is Buckingham's traceless tensor, ½Σq(3rᵢrⱼ − r²δᵢⱼ) about
+  the coordinate origin. tblite's molecular quadrupole, which the g-xTB 2.0.1 program
+  prints, counts the off-diagonal charge and dipole parts twice and is not a tensor.
 - `atomic_dipoles` and `atomic_quadrupoles` are electronic only, about each atom's
   nucleus: μ_A = −Σ_{μ∈A}(P D)_μμ, with the integrals about the atom of the column AO;
   quadrupoles in Buckingham's traceless form, 3/2 M − 1/2 tr(M) I, 3 × 3 per atom.

@@ -125,7 +125,7 @@ def test_single_point_typed_fields():
         energy=-1.0,
         energy_components={"nuclear_repulsion": 0.5, "one_electron": -2.0, "xc": 0.5},
         scf_iterations=9,
-        scf_quadrupole_moment=np.arange(9.0),
+        quadrupole_moment=np.arange(9.0),
         polarizability=[[1, 0, 0], [0, 2, 0], [0, 0, 3]],
         atomic_charges=[0.1, -0.1],
         atomic_charges_kind="mulliken",
@@ -133,11 +133,20 @@ def test_single_point_typed_fields():
         bond_orders_kind="mayer",
     )
     assert sum(sp.energy_components.values()) == pytest.approx(sp.energy)
-    assert sp.scf_quadrupole_moment.shape == (3, 3)
+    assert sp.quadrupole_moment.shape == (3, 3)
     assert sp.bond_orders.shape == (2, 2)
     assert SinglePointData.model_validate_json(sp.model_dump_json()) == sp
     with pytest.raises(ValidationError):
         SinglePointData(provenance=PROV, polarizability=[1.0, 2.0])
+
+
+def test_moments_are_the_methods_whatever_the_method():
+    """A force field's dipole has the same home as an SCF one; the old names are gone."""
+    sp = SinglePointData(provenance=PROV, dipole_moment=[0.0, 0.0, 0.73])
+    assert sp.dipole_moment == [0.0, 0.0, 0.73]
+    for old in ("scf_dipole_moment", "scf_quadrupole_moment"):
+        with pytest.raises(ValidationError, match=old):
+            SinglePointData.model_validate({"provenance": PROV, old: [0.0, 0.0, 1.0]})
 
 
 def _water_analysis(**kw):

@@ -140,7 +140,7 @@ What H contains:
 - `atomic_dipoles`, `atomic_quadrupoles`: the electronic part only, about each atom
   (μ_A = −Σ_{μ∈A}(P D)_μμ, integrals about the column AO's atom); quadrupoles Buckingham
   traceless (3/2 M − 1/2 tr M), 3 × 3 per atom.
-- `scf_quadrupole_moment` is the Buckingham traceless tensor, with no kind beside it.
+- `quadrupole_moment` is the Buckingham traceless tensor, with no kind beside it.
   tblite's molecular quadrupole, which the g-xTB 2.0.1 program prints, counts the
   off-diagonal charge and dipole parts twice and is not a tensor.
 
