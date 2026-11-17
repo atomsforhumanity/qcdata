@@ -1819,7 +1819,8 @@ replaced and nothing deferred.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A stable snake_case code, defined and documented by the program.</p>
+                <p>A stable snake_case code: one the conventions share
+(<code>loosely_converged</code>) or one the program defines and documents.</p>
               </div>
             </td>
           </tr>
@@ -1936,9 +1937,10 @@ branches on.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A stable snake_case code that refines <code>kind</code> (e.g. <code>max_iter</code>,
-<code>energy_rose</code>, <code>not_first_order_saddle</code>), defined and documented by the
-program. Callers branch on it instead of parsing <code>message</code>.</p>
+                <p>A stable snake_case code that refines <code>kind</code>: one the conventions share
+(<code>scf_not_converged</code>, <code>host_memory</code>) or one the program defines and
+documents (<code>max_iter</code>, <code>energy_rose</code>, <code>not_first_order_saddle</code>).
+Callers branch on it instead of parsing <code>message</code>.</p>
               </div>
             </td>
           </tr>
@@ -1975,8 +1977,10 @@ because the SCF did not converge" stays structured through every level.</p>
               <div class="doc-md-description">
                 <p>Structured facts about the failure, as plain JSON, so callers need
 not parse <code>message</code>. The conventions name the keys of shared codes:
-<code>required_gib</code> and <code>available_gib</code> (GiB) for <code>host_memory</code> and
-<code>device_memory</code>, when the program knows them.</p>
+<code>required_gib</code> and <code>available_gib</code> for <code>host_memory</code> and
+<code>device_memory</code>, when the program knows them, in the memory keyword's
+terms: the <code>memory_gib</code> (<code>device_memory_gib</code>) with which the calculation
+would fit, and the one it ran with (GiB).</p>
               </div>
             </td>
           </tr>
@@ -2119,6 +2123,19 @@ did not converge; the results reached are attached.</p>
             <td>
               <div class="doc-md-description">
                 <p>The calculation ran out of time (set by the runner).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="qcdata.ErrorKind.stopped">stopped</span></code></td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The program stopped on request at one of its steps (a runner's stop,
+which the program sees as <code>ctx.stop_requested()</code>); the partial output it
+reached is attached. Not a fault of the calculation, so a runner never
+stores a stopped output and a store never reuses one.</p>
               </div>
             </td>
           </tr>

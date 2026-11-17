@@ -2296,7 +2296,10 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The hessian of the structure in <code>Hartrees/Bohr^2</code>.</p>
+                <p>The full Cartesian second derivative of the energy at the input
+geometry (Eh/bohr^2), 3N x 3N, never projected. Away from a stationary point
+the gradient gives rotations a part in it, which projection would lose.
+Projection belongs to <code>vibrational_analysis</code>, which records it.</p>
               </div>
             </td>
           </tr>
@@ -2914,15 +2917,15 @@ input has no single structure.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/qcdata/models/data.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">579</span>
-<span class="normal">580</span>
-<span class="normal">581</span>
-<span class="normal">582</span>
-<span class="normal">583</span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">583</span>
 <span class="normal">584</span>
 <span class="normal">585</span>
 <span class="normal">586</span>
-<span class="normal">587</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">587</span>
+<span class="normal">588</span>
+<span class="normal">589</span>
+<span class="normal">590</span>
+<span class="normal">591</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">from_output</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="n">ProgramOutput</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Record a subprogram&#39;s output as a step, at its input&#39;s structure.</span>
 
