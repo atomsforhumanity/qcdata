@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 import numpy as np
-from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 from qcdata.helper_types import (
     SerializableMatrix,
@@ -17,7 +17,7 @@ from qcdata.helper_types import (
 
 from .base_models import CalcType, Files, OutputBase, Provenance, QCDataBaseModel
 from .inputs import ProgramInput
-from .orbitals import Orbitals
+from .orbitals import AOConvention, OrbitalKind, Orbitals
 from .structure import Structure
 from .utils import to_multi_xyz
 from .vibrations import Thermochemistry, VibrationalAnalysis
@@ -55,44 +55,110 @@ class FileData(Files):
     provenance: Provenance
 
 
+#: The AO matrices of a `Wavefunction`; each is an operator, nao x nao.
+_AO_MATRICES = ("overlap", "hamiltonian_a", "hamiltonian_b", "core_hamiltonian")
+
+
 class Wavefunction(QCDataBaseModel):
-    """The wavefunction for a single point calculation.
+    """The wavefunction of a single point calculation: its orbitals and AO matrices.
+
+    The SCF density is not stored: it is C n C^T of the returned orbitals
+    (`Orbitals.density`). The AO matrices come only on request. Each is nao x nao in the
+    AO convention of ``orbitals.basis``, so it needs the orbitals' coefficients and basis
+    set; `with_convention` converts the orbitals and every matrix together.
 
     Attributes:
-        scf_eigenvalues_a: The SCF alpha-spin orbital eigenvalues.
-        scf_eigenvalues_b: The SCF beta-spin orbital eigenvalues.
-        scf_occupations_a: The SCF alpha-spin orbital occupations.
-        scf_occupations_b: The SCF beta-spin orbital occupations.
-        orbitals: The molecular orbitals with the basis set they expand in, when the
-            input asked for them (they are large: nao x nmo per spin).
+        orbitals: The orbital levels and, on request, the orbitals and their basis set.
+        overlap: The AO overlap matrix S the program used, with its own screening.
+        hamiltonian_a: The Fock or Kohn-Sham matrix, or the tight-binding Hamiltonian
+            (Eh), of alpha electrons or of both spins for restricted orbitals: the
+            operator of one build at the SCF's last input (a density, or charges and
+            multipole moments), however that input was mixed. The canonical orbitals
+            are its fresh generalized eigenvectors with the returned S,
+            H C = S C diag(energies). It is built from the last input, not from the
+            returned orbitals' density, which is one step ahead; the two differ by the
+            SCF residual. It holds everything in the SCF operator (exchange-correlation
+            on the final grid, nonlocal correlation, a continuum solvent's operator)
+            and nothing that does not depend on the density (dispersion, a solvent's
+            CDS term). Requesting it changes no other number.
+        hamiltonian_b: The beta Hamiltonian (Eh) of unrestricted orbitals.
+        core_hamiltonian: Every density-independent one-electron term of the run (Eh):
+            the kinetic energy, the attraction of nuclei with charges
+            Z - core_electrons, the ECPs, and external point charges and fields where a
+            program supports them; tr((P_a + P_b) h) is the energy's ``one_electron``
+            component.
     """
 
-    scf_eigenvalues_a: SerializableVector | None = None
-    scf_eigenvalues_b: SerializableVector | None = None
-    scf_occupations_a: SerializableVector | None = None
-    scf_occupations_b: SerializableVector | None = None
-    orbitals: Orbitals | None = None
+    orbitals: Orbitals
+    overlap: SerializableMatrix | None = None
+    hamiltonian_a: SerializableMatrix | None = None
+    hamiltonian_b: SerializableMatrix | None = None
+    core_hamiltonian: SerializableMatrix | None = None
 
-    @field_validator(
-        "scf_eigenvalues_a",
-        "scf_eigenvalues_b",
-        "scf_occupations_a",
-        "scf_occupations_b",
-    )
-    @classmethod
-    def to_numpy(
-        cls, val: np.ndarray | None, _info: ValidationInfo
-    ) -> np.ndarray | None:
-        """Ensure orbital eigenvalues and occupations are stored as numpy arrays.
+    @model_validator(mode="after")
+    def _check_ao_matrices(self) -> Self:
+        """AO matrices are nao x nao of the orbitals' basis; H comes with S."""
+        present = [name for name in _AO_MATRICES if getattr(self, name) is not None]
+        if not present:
+            return self
+        orbitals = self.orbitals
+        if orbitals.basis is None:
+            raise ValueError(
+                f"{', '.join(present)} need the orbitals' basis set: AO matrices are "
+                "nao x nao in orbitals.basis, which comes with the coefficients"
+            )
+        shape = (orbitals.basis.nao, orbitals.basis.nao)
+        for name in present:
+            if getattr(self, name).shape != shape:
+                raise ValueError(
+                    f"{name} must be nao x nao = {shape}, not "
+                    f"{getattr(self, name).shape}"
+                )
+        if self.hamiltonian_a is None:
+            if self.hamiltonian_b is not None:
+                raise ValueError("hamiltonian_b needs hamiltonian_a")
+            return self
+        if self.overlap is None:
+            raise ValueError(
+                "a hamiltonian comes with the overlap its orbitals are eigenvectors in"
+            )
+        if orbitals.kind != OrbitalKind.canonical:
+            raise ValueError(
+                "a hamiltonian's eigenvectors are canonical orbitals, not "
+                f"{orbitals.kind.value} ones"
+            )
+        if orbitals.restricted and self.hamiltonian_b is not None:
+            raise ValueError(
+                "restricted orbitals have one hamiltonian: no hamiltonian_b"
+            )
+        if not orbitals.restricted and self.hamiltonian_b is None:
+            raise ValueError("unrestricted orbitals need hamiltonian_b too")
+        return self
+
+    def with_convention(self, convention: AOConvention) -> Wavefunction:
+        """The same wavefunction with its AOs in another convention.
+
+        Each array changes with its variance (`BasisSet.transform`): coefficients scale
+        by s per AO index and the AO matrices, all operators, by 1 / (s_mu s_nu).
 
         Args:
-            val: The eigenvalue or occupation vector, or None if not provided.
-            _info: Pydantic validation context (unused).
+            convention: The target AO convention.
 
         Returns:
-            The value as a numpy array, or None if it was not provided.
+            A new wavefunction whose orbitals' basis set has the target convention.
+
+        Raises:
+            ValueError: If the orbitals have no coefficients.
         """
-        return np.asarray(val) if val is not None else None
+        orbitals = self.orbitals.with_convention(convention)
+        basis = self.orbitals.basis
+        assert basis is not None  # with_convention raised otherwise
+        update: dict[str, Any] = {"orbitals": orbitals}
+        for name in _AO_MATRICES:
+            matrix = getattr(self, name)
+            if matrix is not None:
+                update[name] = basis.transform(matrix, convention, kind="operator")
+        return self.model_copy(update=update)
 
 
 class CalcInfoData(BaseModel):

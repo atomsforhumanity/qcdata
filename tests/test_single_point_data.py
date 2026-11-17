@@ -1,6 +1,6 @@
 import numpy as np
 
-from qcdata import SinglePointData, Wavefunction
+from qcdata import Orbitals, SinglePointData, Wavefunction
 
 
 def test_gradient_converted_np_array():
@@ -43,22 +43,19 @@ def test_single_point_success_casts_hessian_to_3n_by_3n(prog_input_factory):
     assert data.hessian.dtype == np.float64
 
 
-def test_wavefunction_to_numpy():
-    """Test that wavefunction converts to numpy array"""
-    wavefunction = Wavefunction(
-        scf_eigenvalues_a=[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-        scf_eigenvalues_b=[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-        scf_occupations_a=[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-        scf_occupations_b=[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+def test_orbital_levels_are_numpy():
+    """Orbital energies and occupations are float64 arrays."""
+    orbitals = Orbitals(
+        spin="unrestricted",
+        energies_a=[-1.0, 0.5],
+        energies_b=[-0.9, 0.6],
+        occupations_a=[1, 0],
+        occupations_b=[1, 0],
     )
-    assert isinstance(wavefunction.scf_eigenvalues_a, np.ndarray)
-    assert isinstance(wavefunction.scf_eigenvalues_b, np.ndarray)
-    assert isinstance(wavefunction.scf_occupations_a, np.ndarray)
-    assert isinstance(wavefunction.scf_occupations_b, np.ndarray)
-    assert wavefunction.scf_eigenvalues_a.dtype == np.float64
-    assert wavefunction.scf_eigenvalues_b.dtype == np.float64
-    assert wavefunction.scf_occupations_a.dtype == np.float64
-    assert wavefunction.scf_occupations_b.dtype == np.float64
+    for name in ("energies_a", "energies_b", "occupations_a", "occupations_b"):
+        value = getattr(orbitals, name)
+        assert isinstance(value, np.ndarray) and value.dtype == np.float64
+    assert Wavefunction(orbitals=orbitals).orbitals is orbitals
 
 
 def test_single_point_data_can_be_empty_for_partial_or_failed_outputs():

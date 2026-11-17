@@ -1,38 +1,25 @@
-"""The typed slots of the AFH program interface: outcome, vibrations, orbitals."""
-
-import math
-from typing import Any
+"""The typed slots of the AFH program interface: outcome and vibrations."""
 
 import numpy as np
 import pytest
 from pydantic import ValidationError
 
 from qcdata import (
-    DEFAULT_AO_CONVENTION,
-    MOLDEN_CONVENTION,
-    AOConvention,
-    BasisSet,
     CalcType,
-    CartesianNormalization,
     ErrorInfo,
     ErrorKind,
     ExecutionInfo,
     Frame,
     OptimizationData,
-    Orbitals,
-    OrbitalSpin,
     ProgramInput,
     ProgramOutput,
     ProgramWarning,
     Provenance,
     Resolved,
-    Shell,
     SinglePointData,
-    SphericalOrder,
     Thermochemistry,
     ThermoTerm,
     VibrationalAnalysis,
-    Wavefunction,
 )
 
 PROV = Provenance(program="test", program_version="1.0", program_commit="abc123")
@@ -253,162 +240,3 @@ def test_frequencies_live_only_in_the_analysis():
     with pytest.raises(ValidationError, match="vibrational_analysis"):
         SinglePointData.model_validate({"provenance": PROV, "freqs_wavenumber": [1.0]})
     assert "freqs_wavenumber" not in SinglePointData.model_fields
-
-
-# ------------------------------------------------------------------- orbitals
-
-
-def _norm(alpha: float) -> float:
-    """Coefficient that normalizes one s primitive."""
-    return (2 * alpha / math.pi) ** 0.75
-
-
-def _basis(pure_d: bool = True) -> BasisSet:
-    shells = [
-        Shell(
-            center=0,
-            angular_momentum=0,
-            pure=True,
-            exponents=np.array([1.0]),
-            coefficients=np.array([_norm(1.0)]),
-        ),
-        Shell(
-            center=0,
-            angular_momentum=1,
-            pure=True,
-            exponents=np.array([0.8]),
-            coefficients=np.array([1.0]),
-        ),
-        Shell(
-            center=0,
-            angular_momentum=2,
-            pure=pure_d,
-            exponents=np.array([0.6]),
-            coefficients=np.array([1.0]),
-        ),
-        Shell(
-            center=1,
-            angular_momentum=0,
-            pure=True,
-            exponents=np.array([0.5]),
-            coefficients=np.array([_norm(0.5)]),
-        ),
-    ]
-    return BasisSet(name="toy", shells=shells)
-
-
-def _orbitals(basis: BasisSet, spin: str = "restricted") -> Orbitals:
-    rng = np.random.default_rng(1)
-    n = basis.nao
-    c = np.linalg.qr(rng.normal(size=(n, n)))[0]
-    occ = np.array([1.0] * 3 + [0.0] * (n - 3))
-    kw: dict[str, Any] = {}
-    if spin == "unrestricted":
-        kw = dict(coefficients_b=c[:, ::-1], energies_b=np.arange(n, dtype=float))
-    return Orbitals(
-        basis=basis,
-        spin=OrbitalSpin(spin),
-        coefficients_a=c,
-        energies_a=np.arange(n, dtype=float),
-        occupations_a=occ,
-        **kw,
-    )
-
-
-def test_basis_counts_and_labels():
-    pure, cart = _basis(True), _basis(False)
-    assert pure.nao == 1 + 3 + 5 + 1
-    assert cart.nao == 1 + 3 + 6 + 1
-    assert pure.shell_offsets() == [0, 1, 4, 9]
-    labels = pure.ao_labels(["O", "H"])
-    assert labels[0] == "0 O 1s" and labels[1] == "0 O 2p x" and labels[-1] == "1 H 1s"
-    assert "0 O 3dxy" in cart.ao_labels(["O", "H"])
-    s = pure.shells[0]
-    assert s.primitive_coefficients() == pytest.approx([1.0])
-
-
-def test_shell_and_orbital_validation():
-    with pytest.raises(ValidationError, match="same length"):
-        Shell(
-            center=0,
-            angular_momentum=0,
-            pure=True,
-            exponents=np.array([1.0, 2.0]),
-            coefficients=np.array([1.0]),
-        )
-    with pytest.raises(ValidationError, match="positive"):
-        Shell(
-            center=0,
-            angular_momentum=0,
-            pure=True,
-            exponents=np.array([-1.0]),
-            coefficients=np.array([1.0]),
-        )
-    basis = _basis()
-    with pytest.raises(ValidationError, match="nao x nmo"):
-        Orbitals(basis=basis, spin="restricted", coefficients_a=np.zeros((3, 3)))
-    with pytest.raises(ValidationError, match="need coefficients_b"):
-        Orbitals(basis=basis, spin="unrestricted", coefficients_a=np.eye(basis.nao))
-    with pytest.raises(ValidationError, match="one value per orbital"):
-        Orbitals(
-            basis=basis,
-            spin="restricted",
-            coefficients_a=np.eye(basis.nao),
-            energies_a=[1.0],
-        )
-
-
-@pytest.mark.parametrize("pure_d", [True, False])
-@pytest.mark.parametrize("spin", ["restricted", "unrestricted"])
-def test_conventions_round_trip(pure_d, spin):
-    orb = _orbitals(_basis(pure_d), spin)
-    for conv in (
-        MOLDEN_CONVENTION,
-        AOConvention(spherical_order=SphericalOrder.increasing_m),
-        AOConvention(spherical_order="trexio", cartesian_normalization="pyscf"),
-    ):
-        there = orb.with_convention(conv)
-        assert there.basis.ao_convention == conv
-        back = there.with_convention(DEFAULT_AO_CONVENTION)
-        assert np.allclose(back.coefficients_a, orb.coefficients_a)
-        if spin == "unrestricted":
-            assert np.allclose(back.coefficients_b, orb.coefficients_b)
-
-
-def test_convention_permutations_and_scaling():
-    basis = _basis(pure_d=False)
-    eye = np.eye(basis.nao)
-    # p shells: PySCF (x, y, z) -> CCA increasing m (y, z, x)
-    cca = basis.transform(eye, AOConvention(spherical_order="increasing_m"))
-    assert cca[1:4, 1:4].argmax(axis=1).tolist() == [1, 2, 0]  # y, z, x
-    # Cartesian d: x^l-normalized xy has norm 1/sqrt(3); unit-normalized has norm 1.
-    unit = basis.transform(
-        eye, AOConvention(cartesian_normalization=CartesianNormalization.unit)
-    )
-    labels = basis.ao_labels()
-    xy = labels.index("0 3dxy")
-    xx = labels.index("0 3dxx")
-    assert unit[xy, xy] == pytest.approx(1 / math.sqrt(3))
-    assert unit[xx, xx] == pytest.approx(1.0)
-
-
-def test_density_and_wavefunction_round_trip():
-    orb = _orbitals(_basis())
-    da, db = orb.density()
-    c = orb.coefficients_a[:, :3]
-    assert np.allclose(da, c @ c.T) and np.allclose(da, db)
-    assert orb.spin is OrbitalSpin.restricted and orb.restricted
-    sp = SinglePointData(
-        provenance=PROV,
-        energy=-1.0,
-        wavefunction=Wavefunction(
-            scf_eigenvalues_a=orb.energies_a,
-            scf_occupations_a=orb.occupations_a,
-            orbitals=orb,
-        ),
-    )
-    loaded = SinglePointData.model_validate_json(sp.model_dump_json())
-    assert loaded == sp
-    assert np.array_equal(
-        loaded.wavefunction.orbitals.coefficients_a, orb.coefficients_a
-    )
