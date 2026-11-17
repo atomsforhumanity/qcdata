@@ -633,6 +633,10 @@ class ErrorKind(StrEnum):
         backend: The hardware backend failed (no usable GPU, a device error).
         program: A subprogram failed; `ErrorInfo.cause` holds its error.
         timeout: The calculation ran out of time (set by the runner).
+        stopped: The program stopped on request at one of its steps (a runner's stop,
+            which the program sees as ``ctx.stop_requested()``); the partial output it
+            reached is attached. Not a fault of the calculation, so a runner never
+            stores a stopped output and a store never reuses one.
         environment: The program could not be run at all: not installed, no licence,
             the process died (set by the runner).
         internal: A failure nobody anticipated: a bug (an exception other than
@@ -649,6 +653,7 @@ class ErrorKind(StrEnum):
     backend = "backend"
     program = "program"
     timeout = "timeout"
+    stopped = "stopped"
     environment = "environment"
     internal = "internal"
 

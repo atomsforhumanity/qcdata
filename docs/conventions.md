@@ -388,6 +388,7 @@ codes may define theirs.
 | `backend` | the hardware backend failed |
 | `program` | a subprogram failed; `cause` holds its error |
 | `timeout` | out of time (set by the runner) |
+| `stopped` | the program stopped on request at one of its steps, its partial output attached (see [Stopping](#stopping)) |
 | `environment` | the program could not run: not installed, no licence, process died (set by the runner) |
 | `internal` | a failure nobody anticipated: a bug (an exception other than `ProgramError`, a broken invariant, a crash) or, on the codec path, a failure no rule classifies (a reported failure, an unexplained exit, unreadable output). A failure a program or codec anticipates takes the kind that fits it |
 
@@ -438,6 +439,20 @@ with one shared key: `event`, a snake_case name of what happened (`step`). Progr
 document their events. The runner adds `path`, the program names from the caller's input
 down to the program that emitted it; programs do not set it. Events are not results:
 nothing in them is stored, and no output depends on whether anyone listened.
+
+### Stopping
+
+A caller may ask a running calculation to stop at its next step (qccompute's
+`runner.stop(future)`), to keep what it has reached: a search's frames so far, to analyze
+now. The program sees the request as `ctx.stop_requested()`, checks it where it can end
+cleanly (an optimizer: before each step), and ends there: its output is a failure of kind
+`stopped` with the partial results, raised as for any failure
+(`ProgramError(out.error, output=out)`). The request covers the whole calculation: a
+program whose subprogram stopped stops too, with kind `stopped` rather than `program`. A
+program with no steps to stop at need not check, and runs to its end.
+
+A stopped output is where the caller chose to end the run, not what the input gives: a
+runner never stores one, and a store never reuses one.
 
 ## Saved files
 

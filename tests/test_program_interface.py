@@ -118,6 +118,31 @@ def test_error_details_are_structured_json():
     assert ProgramError.of("numerical", "nan").error.details == {}
 
 
+def test_a_stopped_search_keeps_its_partial_output(water):
+    """A program stopped on request ends with kind `stopped` and the frames it reached."""
+    inp = ProgramInput(
+        program="test",
+        calctype=CalcType.optimization,
+        structure=water,
+        model={"method": "gfn2"},
+    )
+    step = Frame(
+        success=True,
+        structure=water,
+        results=SinglePointData(provenance=PROV, energy=-5.0, gradient=[[0.0] * 3] * 3),
+    )
+    error = ErrorInfo(kind=ErrorKind.stopped, message="stopped on request at step 2")
+    out = ProgramOutput.failure(
+        inp, error, results=OptimizationData(provenance=PROV, frames=[step, step])
+    )
+    assert not out.success and out.error.kind == "stopped"
+    exc = ProgramError(out.error, output=out)
+    loaded = pickle.loads(pickle.dumps(exc))
+    assert loaded.error.kind is ErrorKind.stopped
+    assert len(loaded.results.frames) == 2
+    assert ProgramOutput.model_validate_json(out.model_dump_json()) == out
+
+
 def test_frames_keep_warnings_errors_and_records_but_not_settings(energy_input):
     out = ProgramOutput(
         input_data=energy_input,
