@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.24.0a3] - 2026-11-17
+
+### Added
+
+- `ExecutionInfo.store_run`: `"<key>/<run>"` on an output read from a store (set by the store's `get`), None for a fresh calculation.
+- `Structure.with_geometry(positions)`: a validated copy at new positions. `ProgramInput.from_spec(inp, inp.structure.with_geometry(x))` is the way to make an input at a new geometry.
+- Conventions: the wavefunction outputs by name (`orbitals`, `overlap`, `hamiltonian`, `core_hamiltonian`), what each implies, and how a program refuses one it can't give (`unsupported`, `not_applicable`).
+
+### Changed
+
+- **Breaking:** only the top-level document carries `qcdata_version`, and empty `extras` are left out of dumps. Loading still accepts stamps at any depth. `ProgramOutput` and `Frame` publish their fields' serialization schema.
+- **Breaking:** qcdata requires pydantic 2.12 or later.
+- `__eq__` compares fields directly: about 160 times faster for large arrays, and arrays in free-form fields compare. Objects of different classes are unequal.
+- `OptimizationData.frames` holds one frame per structure evaluated, starting structure first; `final_structure` and `final_energy` are the last frame's.
+- `Request.outputs` no longer offers `density`.
+
+### Removed
+
+- **Breaking:** every compatibility loader. `ProgramOutput` and `Frame` no longer accept `data` for `results`; `OptimizationData` and `ScanData` no longer accept `trajectory`; a saved `ProgramOutput` is no longer accepted as a `Frame` (use `Frame.from_output`); `ConformerSearchData` no longer builds frames from bare structures and energy arrays; `SinglePointData` no longer accepts the pre-0.24 frequency fields, even when empty.
+
+
 ## [0.24.0a2] - 2026-11-17
 
 ### Added
