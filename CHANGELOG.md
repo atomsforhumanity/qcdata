@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.24.0a5] - 2026-11-17
+
+### Changed
+
+- **Breaking:** the basis set moved from `Orbitals.basis` to `Wavefunction.basis`. It is present whenever coefficients or an AO matrix are, and only then. `Orbitals.with_convention` is removed: `Wavefunction.with_convention` converts coefficients and matrices together, and also an overlap without coefficients. `overlap` and `core_hamiltonian` imply only the basis set; a `hamiltonian` needs the coefficients.
+- **Breaking:** `Ecp.core_electrons` (required) is the number of electrons an ECP replaces. It must agree with `Orbitals.core_electrons` on every ECP atom.
+- **Breaking:** `calculation_key` leaves out the resource keyword `device_memory_gib`, like `threads` and `memory_gib`, so inputs that set it get new keys.
+- **Breaking (conventions):** a program with no convergence settings accepts an `accuracy` target, as keyword or session request, and records it as met: `{"target": ..., "thresholds": {}, "estimate": {<each target>: 0.0}}`. It no longer refuses the keyword as `no_effect`.
+- Indented JSON saves put each innermost array on one line: a 718-frame IRC of 26 atoms saves as 4.2 MB instead of 8.8 MB, with the same save and open times.
+
+### Added
+
+- `ErrorInfo.details` (JSON) and `ProgramError.of(..., details=)`. The conventions define `required_gib` and `available_gib` for `host_memory` and `device_memory`.
+- `save()` writes texts in `files` over 1 MiB beside the saved file, and `open` reads them back (`array_files.read_text`, `ArraySink(text_files=True)`).
+
+### Fixed
+
+- The `core_hamiltonian` docs: tr(P h) equals the energy's `one_electron` at the SCF's last input density, and with `Orbitals.density()` only to the SCF residual.
+
+
 ## [0.24.0a4] - 2026-11-17
 
 ### Added
