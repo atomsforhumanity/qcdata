@@ -1,10 +1,10 @@
 """Basis sets and molecular orbitals.
 
 `Orbitals` is the one home of a calculation's orbital levels: energies and occupations
-per spin, the electronic temperature and Fermi levels and, on request, the MO
-coefficients (nao x nmo, one orbital per column) with the `BasisSet` they expand in. A
-`BasisSet` is a list of `Shell` objects placed on the structure's atoms, in AO order; the
-electrons each atom keeps outside the orbitals (`core_electrons`); its effective core
+per spin, the electronic temperature and Fermi levels, the electrons each atom keeps
+outside the orbitals (`core_electrons`) and, on request, the MO coefficients (nao x nmo,
+one orbital per column) with the `BasisSet` they expand in. A `BasisSet` is a list of
+`Shell` objects placed on the structure's atoms, in AO order; its effective core
 potentials (`Ecp`); and an explicit `AOConvention` saying how the functions within a
 shell are ordered and normalized, so coefficients from any program can be stored as
 produced and converted when needed (`Orbitals.with_convention`,
@@ -233,7 +233,7 @@ class Ecp(QCDataBaseModel):
     The potential is U_L(r) + sum_{l<L} (U_l(r) - U_L(r)) P_l, with P_l the projector on
     angular momentum l about the atom and L = ``len(semilocal)``: the layout of Basis Set
     Exchange, NWChem, PySCF and Psi4. Spin-orbit terms have no place here. The electrons
-    it replaces are its atom's `BasisSet.core_electrons`.
+    it replaces are its atom's `Orbitals.core_electrons`.
 
     Attributes:
         center: Index of the atom (0-based) in the structure the basis set belongs to.
@@ -255,35 +255,22 @@ class BasisSet(QCDataBaseModel):
     Attributes:
         name: The basis set's name (e.g. ``"def2-svp"``), if it has one.
         shells: The contracted shells; the AOs are their functions in this order.
-        core_electrons: One per atom of the structure: the electrons the orbitals do not
-            represent, those an ECP replaces or a valence-only method leaves out (28 for
-            Zn in GFN2-xTB and g-xTB); 0 for an all-electron atom. Its length is the
-            number of atoms.
-        ecp: The effective core potentials, at most one per atom.
+        ecp: The effective core potentials, at most one per atom; the electrons each
+            replaces are `Orbitals.core_electrons`.
         ao_convention: Order and normalization of the functions within each shell.
         nao: `@property` The number of AOs.
     """
 
     name: str | None = None
     shells: list[Shell]
-    core_electrons: list[int]
     ecp: list[Ecp] = []
     ao_convention: AOConvention = Field(default_factory=AOConvention)
 
     @model_validator(mode="after")
     def _check(self) -> BasisSet:
-        natoms = len(self.core_electrons)
-        if any(n < 0 for n in self.core_electrons):
-            raise ValueError("core_electrons must be >= 0")
-        beyond = [s.center for s in self.shells if s.center >= natoms]
-        if beyond:
-            raise ValueError(
-                f"a shell sits on atom {max(beyond)}, but core_electrons lists "
-                f"{natoms} atoms; give one value per atom"
-            )
         centers = [e.center for e in self.ecp]
-        if any(not 0 <= c < natoms for c in centers):
-            raise ValueError(f"every Ecp center must be an atom index below {natoms}")
+        if any(c < 0 for c in centers):
+            raise ValueError("Ecp centers must be atom indices >= 0")
         if len(set(centers)) != len(centers):
             raise ValueError("at most one Ecp per atom")
         return self
@@ -418,8 +405,8 @@ class Orbitals(QCDataBaseModel):
     they expand in come only on request. Every per-orbital vector has one value per
     orbital, in the order of the coefficient matrices' columns.
 
-    Where the structure is known (a `ProgramOutput` or a `Frame`) and the orbitals have a
-    basis set, the occupations add up to sum(Z - core_electrons) - charge.
+    Where the structure is known (a `ProgramOutput` or a `Frame`), the occupations add
+    up to sum(Z - core_electrons) - charge.
 
     Attributes:
         spin: ``restricted``: one set of spatial orbitals (one coefficient matrix, one
@@ -440,6 +427,10 @@ class Orbitals(QCDataBaseModel):
         fermi_level_b: The beta Fermi level (Eh); None at 0 K. Each spin is filled at its
             own fixed electron count, so an open shell has two levels; a closed shell's
             are equal.
+        core_electrons: One per atom of the structure: the electrons the orbitals do not
+            represent, those an ECP replaces (required for every ECP atom of `basis`) or
+            a valence-only method leaves out (28 for Zn in GFN2-xTB and g-xTB). None:
+            every electron is in the orbitals.
         basis: The basis set the coefficients expand in (its centers refer to the
             structure's atoms); only with coefficients.
         coefficients_a: nao x nmo; column i is orbital i (alpha, or both spins). Only
@@ -459,6 +450,7 @@ class Orbitals(QCDataBaseModel):
     electronic_temperature: float = 0.0
     fermi_level_a: float | None = None
     fermi_level_b: float | None = None
+    core_electrons: list[int] | None = None
     basis: BasisSet | None = None
     coefficients_a: SerializableMatrix | None = None
     coefficients_b: SerializableMatrix | None = None
@@ -484,6 +476,7 @@ class Orbitals(QCDataBaseModel):
             )
         self._check_smearing()
         self._check_coefficients(nmo, unrestricted)
+        self._check_core_electrons()
         return self
 
     def _check_energies(self, nmo: int, unrestricted: bool) -> None:
@@ -547,6 +540,18 @@ class Orbitals(QCDataBaseModel):
         elif cb.shape != shape:
             raise ValueError(
                 f"coefficients_b must be nao x nmo = {shape}, not {cb.shape}"
+            )
+
+    def _check_core_electrons(self) -> None:
+        core = self.core_electrons
+        if core is not None and min(core, default=0) < 0:
+            raise ValueError("core_electrons must be >= 0")
+        ecp_atoms = [e.center for e in self.basis.ecp] if self.basis else []
+        bare = [a for a in ecp_atoms if core is None or a >= len(core) or core[a] == 0]
+        if bare:
+            raise ValueError(
+                f"atoms {bare} have ECPs, so core_electrons must give the electrons "
+                "each ECP replaces"
             )
 
     @property

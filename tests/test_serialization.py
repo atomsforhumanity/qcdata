@@ -109,6 +109,7 @@ def test_serialized_scientific_arrays_match_schema(water):
                 "energies_a": [-0.5],
                 "occupations_a": [1.0],
                 "occupations_b": [1.0],
+                "core_electrons": [2, 0, 0],
                 "basis": {
                     "shells": [
                         {
@@ -119,7 +120,6 @@ def test_serialized_scientific_arrays_match_schema(water):
                             "coefficients": [0.71],
                         }
                     ],
-                    "core_electrons": [0, 0, 0],
                     "ecp": [
                         {
                             "center": 0,

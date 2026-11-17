@@ -170,9 +170,9 @@ Frequencies are negative for imaginary modes and stored without a cutoff;
 wavefunction; coefficients and their basis set only on request. Occupations are per spin,
 each between 0 and 1, with both `occupations_a` and `occupations_b` always given;
 `electronic_temperature` is 0 for aufbau occupations, and smeared ones carry a Fermi level
-per spin. `BasisSet.core_electrons` counts, per atom, the electrons the orbitals do not
-represent (ECP cores, or the core a valence-only method leaves out), so the occupations
-sum to Σ(Z − core_electrons) − charge.
+per spin. `Orbitals.core_electrons` counts, per atom, the electrons the orbitals do not
+represent (ECP cores, or the core a valence-only method leaves out; None for an
+all-electron calculation), so the occupations sum to Σ(Z − core_electrons) − charge.
 
 Orbitals and AO matrices are stored as the program produced them, with their
 `AOConvention`; `Wavefunction.with_convention` (or `Orbitals.with_convention`, for the

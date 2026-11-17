@@ -26,6 +26,7 @@ inside a session). Given orbitals (`ProgramInput.given`) may at most seed a gues
 | `occupations_a/_b` | both always, each between 0 and 1 |
 | `electronic_temperature` | K; 0 for aufbau occupations |
 | `fermi_level_a/_b` | Eh; None at 0 K, both given above it. Open shells are filled per spin at fixed n_α and n_β, so there are two |
+| `core_electrons` | one per atom: the electrons the orbitals do not represent, ECP cores or the core a valence-only method leaves out (bookkeeping only; Zn's core is 28 in GFN2 and g-xTB). None: all-electron |
 | `basis`, `coefficients_a/_b` | optional, both or neither; only on request |
 
 - Tight binding's open shells (GFN2-xTB) are restricted orbitals of one spin-averaged
@@ -34,8 +35,12 @@ inside a session). Given orbitals (`ProgramInput.given`) may at most seed a gues
   wanted on every frame of an optimization; coefficients cost time (GFN2-xTB on
   (H₂O)₂₀₀: an energy and gradient take 3.4 s without them, 4.9 s with) and nao × nmo
   numbers per spin (caffeine in def2-SVP: 246 energies against 60,516 coefficients).
-- Where the structure is known (a `ProgramOutput` or a `Frame`) and the orbitals have a
-  basis set, the occupations must add up to Σ(Z − core_electrons) − charge, to 1e-6
+- `core_electrons` lives with the levels, not the basis set, so the electron count can be
+  checked on every frame, coefficients or not. All-electron producers write nothing;
+  tight-binding programs give their valence-only cores, and a basis set with ECPs needs
+  the core of every ECP atom.
+- Where the structure is known (a `ProgramOutput` or a `Frame`), `core_electrons` lists
+  its atoms and the occupations add up to Σ(Z − core_electrons) − charge, to 1e-6
   electrons. This checks electron populations, not charges: g-xTB 2.0.1's reference
   occupations are not integers, so its charges for a neutral molecule sum to −7e-10.
   A given wavefunction (`ProgramInput.given`) may come from another charge or
@@ -48,17 +53,13 @@ inside a session). Given orbitals (`ProgramInput.given`) may at most seed a gues
 - `shells` and `ao_convention`. Tight-binding orbitals fit this layout exactly: GFN2-xTB
   and g-xTB orbitals are orthonormal to 4e-15–8e-15 in an independently computed overlap,
   and their spherical coefficients map onto their Cartesian ones to 1e-16.
-- `core_electrons`: one per atom, the electrons not represented by the orbitals: ECP cores,
-  or the core a valence-only method leaves out (bookkeeping only; Zn's core is 28 in GFN2
-  and g-xTB); 0 otherwise. Its length is the number of atoms, which every shell's center
-  and every ECP's center must fit.
 - `ecp`: a list of `Ecp(center, local: list[EcpTerm], semilocal: list[list[EcpTerm]])`,
   at most one per atom. `semilocal[l]`, for l = 0..L−1, is the channel U_l − U_L, as
   Basis Set Exchange, NWChem, PySCF and Psi4 store it. `EcpTerm(power, exponent,
   coefficient)` is coefficient · r^power · exp(−exponent r²). `power` is the power of r
   (−2 or more): Basis Set Exchange JSON and NWChem write n for r^(n−2), so their
-  converters subtract 2. Scalar ECPs only; spin-orbit terms are refused.
-  `core_electrons` is not repeated inside `Ecp`.
+  converters subtract 2. Scalar ECPs only; spin-orbit terms are refused. The electrons
+  an ECP replaces are its atom's `Orbitals.core_electrons`, not repeated inside `Ecp`.
 - A basis belongs to one geometry. GFN2's is the same per element at any geometry.
   g-xTB's q-vSZP contraction depends on each atom's EEQ-BC charge and coordination number
   at that geometry (fixed during the SCF), so the frames of a g-xTB trajectory do not
@@ -175,7 +176,7 @@ TREXIO → PySCF energy at the same density.
 |---|---|
 | `nucleus.*` | `Structure` |
 | `basis.*` (flat per-primitive arrays; `shell_factor` × `prim_factor` × `coefficient`) | `BasisSet.shells` (per-atom `Shell`, one normalization convention) |
-| `ecp.*` | `BasisSet.core_electrons`, `BasisSet.ecp` (local and semilocal channels; power of r) |
+| `ecp.*` | `Orbitals.core_electrons`, `BasisSet.ecp` (local and semilocal channels; power of r) |
 | `ao.cartesian`, `ao.normalization` | `Shell.pure`, `AOConvention` (`spherical_order="trexio"` selectable, never the default) |
 | `ao_1e_int.overlap`, `core_hamiltonian` | `Wavefunction.overlap`, `core_hamiltonian` |
 | `ao_1e_int.kinetic`, `potential_n_e`, `ecp`, dipole | deferred |

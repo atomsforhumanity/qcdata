@@ -207,7 +207,7 @@ def _normalized_shell(center, l, pure, exponents, raw):
     )
 
 
-def make_basis(core_electrons=(0, 0, 0)):
+def make_basis(ecp=()):
     """Water: Cartesian and spherical d and f shells, contracted and not."""
     spec = [
         (0, 0, True, [5.0, 1.2], [0.4, 0.7]),
@@ -225,7 +225,7 @@ def make_basis(core_electrons=(0, 0, 0)):
     return BasisSet(
         name="test",
         shells=[_normalized_shell(*s) for s in spec],
-        core_electrons=list(core_electrons),
+        ecp=list(ecp),
     )
 
 
@@ -398,28 +398,22 @@ def test_basis_counts_and_labels():
     assert "1 H 3dxy" in labels
 
 
-def test_basis_core_electrons_and_ecp():
+TERM = EcpTerm(power=-2, exponent=1.5, coefficient=3.0)
+ECP = Ecp(center=0, local=[TERM], semilocal=[[TERM], [TERM, TERM]])
+
+
+def test_basis_ecp():
     shells = BASIS.shells
-    with pytest.raises(ValidationError, match="core_electrons"):
-        BasisSet(shells=shells)
-    with pytest.raises(ValidationError, match="one value per atom"):
-        BasisSet(shells=shells, core_electrons=[0, 0])
-    with pytest.raises(ValidationError, match=">= 0"):
-        BasisSet(shells=shells, core_electrons=[-2, 0, 0])
-    term = EcpTerm(power=-2, exponent=1.5, coefficient=3.0)
-    ecp = Ecp(center=0, local=[term], semilocal=[[term], [term, term]])
-    basis = BasisSet(shells=shells, core_electrons=[2, 0, 0], ecp=[ecp])
+    basis = BasisSet(shells=shells, ecp=[ECP])
     assert basis.ecp[0].semilocal[1][1].power == -2
     loaded = BasisSet.model_validate_json(basis.model_dump_json())
     assert loaded == basis
     with pytest.raises(ValidationError, match="at most one Ecp"):
-        BasisSet(shells=shells, core_electrons=[2, 0, 0], ecp=[ecp, ecp])
-    with pytest.raises(ValidationError, match="Ecp center"):
-        BasisSet(
-            shells=shells,
-            core_electrons=[2, 0, 0],
-            ecp=[Ecp(center=3, local=[term], semilocal=[])],
-        )
+        BasisSet(shells=shells, ecp=[ECP, ECP])
+    with pytest.raises(ValidationError, match="Ecp centers"):
+        BasisSet(shells=shells, ecp=[Ecp(center=-1, local=[TERM], semilocal=[])])
+    with pytest.raises(ValidationError, match="core_electrons"):
+        BasisSet(shells=shells, core_electrons=[2, 0, 0])  # on Orbitals now
     with pytest.raises(ValidationError, match="power"):
         EcpTerm(power=-3, exponent=1.0, coefficient=1.0)
     with pytest.raises(ValidationError, match="exponent"):
@@ -431,8 +425,8 @@ def test_basis_core_electrons_and_ecp():
 
 
 def test_ao_convention_default_is_a_fresh_default():
-    a = BasisSet(shells=BASIS.shells, core_electrons=[0, 0, 0])
-    b = BasisSet(shells=BASIS.shells, core_electrons=[0, 0, 0])
+    a = BasisSet(shells=BASIS.shells)
+    b = BasisSet(shells=BASIS.shells)
     assert a.ao_convention == b.ao_convention == DEFAULT_AO_CONVENTION
     assert BasisSet.model_fields["ao_convention"].default_factory is AOConvention
 
@@ -557,6 +551,21 @@ def test_coefficients_come_with_their_basis():
         Orbitals(**unrestricted, basis=BASIS, coefficients_a=c, coefficients_b=c[:-1])
     with pytest.raises(ValidationError, match="coefficients_b needs"):
         Orbitals(**unrestricted, coefficients_b=c)
+
+
+def test_core_electrons_and_ecps():
+    assert levels().core_electrons is None  # all-electron
+    assert levels(core_electrons=[2, 0, 0]).core_electrons == [2, 0, 0]
+    with pytest.raises(ValidationError, match=">= 0"):
+        levels(core_electrons=[-2, 0, 0])
+    # An ECP atom's core must be given: it is what the electron count reflects.
+    wf = make_wavefunction()
+    with_ecp = dict(wf.orbitals, basis=make_basis(ecp=[ECP]))
+    for core in (None, [0, 0, 0], []):
+        with pytest.raises(ValidationError, match=r"atoms \[0\] have ECPs"):
+            Orbitals.model_validate(dict(with_ecp, core_electrons=core))
+    orb = Orbitals.model_validate(dict(with_ecp, core_electrons=[2, 0, 0]))
+    assert orb.basis.ecp[0].center == 0
 
 
 def test_density_is_c_n_ct_per_spin():
@@ -692,10 +701,8 @@ def _output(results, structure=water):
 
 
 def _with_cores(wf, core_electrons):
-    basis = make_basis(core_electrons)
-    return wf.model_copy(
-        update={"orbitals": wf.orbitals.model_copy(update={"basis": basis})}
-    )
+    orbitals = wf.orbitals.model_copy(update={"core_electrons": core_electrons})
+    return wf.model_copy(update={"orbitals": orbitals})
 
 
 def test_occupations_hold_the_structures_electrons():
@@ -721,22 +728,45 @@ def test_occupations_hold_the_structures_electrons():
     )
     ok = valence.model_copy(update={"orbitals": orbitals})
     _output(SinglePointData(provenance=PROV, energy=-17.0, wavefunction=ok))
-    # Levels without a basis set cannot be counted: core electrons live in the basis.
-    _output(
-        SinglePointData(
-            provenance=PROV, energy=-76.0, wavefunction=Wavefunction(orbitals=levels())
+    # Levels without coefficients are counted too: 5 + 5 electrons, all-electron.
+    lv = Wavefunction(orbitals=levels())
+    _output(SinglePointData(provenance=PROV, energy=-76.0, wavefunction=lv))
+    with pytest.raises(ValidationError, match="hold 10 electrons"):
+        _output(SinglePointData(provenance=PROV, energy=-76.0, wavefunction=lv), cation)
+    # Valence-only levels, as tight binding returns them on every frame.
+    occ_a, occ_b = occupations(4, 4, nmo=8)
+    tb = Wavefunction(
+        orbitals=levels(
+            occupations_a=occ_a, occupations_b=occ_b, core_electrons=[2, 0, 0]
         )
     )
+    _output(SinglePointData(provenance=PROV, energy=-5.0, wavefunction=tb))
+    with pytest.raises(ValidationError, match="core electrons leave 10"):
+        _output(
+            SinglePointData(
+                provenance=PROV,
+                energy=-5.0,
+                wavefunction=_with_cores(tb, None),
+            )
+        )
 
 
 def test_per_atom_results_fit_the_structure():
     hydroxide = Structure(symbols=["O", "H"], geometry=water.geometry[:2], charge=-1)
-    with pytest.raises(ValidationError, match="core_electrons for 3 atoms"):
+    with pytest.raises(ValidationError, match="functions on atom 2"):
         _output(
             SinglePointData(
                 provenance=PROV, energy=-1.0, wavefunction=make_wavefunction()
             ),
             hydroxide,
+        )
+    with pytest.raises(ValidationError, match="core_electrons list 2 atoms"):
+        _output(
+            SinglePointData(
+                provenance=PROV,
+                energy=-1.0,
+                wavefunction=_with_cores(make_wavefunction(), [0, 0]),
+            )
         )
     for name, value in (
         ("atomic_dipoles", np.zeros((2, 3))),
@@ -774,7 +804,15 @@ def test_given_wavefunctions_fit_atoms_but_may_hold_other_electrons():
     inp = ProgramInput(program="test", calctype="energy", structure=cation, given=given)
     assert inp.given.wavefunction is not None
     other_atoms = Structure(symbols=["O", "H"], geometry=water.geometry[:2])
-    with pytest.raises(ValidationError, match="core_electrons for 3 atoms"):
+    with pytest.raises(ValidationError, match="functions on atom 2"):
         ProgramInput(
             program="test", calctype="energy", structure=other_atoms, given=given
+        )
+    levels_only = SinglePointData(
+        provenance=PROV,
+        wavefunction=Wavefunction(orbitals=levels(core_electrons=[2, 0, 0])),
+    )
+    with pytest.raises(ValidationError, match="core_electrons list 3 atoms"):
+        ProgramInput(
+            program="test", calctype="energy", structure=other_atoms, given=levels_only
         )

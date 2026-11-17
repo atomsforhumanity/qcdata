@@ -451,8 +451,7 @@ def _check_fits_structure(
         results: Results at the structure.
         structure: The structure they belong to.
         electrons: Also check that the orbitals hold the structure's electrons,
-            sum(Z - core_electrons) - charge (possible only with a basis set, which
-            gives the core electrons).
+            sum(Z - core_electrons) - charge.
 
     Raises:
         ValueError: If they do not fit.
@@ -474,23 +473,30 @@ def _check_fits_structure(
             f"shell_atoms names atom {max(results.shell_atoms)}; the structure has "
             f"{n} atoms"
         )
-    orbitals = results.wavefunction.orbitals if results.wavefunction else None
-    if orbitals is None or orbitals.basis is None:
+    if results.wavefunction is None:
         return
-    core = orbitals.basis.core_electrons
-    if len(core) != n:
+    orbitals = results.wavefunction.orbitals
+    core = orbitals.core_electrons
+    if core is not None and len(core) != n:
         raise ValueError(
-            f"the orbitals' basis set has core_electrons for {len(core)} atoms; the "
-            f"structure has {n}"
+            f"the orbitals' core_electrons list {len(core)} atoms; the structure has {n}"
         )
+    if orbitals.basis is not None:
+        basis = orbitals.basis
+        centers = [s.center for s in basis.shells] + [e.center for e in basis.ecp]
+        if max(centers, default=0) >= n:
+            raise ValueError(
+                f"the orbitals' basis set has functions on atom {max(centers)}; the "
+                f"structure has {n} atoms"
+            )
     if not electrons:
         return
-    expected = sum(structure.atomic_numbers) - sum(core) - structure.charge
+    expected = sum(structure.atomic_numbers) - sum(core or ()) - structure.charge
     held = float(orbitals.occupations_a.sum() + orbitals.occupations_b.sum())
     if abs(held - expected) > _ELECTRON_COUNT_TOLERANCE:
         raise ValueError(
             f"the orbitals hold {held:.10g} electrons, but the structure's nuclei, "
-            f"charge and the basis set's core electrons leave {expected}"
+            f"charge and the orbitals' core electrons leave {expected}"
         )
 
 
