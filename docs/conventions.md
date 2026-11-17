@@ -413,7 +413,18 @@ reads the run and never stores it, so it is None on every output that ran.
 
 ## Saved files
 
-`save` writes a model as JSON, YAML or TOML. An array field whose float64 size exceeds
+`save` writes a model as JSON, YAML or TOML. Indented JSON (the default, `indent=4`)
+keeps each innermost array, a list holding no lists or objects, on one line, so a
+structure's coordinates read as one row per atom:
+
+```json
+"geometry": [
+    [-8.601339697312277, -0.6368849812267334, 0.7906010193844016],
+    [-6.3155913218934, 0.4215960361624519, 1.2240196532066823]
+]
+```
+
+An array field whose float64 size exceeds
 1 MiB (more than 131,072 numbers) goes to its own `.npy` file beside the saved file, named
 by the file's stem and the array's path in the document, and the document holds a pointer
 in its place:

@@ -273,3 +273,36 @@ def test_save_keeps_containers_filled_after_construction(tmp_path):
     assert ProgramOutput.open(tmp_path / "out.json").record == {
         "scf": {"iterations": 12}
     }
+
+
+def test_indented_json_keeps_innermost_arrays_on_one_line(tmp_path):
+    """Rows of numbers stay on one line; the document around them stays indented."""
+    structure = Structure(
+        symbols=["O", "H", "H"],
+        geometry=[[0.0, 0.0, -0.1294], [-0.0, 1.4941, 1.0274], [0.0, -1.4941, 1e300]],
+        connectivity=[(0, 1, 1.0), (0, 2, 1.0)],
+    )
+    inp = ProgramInput(
+        program="qcopt",
+        calctype="optimization",
+        structure=structure,
+        keywords={"weights": [[]], "names": ["a", "qcdata.row.0"], "empty": []},
+        subprograms=[ProgramSpec(program="axtb", calctype="gradient")],
+    )
+    path = tmp_path / "inp.json"
+    inp.save(path)
+    text = path.read_text()
+    lines = text.splitlines()
+    assert '        "symbols": ["O", "H", "H"],' in lines
+    assert "            [-0.0, 1.4941, 1.0274]," in lines
+    assert "            [0.0, -1.4941, 1e+300]" in lines
+    assert "            [0.0, 1.0, 1.0]," in lines
+    assert '        "names": ["a", "qcdata.row.0"],' in lines
+    assert '        "empty": []' in lines
+    assert '        "weights": [' in lines  # a list of lists stays indented
+    assert '    "subprograms": [' in lines  # a list of objects too
+    assert ProgramInput.open(path) == inp
+    assert np.signbit(ProgramInput.open(path).structure.geometry[1, 0])
+    inp.save(path, indent=None)
+    compact = path.read_text()
+    assert "\n" not in compact and json.loads(compact) == json.loads(text)

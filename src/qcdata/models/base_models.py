@@ -1,6 +1,8 @@
 """The base model from which all QCData model objects inherit."""
 
 import json
+import re
+import secrets
 from abc import ABC
 from base64 import b64decode, b64encode
 from enum import StrEnum
@@ -242,7 +244,9 @@ class QCDataBaseModel(BaseModel, ABC):
 
             Additionally, padding will be added to the file by default to make it more
             human-readable. You can adjust the amount of padding added by changing the
-            `indent` parameter. Pass `indent=None` to create a more compact file.
+            `indent` parameter. Pass `indent=None` to create a more compact file. An
+            indented JSON file keeps each innermost array (a list holding no lists or
+            objects, such as a row of coordinates) on one line.
 
         Args:
             filepath: The path to write the object to.
@@ -296,9 +300,11 @@ class QCDataBaseModel(BaseModel, ABC):
         elif filepath.suffix == ".toml":
             data = toml.dumps(model_dict)
 
+        elif indent is None:
+            data = json.dumps(model_dict)
         else:
             # Write data to json regardless of file extension
-            data = json.dumps(model_dict, indent=indent)
+            data = _indented_json(model_dict, indent)
 
         filepath.write_text(data)
         return [filepath, *array_paths]
@@ -345,6 +351,35 @@ def _equal(a: Any, b: Any) -> bool:
     if isinstance(a, list | tuple) and isinstance(b, list | tuple):
         return len(a) == len(b) and all(_equal(x, y) for x, y in zip(a, b, strict=True))
     return bool(a == b)
+
+
+def _indented_json(document: Any, indent: int) -> str:
+    """JSON text indented by ``indent``, with each innermost array on one line.
+
+    An innermost array is a non-empty list holding no lists or objects (a row of
+    coordinates, a vector, a list of symbols); it is written as ``[1.0, 2.0, 3.0]``.
+    Numbers are written exactly as `json.dumps` writes them, so the text loads to the
+    same values as any other JSON form.
+    """
+    token = f"qcdata.row.{secrets.token_hex(8)}."
+    rows: list[str] = []
+
+    def visit(node: Any) -> Any:
+        if isinstance(node, dict):
+            return {k: visit(v) for k, v in node.items()}
+        if isinstance(node, list):
+            if node and not any(isinstance(v, list | dict) for v in node):
+                rows.append(json.dumps(node))
+                return f"{token}{len(rows) - 1}"
+            return [visit(v) for v in node]
+        return node
+
+    text = json.dumps(visit(document), indent=indent)
+    if not rows:
+        return text
+    return re.sub(
+        f'"{re.escape(token)}([0-9]+)"', lambda m: rows[int(m.group(1))], text
+    )
 
 
 def _stamped(dump_options: dict[str, Any]) -> bool:
