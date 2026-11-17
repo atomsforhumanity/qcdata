@@ -1,5 +1,7 @@
 """The typed slots of the AFH program interface: outcome and vibrations."""
 
+import pickle
+
 import numpy as np
 import pytest
 from pydantic import ValidationError
@@ -11,6 +13,7 @@ from qcdata import (
     ExecutionInfo,
     Frame,
     OptimizationData,
+    ProgramError,
     ProgramInput,
     ProgramOutput,
     ProgramWarning,
@@ -90,6 +93,29 @@ def test_error_slot_only_on_failures(energy_input):
         )
     with pytest.raises(ValidationError):
         ErrorInfo(kind="not_a_kind", message="x")
+
+
+def test_error_details_are_structured_json():
+    """A memory failure says what it needed as data, not only in its message."""
+    plain = ErrorInfo(kind="convergence", message="SCF")
+    assert plain.details == {}
+    error = ErrorInfo(
+        kind="resource",
+        code="host_memory",
+        message="RI-K needs 1.25 GiB, more than its budget of 1.19 GiB",
+        details={"required_gib": np.float64(1.25), "available_gib": 1.19},
+    )
+    loaded = ErrorInfo.model_validate_json(error.model_dump_json())
+    assert loaded.details == {"required_gib": 1.25, "available_gib": 1.19}
+    raised = ProgramError.of(
+        "resource",
+        "out of GPU memory",
+        code="device_memory",
+        details={"required_gib": 30.5, "available_gib": 23.6},
+    )
+    assert raised.error.details["required_gib"] == 30.5
+    assert pickle.loads(pickle.dumps(raised)).error == raised.error
+    assert ProgramError.of("numerical", "nan").error.details == {}
 
 
 def test_frames_keep_warnings_errors_and_records_but_not_settings(energy_input):

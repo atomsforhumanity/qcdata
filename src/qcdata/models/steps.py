@@ -320,7 +320,12 @@ class ProgramError(Exception):
 
     @classmethod
     def of(
-        cls, kind: ErrorKind | str, message: str, *, code: str | None = None
+        cls,
+        kind: ErrorKind | str,
+        message: str,
+        *,
+        code: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> ProgramError:
         """Shorthand for a ProgramError without partial results.
 
@@ -328,11 +333,16 @@ class ProgramError(Exception):
             kind: The error kind.
             message: A human-readable explanation.
             code: A program-defined code refining the kind.
+            details: Structured facts about the failure (`ErrorInfo.details`).
 
         Returns:
             The exception.
         """
-        return cls(ErrorInfo(kind=ErrorKind(kind), message=message, code=code))
+        return cls(
+            ErrorInfo(
+                kind=ErrorKind(kind), message=message, code=code, details=details or {}
+            )
+        )
 
 
 class ProgramErrors(ExceptionGroup):  # type: ignore[type-arg]

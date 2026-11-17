@@ -608,6 +608,10 @@ class ErrorInfo(QCDataBaseModel):
             failed when it is not the top-level one.
         cause: The subprogram's own error, for kind ``program``: "the gradient failed
             because the SCF did not converge" stays structured through every level.
+        details: Structured facts about the failure, as plain JSON, so callers need
+            not parse `message`. The conventions name the keys of shared codes:
+            ``required_gib`` and ``available_gib`` (GiB) for ``host_memory`` and
+            ``device_memory``, when the program knows them.
     """
 
     kind: ErrorKind
@@ -615,6 +619,7 @@ class ErrorInfo(QCDataBaseModel):
     code: str | None = None
     program: str | None = None
     cause: "ErrorInfo | None" = None
+    details: FreeDict = {}
 
 
 class ProgramWarning(QCDataBaseModel):

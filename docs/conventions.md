@@ -336,14 +336,33 @@ Shared error codes of other kinds, which runners and schedulers act on:
 
 | kind | code | meaning |
 |---|---|---|
-| `resource` | `host_memory` | out of host memory (a failed allocation, or the plan's need above the grant) |
-| `resource` | `device_memory` | out of GPU memory |
+| `resource` | `host_memory` | out of host memory (a failed allocation, or the plan's need above the grant); `details` as below |
+| `resource` | `device_memory` | out of GPU memory; `details` as below |
 | `backend` | `device_lost` | a GPU fault poisoned the device context (illegal address, launch failure, device assert, ECC error, launch timeout); nothing more can run in this process. A worker answers the request in flight with it and then exits; in process, the caller should not use the program again |
 | `environment` | `worker_died` | a worker process ended mid-request (a crash, a signal, an out-of-memory kill); set by the client, with the exit status and the tail of the worker's stderr in the message. A worker that exits on purpose answers the request in flight first (`device_lost`), so only later requests see `worker_died` |
 
+`ErrorInfo.details` holds structured facts about a failure as plain JSON, so a caller never
+parses the message. For `host_memory` and `device_memory` the keys are, each given when
+the program knows it:
+
+| key | meaning |
+|---|---|
+| `required_gib` | the memory (GiB) the calculation needed: its plan's need, or at least what had been allocated plus the request that failed |
+| `available_gib` | the memory (GiB) it could use: its budget (`memory_gib`, `device_memory_gib` or the grant) or what the device had free |
+
+```json
+{"kind": "resource", "code": "host_memory",
+ "message": "RI-K needs at least 1.25 GiB for its 3-index exchange tensor, more than its budget of 1.19 GiB",
+ "details": {"required_gib": 1.25, "available_gib": 1.19}}
+```
+
+A dispatcher that resubmits with more memory reads `required_gib`; qc* itself still
+schedules nothing by memory. Programs may add their own keys beside these, and other
+codes may define theirs.
+
 ### Errors
 
-`ErrorInfo(kind, message, code, program, cause)`, on failed outputs only. Kinds:
+`ErrorInfo(kind, message, code, program, cause, details)`, on failed outputs only. Kinds:
 
 | kind | meaning |
 |---|---|
