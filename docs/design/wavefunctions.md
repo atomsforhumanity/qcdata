@@ -1,109 +1,193 @@
-# Wavefunctions and integrals in qcdata: what is common, what is not
+# Wavefunctions in qcdata
 
-Status: **draft** (2026-11-11), from the qc* session after answers from linus (HF/DFT) and
-axtb (GFN2-xTB, g-xTB), with TREXIO 2.x as the reference format. This concerns only the
-**output** data qcdata returns to users. Programs keep their own internal, performance-
-oriented structures. The definitions were agreed with linus and axtb; Colton decides whether to add the fields.
+Status: **draft 2** (2026-11-17), proposed; Colton decides. It revises the 11-11 draft after
+reviews by linus (HF/DFT, measured on caffeine B3LYP/def2-SVP and a 483-function anion) and
+axtb (GFN2-xTB, g-xTB 1.1 and 2.0.1, GFN-FF, checked against its code with an independent
+numpy overlap builder). It covers the **output** data qcdata returns. Programs keep their
+internal structures and their warm-start state: the standardized wavefunction is not a
+restart format (axtb warm-starts from moments and densities, linus from its own orbital
+copies, inside sessions). Orbitals may at most seed a guess.
 
-## Summary
+## Principles
 
-Full quantum chemistry (linus) and semi-empirical tight binding (axtb) share more at the
-output level than one might expect. Both expand their orbitals in **contracted Gaussian
-shells centred on atoms**:
+- One home for every number.
+- Store what cannot be derived. The SCF density is C n Cᵀ of the returned orbitals
+  (`Orbitals.density()`); AO integrals that any integral library recomputes from the basis
+  wait for a consumer.
+- A field arrives with a consumer and a definition two programs can test.
+- Models always hold arrays; only saving decides between inline JSON and a file.
+- TREXIO: the same physics and names where they agree; our own layout.
 
-- **linus:** def2 and other basis sets, general contractions split into shells.
-- **GFN2-xTB:** its Slater functions are evaluated as STO-nG Gaussian expansions, and those
-  expansions are what every computed quantity uses.
-- **g-xTB:** q-vSZP shells whose contraction depends on each atom's charge and
-  coordination number. At a converged geometry they are a fixed per-atom contraction, and
-  qcdata's shells are per atom anyway.
+## Orbitals: the one home of the orbital levels
 
-So one `Orbitals` model (basis, AO convention, per-spin coefficients, energies,
-occupations) holds both exactly. One viewer or analysis (orbital plots, densities on a
-grid, populations, Molden or TREXIO export) then works for either program. Both programs
-already write Molden files that agree with qcdata's `MOLDEN_CONVENTION`.
-
-What is **not** common is everything model-specific under the orbitals:
-
-- two-electron integrals, which tight binding does not have and which are far too large
-  for JSON in DFT;
-- tight binding's charge-dependent kernels (gamma, multipoles, third order, spin
-  constants) and H0 parameters;
-- DFT's grids, XC kernels, density-fitting tensors and response intermediates.
-
-These stay inside the programs, or in `record`.
-
-## Common model (proposed additions to phase 1)
-
-| where | field | linus | axtb | notes |
-|---|---|---|---|---|
-| `BasisSet` | `shells` (exists) | yes | yes (STO-nG; converged q-vSZP) | Gaussian only; no Slater exponents (axtb: they would describe slightly different functions) |
-| `BasisSet` | `core_electrons` per atom | ECP cores (Rb-Rn, def2) | valence-only counts | defined as "electrons not represented by the orbitals", so Z − core is what the density integrates against; TREXIO `ecp.z_core` |
-| `BasisSet` | `ecp` per atom: `lmax` (local channel) and terms (l, power, exponent, coefficient) | yes | — | full ECP so exported orbitals reproduce energies elsewhere; TREXIO `ecp` group |
-| `Orbitals` | coefficients, energies, occupations per spin (exist) | RHF/RKS, UHF/UKS | GFN2 open shells: restricted with alpha/beta occupations; g-xTB: unrestricted | fractional occupations allowed |
-| `Orbitals` | `electronic_temperature` (K), `fermi_level` (Eh) | — | when smearing is on | TREXIO `mo.electronic_temperature` |
-| `Wavefunction` | `overlap` S | yes | yes (non-orthogonal basis) | |
-| `Wavefunction` | `density_a/_b` | yes | yes | P = C n Cᵀ from the returned orbitals |
-| `Wavefunction` | `hamiltonian_a/_b` | Fock / Kohn-Sham matrix (the last diagonalized, usually DIIS-extrapolated) | converged TB Hamiltonian (the last diagonalized) | agreed by linus and axtb: the matrix whose generalized eigenvectors with S are the returned orbitals. H C = S C ε holds exactly when the final step was a diagonalization; after an SOSCF or stability rotation the program semicanonicalizes, and it holds up to the SCF threshold. `record` names the final step (`diagonalization`, `diis_diagonalization`, `soscf_semicanonical`) and the build; H is never promised to be dE/dP |
-| `Wavefunction` | `kinetic`, `potential_n_e`, `ecp_potential`, `core_hamiltonian` (= T + V_ne + V_ecp) | yes | — | TREXIO's `ao_1e_int` split; ab initio only (TB's H0 is model data, not a core Hamiltonian) |
-| `Wavefunction` | `solvent_potential` | PCM reaction-field operator | — | so it can be removed from the Fock matrix |
-| `Wavefunction` | `dipole_integrals` (3 × nao × nao) | yes, about the coordinate origin | — | |
-| `SinglePointData` | `shell_populations` + `shell_atoms` | Mulliken over shells | shell-resolved Mulliken | |
-| `SinglePointData` | `atomic_spin_populations` | yes | g-xTB magnetizations | |
-| `SinglePointData` | `atomic_dipoles`, `atomic_quadrupoles` (+ kind) | via multipole analysis | yes (about each atom; traceless) | |
-
-Every AO-indexed matrix is in the basis and `AOConvention` of `orbitals.basis`, and
-`Orbitals.with_convention` transforms it with the coefficients. AO matrices are filled
-only on request (`output.*`), since each is nao² numbers.
-
-Definitions to write into `conventions.md`:
-
-- **The Fock/Kohn-Sham matrix of a DFT run** includes everything in its SCF operator:
-  - V_xc on that run's grid, so it reproduces the energy only on that grid;
-  - long-range exchange for range-separated hybrids;
-  - density-fitted J/K when `jk` is `df`;
-  - the PCM operator, which is also given alone as `solvent_potential`.
-- **A tight-binding Hamiltonian** is not a Fock matrix of any two-electron integrals. In
-  GFN2 it includes the last iteration's charge-dependent shell and multipole potentials;
-  g-xTB 2.0.1's is a DIIS extrapolation; v1.1's is non-variational in program conventions.
-- **Densities and Mulliken populations of a minimal valence basis** are comparable within a
-  method family, not with DFT's. Compare across methods through observables: densities
-  on a grid, dipoles, and charges with their kind.
-
-## Not standardized, and why
-
-| data | why not |
+| field | meaning |
 |---|---|
-| Two-electron integrals (AO or MO), DF/Cholesky tensors | tight binding has none; linus is density-fitted, and its 3-index tensor is naux·N² (about 200 GB at 2000 functions). If a CC or QMC code needs them, the right object is MO-basis Cholesky vectors for an active space, exported to TREXIO. Post-v1, on demand. |
-| TB model internals: gamma and multipole kernels, third-order terms, spin constants, H0, q-vSZP's charge dependence | model-specific; meaningless outside that program's model |
-| DFT internals: grids, XC kernels, response intermediates (perturbed densities) | engine-specific; dipole derivatives and polarizabilities, their useful outputs, already have homes |
-| Slater exponents of GFN2 | not the functions the program computes with; `record` if wanted |
+| `spin` | `restricted`: one coefficient matrix, one set of energies, one hamiltonian, occupations per spin. `unrestricted`: everything per spin |
+| `kind` | enum. `canonical`: eigenvectors of `hamiltonian`, energies required. `natural`: eigenvectors of a density, occupations, no energies. `localized`: no energies; `localization` names the method. Values are added when a program produces them |
+| `energies_a/_b` | Eh; `_b` only for unrestricted orbitals |
+| `occupations_a/_b` | both always, each between 0 and 1 |
+| `electronic_temperature` | K; 0 for aufbau occupations |
+| `fermi_level_a/_b` | Eh; None at 0 K. Open shells are filled per spin at fixed n_α and n_β, so there are two |
+| `basis`, `coefficients_a/_b` | optional, both or neither; only on request (`outputs: orbitals`) |
 
-## Large data
+- GFN2 open shells are restricted orbitals of one spin-averaged Hamiltonian with per-spin
+  occupations. They are not ROHF; the docstring changes.
+- `Wavefunction.scf_eigenvalues_*` and `scf_occupations_*` go. Levels are free in both
+  programs and wanted on every frame; coefficients cost time (axtb, GFN2 (H2O)200 E+G:
+  3.4 s without, 4.9 s with) and nao × nmo numbers per spin (caffeine def2-SVP: 246
+  energies against 60,516 coefficients).
+- Validation where the structure is known: Σ occupations = Σ(Z − core_electrons) −
+  charge. This checks electron populations, not charges: g-xTB 2.0.1's reference
+  occupations are not integers, so its charges for a neutral molecule sum to −7e-10.
+- `density()`, `with_convention()` and Molden export raise a clear error when coefficients
+  are missing.
 
-JSON lists are fine for small systems and impossible for large ones: one 2000-function
-matrix is 32 MB of JSON. Agreed with linus:
+## BasisSet
 
-- Arrays above a threshold (about 1 MB each) go to a **binary sidecar** referenced from
-  `results.files`, never to base64.
-- The sidecar is one HDF5 file per result. Wavefunction-class data (basis, ECP, orbitals,
-  AO one-electron matrices, densities) use **TREXIO's layout**, so QMC and CC codes read it
-  directly; other large arrays (big Hessians) are plain HDF5 datasets.
-- Each file entry records format, dataset names, shapes, dtype and a hash. This needs a
-  small `FileRef` model beside today's `files: dict[str, str | bytes]`.
-- Converters (Molden, PySCF, TREXIO, cube files from orbitals) live in qcinf.
+- `shells` and `ao_convention`, as built. Both programs' shells fit exactly: axtb's
+  orbitals are orthonormal in an independently computed overlap to 4e-15–8e-15, and its
+  spherical coefficients map onto its Cartesian ones to 1e-16.
+- `core_electrons`: one per atom, the electrons not represented by the orbitals: ECP cores
+  (linus) or tight binding's valence-only counts (bookkeeping only; Zn's core is 28 in
+  GFN2 and g-xTB). 0 otherwise.
+- `ecp`: a list of `Ecp(center, local: list[EcpTerm], semilocal: list[list[EcpTerm]])`.
+  `semilocal[l]`, for l = 0..L−1, is the channel U_l − U_L, as Basis Set Exchange, NWChem,
+  PySCF, Psi4 and linus store it. `EcpTerm(power, exponent, coefficient)` is
+  coefficient · r^power · exp(−exponent r²). `power` is the power of r: Basis Set Exchange
+  JSON and NWChem write n for r^(n−2), so their converters subtract 2. Scalar ECPs only;
+  spin-orbit terms are refused. `core_electrons` is not repeated inside `Ecp`.
+- A basis belongs to one geometry. GFN2's is the same per element at any geometry.
+  g-xTB's q-vSZP contraction depends on each atom's EEQ-BC charge and coordination number
+  at that geometry (fixed during the SCF), so the frames of a g-xTB trajectory do not
+  share a `BasisSet`. g-xTB's scaled-exponent H0 basis is internal; the orbitals' basis is
+  the SCF basis.
 
-## TREXIO correspondence
+## Wavefunction: AO matrices, on request
+
+| field | linus | axtb |
+|---|---|---|
+| `overlap` | yes | yes: the program's own S, with its screening |
+| `hamiltonian_a/_b` | Fock/Kohn-Sham matrix | tight-binding Hamiltonian |
+| `core_hamiltonian` | yes | — (tight binding's H0 is model data) |
+
+- A request for `hamiltonian` implies `overlap`, and H C = S C ε is tested against the
+  returned S: axtb's screened S differs from an exact one by up to 3.4e-9.
+- `core_hamiltonian` is every density-independent one-electron term of the run: T, V_ne
+  with charges Z − core_electrons, V_ecp, and external point charges and fields once a
+  program supports them. Then tr(P h) is `energy_components`' one-electron term.
+- Every matrix is nao × nao of `orbitals.basis`; a matrix without a basis is refused.
+- `Wavefunction.with_convention` converts the orbitals and every matrix together, each
+  with its variance: coefficients scale by s per AO index, densities by s_μ s_ν,
+  operators (S, H, h) by 1/(s_μ s_ν). A spherical reordering is a permutation either
+  way; a change of Cartesian normalization is not. (The 11-11 draft said the coefficient
+  transform applied to matrices; it does not.) Large arrays are not converted through
+  Python lists.
+
+## The Hamiltonian
+
+`hamiltonian` is the operator of **one build** at the last build's input x (a density, or
+tight binding's charges and multipole moments), however that input was mixed. The
+returned orbitals are its fresh generalized eigenvectors with the returned S, so
+H C = S C ε holds to rounding (linus: max |CᵀFC − diag ε| 6e-14–8e-14).
+
+- Allowed: mixing inputs (Broyden or DIIS on moments, damping of densities).
+- Not allowed: combining several builds' operators (DIIS on F or H), damping or level
+  shifting the returned matrix, or returning H and C from different iterations.
+- Requesting `hamiltonian` changes no other returned number.
+- H is F[x], not F of C n Cᵀ: the returned orbitals' density is one step ahead, and the
+  two differ by the SCF residual (linus: 1.2e-6–1.6e-6 on caffeine at default
+  thresholds).
+
+| program | today | needed |
+|---|---|---|
+| linus | F from the last density, freshly diagonalized | the final build always full. Today it is incremental for CPU energies with exact J/K; forcing it moves energies by about 1e-11 Eh and orbital energies by up to 3e-9, costs about 6% there (within noise), bumps linus's numerics epoch, and removes `jk.final_full_build` |
+| GFN2 | both mixers mix input moments | nothing |
+| g-xTB v1.1 | ends with one unmixed iteration (the program's rule) | nothing |
+| g-xTB 2.0.1, axtb conventions | returns the DIIS-mixed Fock matrix | one unmixed iteration after convergence, as v1.1: +1 iteration, +3–4% time, closer to convergence in all 14 cases measured (taxol energy error against tight 1.2e-7 → 2.6e-8 Eh); results move by up to 1e-7 Eh and 4e-5 Eh/bohr |
+| g-xTB 2.0.1, program conventions | the program's rule, for parity | a `hamiltonian` request is refused (`not_applicable`) |
+| axtb's solvation composite | | returns its base part's wavefunction; `record` names it; H and P do not reproduce the composite energy |
+| GFN-FF | | `wavefunction` is None |
+
+What H contains:
+
+- **DFT:** everything in the SCF operator: V_xc on the run's final grid, plus VV10's
+  nonlocal potential; range-separated exchange; J/K as built (density-fitted when `jk` is
+  `df`, COSX K on its final grid); the PCM operator. Nothing for D3/D4 or SMD's CDS term,
+  which do not depend on the density.
+- **Tight binding:** GFN2: H0 plus the potentials of the last input moments (shell,
+  multipole, third order). g-xTB: the unmixed Fock matrix at the last input.
+
+## Populations and multipoles (`SinglePointData`)
+
+- `shell_populations`: electron populations Σ_{μ∈shell}(PS)_μμ, indexed like
+  `basis.shells`, with `shell_atoms` and `shell_angular_momenta` so they stand without a
+  basis. Not charges, which depend on method-specific reference occupations.
+- `atomic_spin_populations`: with a kind, the partition of `atomic_charges_kind`.
+- `atomic_dipoles`, `atomic_quadrupoles`: the electronic part only, about each atom
+  (μ_A = −Σ_{μ∈A}(P D)_μμ, integrals about the column AO's atom); quadrupoles Buckingham
+  traceless (3/2 M − 1/2 tr M), 3 × 3 per atom. axtb fills them for GFN2 and g-xTB 2.0.1.
+- `scf_quadrupole_moment` names its form: the Buckingham traceless tensor. tblite's
+  molecular quadrupole, which the g-xTB 2.0.1 program prints, counts the off-diagonal
+  charge and dipole parts twice and is not a tensor.
+
+## Deferred until a consumer is named
+
+| data | why it waits |
+|---|---|
+| `kinetic`, `potential_n_e`, `ecp_potential`, `dipole_integrals` | linus and axtb could fill them, but any integral library recomputes them from the basis and ECP in milliseconds, and each is a definition two programs must test |
+| `solvent_potential` | H already contains the solvent operator and `record` names the model; for tight binding, removing it gives no gas-phase answer |
+| stored densities | only for densities that are not C n Cᵀ of the returned orbitals (relaxed, response, or a mixed density returned without orbitals), with a kind (`scf`, `relaxed`, `unrelaxed`) |
+| two-electron integrals, DF and Cholesky tensors | tight binding has none; linus's 3-index tensor is about 200 GB at 2000 functions. For CC or QMC: MO-basis Cholesky vectors of an active space, exported to TREXIO, on demand |
+| tight-binding kernels and H0, DFT grids and response intermediates, GFN2's Slater exponents | model- or engine-specific, or not the functions the program computes with |
+
+## Large arrays
+
+- Models always hold arrays. No field is ever a file reference: that would make equality,
+  hashing, pickling to workers and moving a result between hosts depend on files beside
+  it. Lazy loading is the reader's business.
+- Saving decides by float64 size: an array of more than 1 MiB (131,072 numbers; square
+  matrices from nao ≥ 363) goes to a file beside the JSON, so the same result always saves
+  the same way. Caffeine def2-SVP stays inline; def2-TZVP does not.
+- The file is one HDF5 file per saved output; dataset path = field path; little-endian
+  float64, C order, uncompressed (compression saves about 4% on coefficients). The JSON
+  records shape, dtype and sha256.
+- Inline floats round-trip exactly.
+- Measured: JSON costs 21.8–23.2 bytes per float64, against 8 in binary. A 2000-function
+  matrix is 32 MB binary and 87–93 MB as JSON (1.2 s in `json.dumps`).
+- In qcstore, this file is one of a run's blobs.
+
+## TREXIO
+
+The same physics and names; our own layout. A converter in qcinf, built on the `trexio`
+package (an optional extra), writes real TREXIO files, tested by a round trip: linus
+orbitals → TREXIO → PySCF energy at the same density.
 
 | TREXIO | qcdata |
 |---|---|
 | `nucleus.*` | `Structure` |
-| `basis.*` (flat per-primitive arrays, `shell_factor` × `prim_factor` × `coefficient`) | `BasisSet.shells` (per-atom `Shell`, one normalization convention) |
-| `ecp.*` | `BasisSet.core_electrons`, `BasisSet.ecp` |
-| `ao.cartesian` / `cartesian_shell`, `ao.normalization` | `Shell.pure`, `AOConvention` (`spherical_order="trexio"` is TREXIO's order) |
-| `ao_1e_int.overlap/kinetic/potential_n_e/ecp/core_hamiltonian/dipole_*` | `Wavefunction.overlap`, `kinetic`, `potential_n_e`, `ecp_potential`, `core_hamiltonian`, `dipole_integrals` |
+| `basis.*` (flat per-primitive arrays; `shell_factor` × `prim_factor` × `coefficient`) | `BasisSet.shells` (per-atom `Shell`, one normalization convention) |
+| `ecp.*` | `BasisSet.core_electrons`, `BasisSet.ecp` (local and semilocal channels; power of r) |
+| `ao.cartesian`, `ao.normalization` | `Shell.pure`, `AOConvention` (`spherical_order="trexio"` selectable, never the default) |
+| `ao_1e_int.overlap`, `core_hamiltonian` | `Wavefunction.overlap`, `core_hamiltonian` |
+| `ao_1e_int.kinetic`, `potential_n_e`, `ecp`, dipole | deferred |
 | `mo.coefficient` [mo, ao], `mo.spin` | `Orbitals.coefficients_a/_b` [ao, mo] |
-| `mo.energy`, `mo.occupation`, `mo.type`, `mo.electronic_temperature` | `energies_*`, `occupations_*`, `kind`, `electronic_temperature` |
-| `rdm.1e_up/_dn` (MO basis) | `density_a/_b` (AO basis) |
-| — (no Fock in TREXIO) | `hamiltonian_a/_b` |
-| `ao_2e_int`, `mo_2e_int`, `determinant`, `amplitude`, `jastrow`, `qmc` | not in qcdata (see above) |
+| `mo.energy`, `mo.occupation`, `mo.type`, `mo.electronic_temperature` | `energies_*`, `occupations_*` (per spin, 0..1; TREXIO's restricted occupation is believed to be the total, 0..2, which the converter checks), `kind`, `electronic_temperature` |
+| — | `fermi_level_a/_b` |
+| `rdm.1e_up/_dn` (MO basis) | `Orbitals.density()` (AO basis, computed) |
+| — (no Fock matrix) | `hamiltonian_a/_b` |
+| `ao_2e_int`, `mo_2e_int`, `determinant`, `amplitude`, `jastrow`, `qmc` | not in qcdata |
+
+## What changes if this is adopted
+
+- **qcdata:** `Orbitals` and `Wavefunction` as above; `scf_eigenvalues_*` and
+  `scf_occupations_*` removed; `Wavefunction.with_convention` with variance; validators
+  (matrix shapes against the basis, occupation sums; Cᵀ S C = 1 in tests); the save format;
+  axtb's check scripts (independent Molden overlap, spherical against Cartesian,
+  Mulliken) as test fixtures.
+- **linus:** drop `output.density`; final build always full (epoch bump;
+  `jk.final_full_build` removed); emit `overlap` and `core_hamiltonian` on request; ECP
+  terms in the new layout.
+- **axtb:** g-xTB 2.0.1 in axtb conventions ends with one unmixed iteration (golden values
+  move); program conventions refuse `hamiltonian`; Fermi levels per spin; atomic
+  multipoles 3 × 3; GFN2 computes eigenvectors once after convergence when orbitals are
+  requested.
