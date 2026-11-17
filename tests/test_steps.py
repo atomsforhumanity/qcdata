@@ -93,7 +93,6 @@ def test_the_accuracy_keyword_is_the_inputs_own_target():
         ({"extras": {}}, "unknown_key", "accuracy takes energy, gradient, hessian"),
         ({}, "no_effect", "sets no target"),
         ({"energy": None}, "no_effect", "sets no target"),
-        (Accuracy(energy=1e-8), None, "not Accuracy"),  # keywords hold JSON values
     ],
 )
 def test_the_accuracy_keyword_refuses_what_is_not_a_target(value, code, match):

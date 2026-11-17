@@ -139,9 +139,8 @@ class Accuracy(QCDataBaseModel):
         The keyword is a JSON object of `Accuracy`'s targets
         (``{"energy": 1e-8, "gradient": 1e-6}``), never a bare number: an input's
         target applies to every calctype a session runs, so a number would have no
-        single quantity to aim at. Keywords hold JSON values, so an `Accuracy` object
-        is refused too: dumped, it would spell its unset targets as nulls, and the
-        calculation key would change after a round trip.
+        single quantity to aim at. An `Accuracy` given in keywords is stored in this
+        form (`ProgramSpec.keywords`).
 
         Args:
             keywords: The input's keywords (`ProgramSpec.keywords`).

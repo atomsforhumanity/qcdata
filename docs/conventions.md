@@ -57,6 +57,9 @@ Python keyword arguments spell it. The rules:
    convergence, algorithm, resource, output) and `x-applies-to` on every key.
 7. `model.method` and `model.basis` carry the method and basis; `structure` carries
    positions, atoms, charge and multiplicity. The settings tree does not repeat them.
+8. `keywords` hold plain JSON. A pydantic model given in them, at any depth (an
+   `Accuracy`), is stored as its JSON form with nulls left out, so an input saves,
+   reloads and keys the same.
 
 ### Shared names
 

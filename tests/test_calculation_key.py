@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 
 from qcdata import (
+    Accuracy,
     FileInput,
     ProgramInput,
     ProgramSpec,
@@ -281,6 +282,42 @@ def test_keying_changes_nothing():
 )
 def test_different_keywords(a, b):
     assert calculation_key(_input(keywords=a)) != calculation_key(_input(keywords=b))
+
+
+@pytest.mark.parametrize("suffix", [".json", ".yaml"])
+def test_models_in_keywords_are_json_and_key_alike_after_a_save(suffix, tmp_path):
+    """A model in keywords is stored as its JSON form, so a save changes no key."""
+    keywords = {
+        "accuracy": Accuracy(gradient=1e-5),
+        "steps": [{"target": Accuracy(energy=1e-8)}, ("x", Accuracy(hessian=1e-4))],
+    }
+    sub = ProgramSpec(
+        program="axtb",
+        calctype="gradient",
+        keywords={"accuracy": Accuracy(energy=1e-9)},
+    )
+    inp = _input(calctype="optimization", keywords=keywords, subprograms=[sub])
+    assert inp.keywords["accuracy"] == {"gradient": 1e-5}
+    assert inp.keywords["steps"] == [
+        {"target": {"energy": 1e-8}},
+        ("x", {"hessian": 1e-4}),
+    ]
+    assert inp.subprograms[0].keywords == {"accuracy": {"energy": 1e-9}}
+    as_json = {
+        "accuracy": {"gradient": 1e-5},
+        "steps": [{"target": {"energy": 1e-8}}, ["x", {"hessian": 1e-4}]],
+    }
+    sub_json = sub.model_copy(update={"keywords": {"accuracy": {"energy": 1e-9}}})
+    key = calculation_key(inp)
+    assert key == calculation_key(
+        _input(calctype="optimization", keywords=as_json, subprograms=[sub_json])
+    )
+    inp.save(tmp_path / f"inp{suffix}")
+    assert calculation_key(ProgramInput.open(tmp_path / f"inp{suffix}")) == key
+    assert (
+        calculation_key(ProgramInput.model_validate_json(inp.model_dump_json())) == key
+    )
+    assert Accuracy.from_keywords(inp.keywords) == Accuracy(gradient=1e-5)
 
 
 def test_every_part_of_the_input_counts():

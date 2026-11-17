@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 from pydantic import (
+    BaseModel,
     FieldSerializationInfo,
     field_serializer,
     field_validator,
@@ -51,6 +52,26 @@ class FileInput(Files):
         return obj
 
 
+def _json_models(value: Any) -> Any:
+    """A free-form value with each pydantic model in it dumped as JSON, nulls left out.
+
+    Dumped through `BaseModel.model_dump`, so a qcdata model carries no version stamp.
+    Returns ``value`` itself when it holds no model.
+    """
+    if isinstance(value, BaseModel):
+        return BaseModel.model_dump(value, mode="json", exclude_none=True)
+    if isinstance(value, dict):
+        items = {k: _json_models(v) for k, v in value.items()}
+        changed = any(items[k] is not v for k, v in value.items())
+        return items if changed else value
+    if isinstance(value, list | tuple):
+        new = [_json_models(v) for v in value]
+        if all(a is b for a, b in zip(new, value, strict=True)):
+            return value
+        return new if isinstance(value, list) else tuple(new)
+    return value
+
+
 class ProgramSpec(FileInput):
     """A recursive program specification, independent of structures.
 
@@ -61,7 +82,10 @@ class ProgramSpec(FileInput):
         program: The requested executor (distinct from result data provenance).
         calctype: The type of calculation to perform.
         model: The scientific model, or None for programs without one.
-        keywords: Program keywords, excluding model and calculation type.
+        keywords: Program keywords, excluding model and calculation type. Plain
+            JSON: a pydantic model given anywhere in them (an `Accuracy`) is stored
+            as its JSON form without nulls, so the input and its calculation key are
+            the same before and after a save.
         subprograms: Child specifications, with one child per calculation type.
         files: Native input files for this program.
         cmdline_args: Command line arguments for this program.
@@ -72,6 +96,12 @@ class ProgramSpec(FileInput):
     model: Model | None = None
     keywords: FreeDict = {}
     subprograms: list["ProgramSpec"] = []
+
+    @field_validator("keywords")
+    @classmethod
+    def _models_as_json(cls, keywords: dict[str, Any]) -> dict[str, Any]:
+        """Store any pydantic model in the keywords, at any depth, as its JSON form."""
+        return _json_models(keywords)
 
     @field_validator("subprograms")
     @classmethod
