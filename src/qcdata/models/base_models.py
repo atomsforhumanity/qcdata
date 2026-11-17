@@ -12,6 +12,7 @@ import toml
 import yaml
 from pydantic import (
     BaseModel,
+    Field,
     FieldSerializationInfo,
     SerializerFunctionWrapHandler,
     computed_field,
@@ -555,7 +556,7 @@ class OutputBase(QCDataBaseModel):
     success: bool
     logs: str | None = None
     traceback: str | None = None
-    execution: ExecutionInfo = ExecutionInfo()
+    execution: ExecutionInfo = Field(default_factory=ExecutionInfo)
     warnings: list[ProgramWarning] = []
     error: ErrorInfo | None = None
     record: FreeDict = {}

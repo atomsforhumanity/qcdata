@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 import numpy as np
 from pydantic import (
+    Field,
     FieldSerializationInfo,
     field_serializer,
     field_validator,
@@ -96,7 +97,7 @@ class Structure(QCDataBaseModel):
     geometry: SerializableMatrix  # Coerced to 2D array
     charge: int = 0
     multiplicity: int = 1
-    identifiers: Identifiers = Identifiers()
+    identifiers: Identifiers = Field(default_factory=Identifiers)
     connectivity: list[tuple[int, int, float]] = []
     _xyz_comment_key: ClassVar[str] = "xyz_comments"
 
