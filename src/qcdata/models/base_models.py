@@ -265,13 +265,33 @@ class QCDataBaseModel(BaseModel, ABC):
         ]
 
     def __eq__(self, other: Any) -> bool:
-        """Check equality of two objects.
+        """Whether two objects of the same class hold equal values, field by field.
 
-        Necessary because BaseModel.__eq__ does not compare numpy arrays.
+        Arrays compare by shape and value (`np.array_equal`), also inside free-form
+        fields; lists and tuples alike, as JSON writes both as arrays. Nothing is
+        serialized, so comparing large wavefunctions costs what comparing their arrays
+        does.
         """
-        if isinstance(other, self.__class__):
-            return self.model_dump() == other.model_dump()
-        return False
+        if type(other) is not type(self):
+            return False
+        return all(
+            _equal(getattr(self, name), getattr(other, name))
+            for name in type(self).model_fields
+        )
+
+
+def _equal(a: Any, b: Any) -> bool:
+    """Whether two field values are equal: arrays by value, containers item by item."""
+    if isinstance(a, np.ndarray) or isinstance(b, np.ndarray):
+        try:
+            return bool(np.array_equal(a, b))
+        except ValueError:  # a ragged list against an array
+            return False
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(_equal(a[k], b[k]) for k in a)
+    if isinstance(a, list | tuple) and isinstance(b, list | tuple):
+        return len(a) == len(b) and all(_equal(x, y) for x, y in zip(a, b, strict=True))
+    return bool(a == b)
 
 
 class Files(QCDataBaseModel):
