@@ -1,10 +1,7 @@
-import copy
 import json
 import warnings
 
 import pytest
-import toml
-import yaml
 from pydantic import ValidationError
 
 import qcdata
@@ -12,8 +9,8 @@ from qcdata import (
     ConformerSearchData,
     Data,
     DataType,
+    Frame,
     OptimizationData,
-    ProgramInput,
     ProgramOutput,
     ScanData,
     SinglePointData,
@@ -44,77 +41,31 @@ def test_data_property_is_removed(prog_output):
     assert not hasattr(prog_output, "data")
 
 
-@pytest.mark.parametrize(
-    "cls", [ProgramOutput, ProgramOutput[ProgramInput, SinglePointData]]
-)
-@pytest.mark.parametrize("payload_kind", ["model", "dict", "json"])
-def test_legacy_data_input(cls, payload_kind, prog_output):
-    payload = prog_output.model_dump(mode="json")
-    payload["data"] = payload.pop("results")
-    if payload_kind == "model":
-        payload["data"] = prog_output.results
-    original_results = payload["data"]
-    with pytest.warns(FutureWarning, match="'data' has been renamed to 'results'"):
-        output = (
-            cls.model_validate_json(json.dumps(payload))
-            if payload_kind == "json"
-            else cls(**payload)
-        )
-    assert output == prog_output
-    assert "data" in payload and "results" not in payload
-    assert payload["data"] is original_results
-    if payload_kind == "model":
-        assert output.results is prog_output.results
-    assert "data" not in output.model_dump()
-    assert "results" in output.model_dump()
+def test_old_field_names_are_refused(prog_output, opt_output):
+    """No compatibility loaders: data and trajectory fail like any unknown field."""
+    output = prog_output.model_dump(mode="json")
+    output["data"] = output.pop("results")
+    frame = opt_output.results.frames[0].model_dump(mode="json")
+    frame["data"] = frame.pop("results")
+    optimization = opt_output.results.model_dump(mode="json")
+    optimization["trajectory"] = optimization.pop("frames")
+    scan = {"provenance": {"program": "qcopt"}, "trajectory": [opt_output]}
+    for cls, payload in [
+        (ProgramOutput, output),
+        (Frame, frame),
+        (OptimizationData, optimization),
+        (ScanData, scan),
+    ]:
+        with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+            cls.model_validate(payload)
 
 
-def test_conflicting_payload_names_rejected(prog_output):
-    payload = prog_output.model_dump()
-    payload["data"] = {**payload["results"], "energy": 123.0}
-    original = copy.deepcopy(payload)
-    with pytest.raises(ValidationError, match="Provide only 'results'"):
-        ProgramOutput.model_validate(payload)
-    assert payload == original
-
-
-@pytest.mark.parametrize("extension", ["json", "yaml", "toml"])
-def test_legacy_files_write_canonical_results(prog_output, tmp_path, extension):
-    payload = prog_output.model_dump(mode="json", exclude_none=True)
-    payload["data"] = payload.pop("results")
-    dumps, loads = {
-        "json": (json.dumps, json.loads),
-        "yaml": (yaml.safe_dump, yaml.safe_load),
-        "toml": (toml.dumps, toml.loads),
-    }[extension]
-    old_path = tmp_path / f"legacy.{extension}"
-    old_path.write_text(dumps(payload))
-    with pytest.warns(FutureWarning, match="'data' has been renamed"):
-        output = ProgramOutput.open(old_path)
-    new_path = tmp_path / f"canonical.{extension}"
-    output.save(new_path)
-    saved = loads(new_path.read_text())
-    assert "results" in saved
-    assert "data" not in saved
-    assert ProgramOutput.open(new_path) == prog_output
-
-
-def test_nested_legacy_results_and_unrelated_data_keys(opt_output):
+def test_a_data_key_in_extras_is_just_metadata(opt_output):
     payload = opt_output.model_dump(mode="json")
     payload["extras"] = {"data": "unrelated metadata"}
-    payload["data"] = payload.pop("results")
-    step = payload["data"]["frames"][0]
-    step["data"] = step.pop("results")
-    with pytest.warns(FutureWarning, match="'data' has been renamed"):
-        output = ProgramOutput.model_validate(payload)
-    assert "data" in payload and "results" not in payload
-    assert "data" in step and "results" not in step
-    assert output.results.final_energy == opt_output.results.final_energy
-    assert output.results.frames[0].results.energy == opt_output.results.final_energy
-    canonical = json.loads(output.model_dump_json())
-    assert "data" not in canonical
-    assert "data" not in canonical["results"]["frames"][0]
-    assert canonical["extras"] == {"data": "unrelated metadata"}
+    output = ProgramOutput.model_validate(payload)
+    assert output.extras == {"data": "unrelated metadata"}
+    assert output.results == opt_output.results
 
 
 def test_json_helper_uses_results(prog_output):

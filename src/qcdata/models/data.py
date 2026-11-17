@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self, TypeVar
 
@@ -539,14 +538,6 @@ class Frame(OutputBase):
                 "record": value.record,
                 "structure": value.input_data.structure,
             }
-        if isinstance(value, dict) and "data" in value and "results" not in value:
-            warnings.warn(
-                "'data' has been renamed to 'results'. Please update your code accordingly.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            value = {**value, "results": value["data"]}
-            del value["data"]
         if isinstance(value, dict) and "input_data" in value:
             value = dict(value)
             # A whole calculation's settings; its parent keeps its own.
@@ -646,22 +637,6 @@ class _FrameSeries:
         return super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)  # type: ignore[misc]
 
 
-def _renamed(payload: Any, old: str, new: str) -> Any:
-    """Move a payload's deprecated field name to its new one, with a warning."""
-    if not isinstance(payload, dict) or old not in payload:
-        return payload
-    if new in payload:
-        raise ValueError(f"Provide only {new!r}; {old!r} is its deprecated name.")
-    warnings.warn(
-        f"'{old}' has been renamed to '{new}'. Please update your code accordingly.",
-        FutureWarning,
-        stacklevel=4,
-    )
-    payload = dict(payload)
-    payload[new] = payload.pop(old)
-    return payload
-
-
 def _check_same_atoms(structures: list[Structure], what: str) -> None:
     """Raise if the structures do not share their atoms in the same order."""
     if structures and any(s.symbols != structures[0].symbols for s in structures):
@@ -674,8 +649,7 @@ class OptimizationData(_FrameSeries, FileData, CalcInfoData):
     Attributes:
         frames: One `Frame` per structure evaluated, in order, the starting structure
             first: its structure and what was computed there. An optimization of n
-            steps has n + 1 frames. Files saved with the former name, `trajectory`,
-            still load.
+            steps has n + 1 frames.
         energies: `@property` The energy of each frame.
         structures: `@property` The structure of each frame.
         final_structure: `@property` The last frame's structure: the optimized one
@@ -684,12 +658,6 @@ class OptimizationData(_FrameSeries, FileData, CalcInfoData):
     """
 
     frames: list[Frame] = []
-
-    @model_validator(mode="before")
-    @classmethod
-    def _migrate_trajectory(cls, payload: Any) -> Any:
-        """Accept the former field name ``trajectory`` for ``frames``."""
-        return _renamed(payload, "trajectory", "frames")
 
     def _series(self) -> list[Frame]:
         return self.frames
@@ -910,16 +878,9 @@ class ScanData(FileData, CalcInfoData):
         structures: The Structure objects for each step of the scan.
         points: One constrained optimization per scan point, as its full
             `ProgramOutput` (each point's input carries its own constraint value).
-            Files saved with the former name, `trajectory`, still load.
     """
 
     points: list[ProgramOutput[ProgramInput, OptimizationData]] = []
-
-    @model_validator(mode="before")
-    @classmethod
-    def _migrate_trajectory(cls, payload: Any) -> Any:
-        """Accept the former field name ``trajectory`` for ``points``."""
-        return _renamed(payload, "trajectory", "points")
 
     @property
     def energies(self) -> np.ndarray:

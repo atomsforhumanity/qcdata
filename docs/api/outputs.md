@@ -12,7 +12,7 @@ members: false
 
 Scientific models retain their `Data` names and can exist independently of an execution. Within `ProgramOutput`, that data is the calculation's `results`: use `output.results.energy`, `output.results.gradient`, or `output.results.final_structure`.
 
-Serialization always emits `"results"`, never `"data"`. The `.data` attribute has been removed; read `.results`. Files and payloads saved with `"data"` still load, with a `FutureWarning`, and are migrated to `"results"`. Providing both names raises `ValueError` during validation. The rename leaves the caller's original field names unchanged.
+The results live in `"results"`. The former name `"data"` is not accepted: a payload that uses it fails validation like any unknown field, and the `.data` attribute is gone.
 
 The old `Results` and `*Results` classes, `qcdata.models.results` module, `qcio` import shim, stdout/files forwarding, and deprecated convenience helpers have been removed. Use `ProgramOutput`, `*Data`, `logs`, `results.files`, and explicit scientific attributes instead.
 

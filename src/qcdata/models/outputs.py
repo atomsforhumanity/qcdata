@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-import warnings
 from typing import Any, Generic, Self, get_args
 
 from pydantic import ValidationInfo, field_validator, model_validator
@@ -45,24 +44,6 @@ class ProgramOutput(OutputBase, Generic[ProgramInputType, DataType]):
     input_data: ProgramInputType
     results: DataType
     resolved: Resolved | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def _migrate_legacy_data(cls, payload: Any) -> Any:
-        """Accept the previous payload field while always serializing as results."""
-        if isinstance(payload, dict) and "data" in payload:
-            if "results" in payload:
-                raise ValueError(
-                    "Provide only 'results'; 'data' is its deprecated name."
-                )
-            warnings.warn(
-                "'data' has been renamed to 'results'. Please update your code accordingly.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            payload = dict(payload)
-            payload["results"] = payload.pop("data")
-        return payload
 
     @classmethod
     def failure(

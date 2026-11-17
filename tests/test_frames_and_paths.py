@@ -78,18 +78,12 @@ def test_outputs_serialize_success_first_and_logs_last(prog_output):
 
 
 def test_optimization_trajectories_hold_frames(prog_output, water):
-    """ProgramOutputs passed as steps become frames; old saved files still load."""
+    """ProgramOutputs passed as steps become frames."""
     data = OptimizationData(provenance=PROVENANCE, frames=[prog_output] * 2)
     assert all(type(step) is Frame for step in data.frames)
     assert data.final_structure == water
-    legacy = data.model_dump(mode="json")
-    legacy["trajectory"] = [prog_output.model_dump(mode="json")] * 2
-    del legacy["frames"]
-    with pytest.warns(FutureWarning, match="'trajectory' has been renamed"):
-        loaded = OptimizationData.model_validate(legacy)
-    assert not hasattr(loaded, "trajectory")
-    assert loaded.structures == [water, water]
-    assert np.array_equal(loaded.energies, [1.0, 1.0])
+    assert data.structures == [water, water]
+    assert np.array_equal(data.energies, [1.0, 1.0])
 
 
 def test_path_data_reads_like_any_series(water, tmp_path):
@@ -259,16 +253,6 @@ def test_conformer_search_holds_frames(water):
     assert data.conformers[0].results.energy == 0.1
     assert np.isnan(data.rotamer_energies).tolist() == [True]
     assert ConformerSearchData.model_validate_json(data.model_dump_json()) == data
-
-
-def test_scan_points_rename(opt_output):
-    """ScanData.trajectory is now points; the old name still loads, with a warning."""
-    from qcdata import ScanData
-
-    with pytest.warns(FutureWarning, match="'trajectory' has been renamed"):
-        scan = ScanData(provenance=PROVENANCE, trajectory=[opt_output])
-    assert scan.points == [opt_output]
-    assert not hasattr(scan, "trajectory")
 
 
 def test_from_output_and_from_spec_accept_wide_types(prog_output, water):
