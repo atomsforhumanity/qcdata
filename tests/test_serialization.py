@@ -136,27 +136,25 @@ def test_serialized_scientific_arrays_match_schema(water):
                 "occupations_a": [1.0],
                 "occupations_b": [1.0],
                 "core_electrons": [2, 0, 0],
-                "basis": {
-                    "shells": [
-                        {
-                            "center": 0,
-                            "angular_momentum": 0,
-                            "pure": True,
-                            "exponents": [1.0],
-                            "coefficients": [0.71],
-                        }
-                    ],
-                    "ecp": [
-                        {
-                            "center": 0,
-                            "local": [
-                                {"power": -2, "exponent": 1.0, "coefficient": 2.0}
-                            ],
-                            "semilocal": [],
-                        }
-                    ],
-                },
                 "coefficients_a": [[1.0]],
+            },
+            basis={
+                "shells": [
+                    {
+                        "center": 0,
+                        "angular_momentum": 0,
+                        "pure": True,
+                        "exponents": [1.0],
+                        "coefficients": [0.71],
+                    }
+                ],
+                "ecp": [
+                    {
+                        "center": 0,
+                        "local": [{"power": -2, "exponent": 1.0, "coefficient": 2.0}],
+                        "semilocal": [],
+                    }
+                ],
             },
             overlap=[[1.0]],
             hamiltonian_a=[[-0.5]],

@@ -248,16 +248,18 @@ Frequencies are negative for imaginary modes and stored without a cutoff;
 ### Orbitals and AO matrices
 
 `Orbitals` is the one home of orbital levels. Energies and occupations come with every
-wavefunction; coefficients and their basis set only on request. Occupations are per spin,
+wavefunction; coefficients only on request. Occupations are per spin,
 each between 0 and 1, with both `occupations_a` and `occupations_b` always given;
 `electronic_temperature` is 0 for aufbau occupations, and smeared ones carry a Fermi level
 per spin. `Orbitals.core_electrons` counts, per atom, the electrons the orbitals do not
 represent (ECP cores, or the core a valence-only method leaves out; None for an
 all-electron calculation), so the occupations sum to Σ(Z − core_electrons) − charge.
 
-Orbitals and AO matrices are stored as the program produced them, with their
-`AOConvention`; `Wavefunction.with_convention` (or `Orbitals.with_convention`, for the
-orbitals alone) converts. The default is PySCF's (libcint's) order: spherical functions
+The coefficients and the AO matrices are indexed by the AOs of one basis set,
+`Wavefunction.basis`, present whenever any of them is and only then: an overlap alone
+ships the basis set and no coefficients. They are stored as the program produced them,
+with the basis set's `AOConvention`; `Wavefunction.with_convention` converts them all
+together. The default is PySCF's (libcint's) order: spherical functions
 m = −l..l except p as (x, y, z); Cartesian components lexicographic (xx, xy, xz, yy, yz,
 zz); every spherical function and the x^l component unit-normalized. A change of Cartesian
 normalization scales coefficients by s per AO, densities by s_μ s_ν and operators
@@ -271,13 +273,14 @@ request's `outputs` or as the keyword `output.<name>`:
 
 | output | adds | implies |
 |---|---|---|
-| `orbitals` | `Orbitals.basis`, `coefficients_a/_b` | |
-| `overlap` | `Wavefunction.overlap` | `orbitals` |
+| `orbitals` | `Orbitals.coefficients_a/_b` | the basis set |
+| `overlap` | `Wavefunction.overlap` | the basis set |
 | `hamiltonian` | `Wavefunction.hamiltonian_a/_b` | `overlap`, `orbitals` |
-| `core_hamiltonian` | `Wavefunction.core_hamiltonian` | `orbitals` |
+| `core_hamiltonian` | `Wavefunction.core_hamiltonian` | the basis set |
 
-A program fills in what an output implies instead of refusing it, since requesting an
-output changes no other number. It refuses an output it cannot give with kind
+The basis set (`Wavefunction.basis`) is not an output of its own: it comes with any of
+the four, since it describes the AO space they share. A program fills in what an output
+implies instead of refusing it, since requesting an output changes no other number. It refuses an output it cannot give with kind
 `unsupported`, code `not_applicable`, and a message naming the reason: a mode whose last
 diagonalization is not of one build refuses `hamiltonian`; a force field has none of the
 four. There is no `density` output: the SCF density is `Orbitals.density()`.

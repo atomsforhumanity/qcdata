@@ -27,7 +27,7 @@ inside a session). Given orbitals (`ProgramInput.given`) may at most seed a gues
 | `electronic_temperature` | K; 0 for aufbau occupations |
 | `fermi_level_a/_b` | Eh; None at 0 K, both given above it. Open shells are filled per spin at fixed n_α and n_β, so there are two |
 | `core_electrons` | one per atom: the electrons the orbitals do not represent, ECP cores or the core a valence-only method leaves out (bookkeeping only; Zn's core is 28 in GFN2 and g-xTB). None: all-electron |
-| `basis`, `coefficients_a/_b` | optional, both or neither; only on request (output `orbitals`) |
+| `coefficients_a/_b` | optional, nao × nmo, in the AOs of `Wavefunction.basis`; only on request (output `orbitals`) |
 
 - Tight binding's open shells (GFN2-xTB) are restricted orbitals of one spin-averaged
   Hamiltonian with per-spin occupations. They are not ROHF.
@@ -45,8 +45,11 @@ inside a session). Given orbitals (`ProgramInput.given`) may at most seed a gues
   occupations are not integers, so its charges for a neutral molecule sum to −7e-10.
   A given wavefunction (`ProgramInput.given`) may come from another charge or
   multiplicity, so only its atoms are checked.
-- `density()` and `with_convention()` raise a clear error when coefficients are missing,
-  as Molden export does.
+- `density()` raises a clear error when coefficients are missing, as Molden export does.
+- `Orbitals` holds no basis set. The basis set describes the AO space that the
+  coefficients and every AO matrix share, so it belongs to their common parent,
+  `Wavefunction.basis`. An overlap requested alone then ships no coefficients, which for
+  unrestricted orbitals would be twice the overlap's own size.
 
 ## BasisSet
 
@@ -63,13 +66,16 @@ inside a session). Given orbitals (`ProgramInput.given`) may at most seed a gues
 - A basis belongs to one geometry. GFN2's is the same per element at any geometry.
   g-xTB's q-vSZP contraction depends on each atom's EEQ-BC charge and coordination number
   at that geometry (fixed during the SCF), so the frames of a g-xTB trajectory do not
-  share a `BasisSet`. g-xTB's scaled-exponent H0 basis is internal; the orbitals' basis is
-  the SCF basis.
+  share a `BasisSet`. g-xTB's scaled-exponent H0 basis is internal; the wavefunction's basis
+  is the SCF basis.
 
-## Wavefunction: AO matrices, on request
+## Wavefunction: the basis set and AO matrices, on request
 
-Each is requested by its output name, the field's (`overlap`, `hamiltonian`,
-`core_hamiltonian`); the conventions list what each implies.
+`basis` is present whenever coefficients or an AO matrix are, and only then: it is the
+AO space they share, in its `AOConvention`. Each AO matrix is requested by its output
+name, the field's (`overlap`, `hamiltonian`, `core_hamiltonian`); the conventions list
+what each implies. `overlap` and `core_hamiltonian` imply only the basis set;
+`hamiltonian` implies `overlap` and `orbitals`.
 
 | field | HF and DFT | tight binding |
 |---|---|---|
@@ -78,15 +84,16 @@ Each is requested by its output name, the field's (`overlap`, `hamiltonian`,
 | `core_hamiltonian` | yes | — (tight binding's H0 is model data) |
 
 - A Wavefunction always has orbitals; GFN-FF and other force fields return none.
-- A `hamiltonian` comes with `overlap`, and H C = S C ε holds with the returned S only: a
-  screened S (a tight-binding program skips distant primitive pairs) can differ from an
-  exact one by up to 3.4e-9. Its orbitals are canonical, and restricted orbitals have one
-  Hamiltonian.
+- A `hamiltonian` comes with `overlap` and the orbitals' coefficients, and H C = S C ε
+  holds with the returned S only: a screened S (a tight-binding program skips distant
+  primitive pairs) can differ from an exact one by up to 3.4e-9. Its orbitals are
+  canonical, and restricted orbitals have one Hamiltonian.
 - `core_hamiltonian` is every density-independent one-electron term of the run: T, V_ne
   with charges Z − core_electrons, V_ecp, and external point charges and fields once a
   program supports them. Then tr(P h) is `energy_components`' `one_electron` term.
-- Every matrix is nao × nao of `orbitals.basis`; a matrix without a basis is refused.
-- `Wavefunction.with_convention` converts the orbitals and every matrix together, each
+- Every matrix is nao × nao of `basis`, and the coefficients have one row per AO of it;
+  an AO-indexed array without a basis set, or a basis set without one, is refused.
+- `Wavefunction.with_convention` converts the coefficients and every matrix together, each
   with its variance: coefficients scale by s per AO index, densities by s_μ s_ν,
   operators (S, H, h) by 1/(s_μ s_ν). A spherical reordering is a permutation either
   way; a change of Cartesian normalization is not, so the coefficient transform does not
@@ -132,7 +139,7 @@ What H contains:
 ## Populations and multipoles (`SinglePointData`)
 
 - `shell_populations`: electron populations Σ_{μ∈shell}(PS)_μμ, indexed like
-  `basis.shells`, with `shell_atoms` and `shell_angular_momenta` so they stand without a
+  `Wavefunction.basis.shells`, with `shell_atoms` and `shell_angular_momenta` so they stand without a
   basis (and must match its shells when there is one). Not charges, which depend on
   method-specific reference occupations.
 - `atomic_spin_populations`: n_α − n_β per atom, with `atomic_spin_populations_kind`
@@ -180,7 +187,7 @@ TREXIO → PySCF energy at the same density.
 | TREXIO | qcdata |
 |---|---|
 | `nucleus.*` | `Structure` |
-| `basis.*` (flat per-primitive arrays; `shell_factor` × `prim_factor` × `coefficient`) | `BasisSet.shells` (per-atom `Shell`, one normalization convention) |
+| `basis.*` (flat per-primitive arrays; `shell_factor` × `prim_factor` × `coefficient`) | `Wavefunction.basis.shells` (per-atom `Shell`, one normalization convention) |
 | `ecp.*` | `Orbitals.core_electrons`, `BasisSet.ecp` (local and semilocal channels; power of r) |
 | `ao.cartesian`, `ao.normalization` | `Shell.pure`, `AOConvention` (`spherical_order="trexio"` selectable, never the default) |
 | `ao_1e_int.overlap`, `core_hamiltonian` | `Wavefunction.overlap`, `core_hamiltonian` |

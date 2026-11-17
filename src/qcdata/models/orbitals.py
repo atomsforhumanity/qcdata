@@ -3,12 +3,13 @@
 `Orbitals` is the one home of a calculation's orbital levels: energies and occupations
 per spin, the electronic temperature and Fermi levels, the electrons each atom keeps
 outside the orbitals (`core_electrons`) and, on request, the MO coefficients (nao x nmo,
-one orbital per column) with the `BasisSet` they expand in. A `BasisSet` is a list of
-`Shell` objects placed on the structure's atoms, in AO order; its effective core
-potentials (`Ecp`); and an explicit `AOConvention` saying how the functions within a
-shell are ordered and normalized, so coefficients from any program can be stored as
-produced and converted when needed (`Orbitals.with_convention`,
-`Wavefunction.with_convention`).
+one orbital per column). The `BasisSet` they expand in is the wavefunction's
+(`Wavefunction.basis`), which every AO-indexed array of a wavefunction shares. A
+`BasisSet` is a list of `Shell` objects placed on the structure's atoms, in AO order; its
+effective core potentials (`Ecp`); and an explicit `AOConvention` saying how the
+functions within a shell are ordered and normalized, so coefficients and AO matrices from
+any program can be stored as produced and converted when needed
+(`Wavefunction.with_convention`).
 
 Coefficients of a shell multiply the *unnormalized* primitives r^l exp(-a r^2) and
 include all normalization: the x^l Cartesian component of the contracted shell, and so
@@ -233,7 +234,8 @@ class Ecp(QCDataBaseModel):
     The potential is U_L(r) + sum_{l<L} (U_l(r) - U_L(r)) P_l, with P_l the projector on
     angular momentum l about the atom and L = ``len(semilocal)``: the layout of Basis Set
     Exchange, NWChem, PySCF and Psi4. Spin-orbit terms have no place here. The electrons
-    it replaces are its atom's `Orbitals.core_electrons`.
+    it replaces are its atom's `Orbitals.core_electrons` in a `Wavefunction` with this
+    basis set.
 
     Attributes:
         center: Index of the atom (0-based) in the structure the basis set belongs to.
@@ -256,7 +258,7 @@ class BasisSet(QCDataBaseModel):
         name: The basis set's name (e.g. ``"def2-svp"``), if it has one.
         shells: The contracted shells; the AOs are their functions in this order.
         ecp: The effective core potentials, at most one per atom; the electrons each
-            replaces are `Orbitals.core_electrons`.
+            replaces are the wavefunction's `Orbitals.core_electrons`.
         ao_convention: Order and normalization of the functions within each shell.
         nao: `@property` The number of AOs.
     """
@@ -401,9 +403,10 @@ class Orbitals(QCDataBaseModel):
     """The orbital levels of a calculation and, on request, the orbitals themselves.
 
     The one home of orbital energies and occupations. The levels are cheap and come with
-    every wavefunction; the coefficients (nao x nmo numbers per spin) and the basis set
-    they expand in come only on request. Every per-orbital vector has one value per
-    orbital, in the order of the coefficient matrices' columns.
+    every wavefunction; the coefficients (nao x nmo numbers per spin) come only on
+    request, and expand in the wavefunction's basis set (`Wavefunction.basis`), which
+    checks their rows. Every per-orbital vector has one value per orbital, in the order
+    of the coefficient matrices' columns.
 
     Where the structure is known (a `ProgramOutput` or a `Frame`), the occupations add
     up to sum(Z - core_electrons) - charge.
@@ -428,13 +431,11 @@ class Orbitals(QCDataBaseModel):
             own fixed electron count, so an open shell has two levels; a closed shell's
             are equal.
         core_electrons: One per atom of the structure: the electrons the orbitals do not
-            represent, those an ECP replaces (required for every ECP atom of `basis`) or
-            a valence-only method leaves out (28 for Zn in GFN2-xTB and g-xTB). None:
-            every electron is in the orbitals.
-        basis: The basis set the coefficients expand in (its centers refer to the
-            structure's atoms); only with coefficients.
-        coefficients_a: nao x nmo; column i is orbital i (alpha, or both spins). Only
-            on request, with `basis`.
+            represent, those an ECP replaces (required for every ECP atom of
+            `Wavefunction.basis`) or a valence-only method leaves out (28 for Zn in
+            GFN2-xTB and g-xTB). None: every electron is in the orbitals.
+        coefficients_a: nao x nmo, in the AOs of `Wavefunction.basis`; column i is
+            orbital i (alpha, or both spins). Only on request.
         coefficients_b: The beta orbitals, nao x nmo: unrestricted orbitals with
             coefficients only.
         nmo: `@property` The number of orbitals.
@@ -451,7 +452,6 @@ class Orbitals(QCDataBaseModel):
     fermi_level_a: float | None = None
     fermi_level_b: float | None = None
     core_electrons: list[int] | None = None
-    basis: BasisSet | None = None
     coefficients_a: SerializableMatrix | None = None
     coefficients_b: SerializableMatrix | None = None
 
@@ -476,7 +476,8 @@ class Orbitals(QCDataBaseModel):
             )
         self._check_smearing()
         self._check_coefficients(nmo, unrestricted)
-        self._check_core_electrons()
+        if self.core_electrons is not None and min(self.core_electrons, default=0) < 0:
+            raise ValueError("core_electrons must be >= 0")
         return self
 
     def _check_energies(self, nmo: int, unrestricted: bool) -> None:
@@ -516,18 +517,17 @@ class Orbitals(QCDataBaseModel):
             )
 
     def _check_coefficients(self, nmo: int, unrestricted: bool) -> None:
-        basis, ca, cb = self.basis, self.coefficients_a, self.coefficients_b
-        if (basis is None) != (ca is None):
-            raise ValueError("basis and coefficients_a come together: both or neither")
-        if basis is None or ca is None:
+        ca, cb = self.coefficients_a, self.coefficients_b
+        if ca is None:
             if cb is not None:
-                raise ValueError("coefficients_b needs coefficients_a and basis")
+                raise ValueError("coefficients_b needs coefficients_a")
             return
-        shape = (basis.nao, nmo)
-        if ca.shape != shape:
+        if ca.ndim != 2 or ca.shape[1] != nmo:
             raise ValueError(
-                f"coefficients_a must be nao x nmo = {shape}, not {ca.shape}"
+                f"coefficients_a must be nao x nmo, with one column per orbital ({nmo}), "
+                f"not shape {ca.shape}"
             )
+        shape = ca.shape
         if not unrestricted:
             if cb is not None:
                 raise ValueError(
@@ -539,19 +539,8 @@ class Orbitals(QCDataBaseModel):
             )
         elif cb.shape != shape:
             raise ValueError(
-                f"coefficients_b must be nao x nmo = {shape}, not {cb.shape}"
-            )
-
-    def _check_core_electrons(self) -> None:
-        core = self.core_electrons
-        if core is not None and min(core, default=0) < 0:
-            raise ValueError("core_electrons must be >= 0")
-        ecp_atoms = [e.center for e in self.basis.ecp] if self.basis else []
-        bare = [a for a in ecp_atoms if core is None or a >= len(core) or core[a] == 0]
-        if bare:
-            raise ValueError(
-                f"atoms {bare} have ECPs, so core_electrons must give the electrons "
-                "each ECP replaces"
+                f"coefficients_b must be nao x nmo = {shape} like coefficients_a, "
+                f"not {cb.shape}"
             )
 
     @property
@@ -568,57 +557,20 @@ class Orbitals(QCDataBaseModel):
         """The alpha and beta AO density matrices, C n C^T per spin.
 
         Returns:
-            Two nao x nao matrices in the basis set's AO convention.
+            Two nao x nao matrices in the AOs of the wavefunction's basis set.
 
         Raises:
             ValueError: If the orbitals have no coefficients.
         """
-        _, ca, cb = self._require_coefficients("density()")
-        return (ca * self.occupations_a) @ ca.T, (cb * self.occupations_b) @ cb.T
-
-    def with_convention(self, convention: AOConvention) -> Orbitals:
-        """The same orbitals with the basis functions in another AO convention.
-
-        `Wavefunction.with_convention` converts the AO matrices with them.
-
-        Args:
-            convention: The target convention.
-
-        Returns:
-            New orbitals whose basis set has the target convention.
-
-        Raises:
-            ValueError: If the orbitals have no coefficients.
-        """
-        basis = self._require_coefficients("with_convention()")[0]
-        update: dict[str, Any] = {
-            "basis": basis.model_copy(update={"ao_convention": convention})
-        }
-        for name in ("coefficients_a", "coefficients_b"):
-            c = getattr(self, name)
-            if c is not None:
-                update[name] = basis.transform(c, convention, kind="coefficients")
-        return self.model_copy(update=update)
-
-    def _require_coefficients(
-        self, what: str
-    ) -> tuple[BasisSet, np.ndarray, np.ndarray]:
-        """The basis set and the alpha and beta coefficients (one matrix if restricted).
-
-        Raises:
-            ValueError: If the orbitals have no coefficients.
-        """
-        if self.basis is None or self.coefficients_a is None:
+        ca = self.coefficients_a
+        if ca is None:
             raise ValueError(
-                f"{what} needs the orbitals' coefficients, and these orbitals have only "
-                "their levels: programs return coefficients and the basis set on request"
+                "density() needs the orbitals' coefficients, and these orbitals have "
+                "only their levels: programs return coefficients on request (output "
+                "orbitals)"
             )
-        cb = (
-            self.coefficients_b
-            if self.coefficients_b is not None
-            else self.coefficients_a
-        )
-        return self.basis, self.coefficients_a, cb
+        cb = self.coefficients_b if self.coefficients_b is not None else ca
+        return (ca * self.occupations_a) @ ca.T, (cb * self.occupations_b) @ cb.T
 
 
 # --- AO bookkeeping ---------------------------------------------------------------------

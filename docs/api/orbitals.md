@@ -3,11 +3,11 @@
 `Wavefunction.orbitals` is the one home of a calculation's orbital levels: energies and
 occupations per spin, the electronic temperature and Fermi levels, and the electrons each
 atom keeps outside the orbitals (`core_electrons`). On request it also holds the
-coefficients with the basis set they expand in and the AO convention they follow, so they
-can seed another program's SCF, be plotted, or be compared across programs. The basis set
-carries its effective core potentials (`Ecp`). `Wavefunction` adds the AO matrices: `overlap`,
-`hamiltonian_a/_b` and `core_hamiltonian`. The design and its reasons are in
-[Wavefunctions](../design/wavefunctions.md).
+coefficients, so they can seed another program's SCF, be plotted, or be compared across
+programs. `Wavefunction` adds the AO matrices (`overlap`, `hamiltonian_a/_b` and
+`core_hamiltonian`) and `basis`, the basis set that the coefficients and every AO matrix
+share, with the AO convention they follow and its effective core potentials (`Ecp`). The
+design and its reasons are in [Wavefunctions](../design/wavefunctions.md).
 
 ::: qcdata.Wavefunction
 

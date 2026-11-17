@@ -17,7 +17,7 @@ from qcdata.helper_types import (
 
 from .base_models import CalcType, Files, OutputBase, Provenance, QCDataBaseModel
 from .inputs import ProgramInput
-from .orbitals import AOConvention, OrbitalKind, Orbitals
+from .orbitals import AOConvention, BasisSet, OrbitalKind, Orbitals
 from .structure import Structure
 from .utils import to_multi_xyz
 from .vibrations import Thermochemistry, VibrationalAnalysis
@@ -63,12 +63,17 @@ class Wavefunction(QCDataBaseModel):
     """The wavefunction of a single point calculation: its orbitals and AO matrices.
 
     The SCF density is not stored: it is C n C^T of the returned orbitals
-    (`Orbitals.density`). The AO matrices come only on request. Each is nao x nao in the
-    AO convention of ``orbitals.basis``, so it needs the orbitals' coefficients and basis
-    set; `with_convention` converts the orbitals and every matrix together.
+    (`Orbitals.density`). The orbitals' coefficients and the AO matrices come only on
+    request, and all of them are indexed by the AOs of one basis set, `basis`: it is
+    present whenever any of them is, and only then. An overlap alone therefore ships the
+    basis set and no coefficients. `with_convention` converts the coefficients and every
+    matrix together.
 
     Attributes:
-        orbitals: The orbital levels and, on request, the orbitals and their basis set.
+        orbitals: The orbital levels and, on request, the orbitals' coefficients.
+        basis: The basis set that the coefficients and every AO matrix share (its
+            centers refer to the structure's atoms), in AO order and with its
+            `AOConvention`; present whenever coefficients or an AO matrix are.
         overlap: The AO overlap matrix S the program used, with its own screening.
         hamiltonian_a: The Fock or Kohn-Sham matrix, or the tight-binding Hamiltonian
             (Eh), of alpha electrons or of both spins for restricted orbitals: the
@@ -90,30 +95,56 @@ class Wavefunction(QCDataBaseModel):
     """
 
     orbitals: Orbitals
+    basis: BasisSet | None = None
     overlap: SerializableMatrix | None = None
     hamiltonian_a: SerializableMatrix | None = None
     hamiltonian_b: SerializableMatrix | None = None
     core_hamiltonian: SerializableMatrix | None = None
 
     @model_validator(mode="after")
-    def _check_ao_matrices(self) -> Self:
-        """AO matrices are nao x nao of the orbitals' basis; H comes with S."""
+    def _check_ao_arrays(self) -> Self:
+        """Coefficients and AO matrices come with the basis set; H comes with S."""
+        orbitals, basis = self.orbitals, self.basis
         present = [name for name in _AO_MATRICES if getattr(self, name) is not None]
-        if not present:
-            return self
-        orbitals = self.orbitals
-        if orbitals.basis is None:
-            raise ValueError(
-                f"{', '.join(present)} need the orbitals' basis set: AO matrices are "
-                "nao x nao in orbitals.basis, which comes with the coefficients"
-            )
-        shape = (orbitals.basis.nao, orbitals.basis.nao)
-        for name in present:
-            if getattr(self, name).shape != shape:
+        if orbitals.coefficients_a is not None:
+            present.insert(0, "orbitals.coefficients_a")
+        if basis is None:
+            if present:
                 raise ValueError(
-                    f"{name} must be nao x nao = {shape}, not "
-                    f"{getattr(self, name).shape}"
+                    f"{', '.join(present)} need the basis set they are indexed by: "
+                    "Wavefunction.basis"
                 )
+            return self
+        if not present:
+            raise ValueError(
+                "basis comes with the arrays it indexes: orbital coefficients or an AO "
+                "matrix (overlap, hamiltonian_a, core_hamiltonian)"
+            )
+        nao = basis.nao
+        for name in ("coefficients_a", "coefficients_b"):
+            c = getattr(orbitals, name)
+            if c is not None and c.shape[0] != nao:
+                raise ValueError(
+                    f"orbitals.{name} must have one row per AO of the basis set "
+                    f"({nao}), not shape {c.shape}"
+                )
+        for name in _AO_MATRICES:
+            matrix = getattr(self, name)
+            if matrix is not None and matrix.shape != (nao, nao):
+                raise ValueError(
+                    f"{name} must be nao x nao = {(nao, nao)}, not {matrix.shape}"
+                )
+        core = orbitals.core_electrons
+        bare = [
+            e.center
+            for e in basis.ecp
+            if core is None or e.center >= len(core) or core[e.center] == 0
+        ]
+        if bare:
+            raise ValueError(
+                f"atoms {bare} have ECPs, so orbitals.core_electrons must give the "
+                "electrons each ECP replaces"
+            )
         if self.hamiltonian_a is None:
             if self.hamiltonian_b is not None:
                 raise ValueError("hamiltonian_b needs hamiltonian_a")
@@ -121,6 +152,11 @@ class Wavefunction(QCDataBaseModel):
         if self.overlap is None:
             raise ValueError(
                 "a hamiltonian comes with the overlap its orbitals are eigenvectors in"
+            )
+        if orbitals.coefficients_a is None:
+            raise ValueError(
+                "a hamiltonian comes with the orbitals that are its eigenvectors: "
+                "orbitals.coefficients_a"
             )
         if orbitals.kind != OrbitalKind.canonical:
             raise ValueError(
@@ -139,21 +175,36 @@ class Wavefunction(QCDataBaseModel):
         """The same wavefunction with its AOs in another convention.
 
         Each array changes with its variance (`BasisSet.transform`): coefficients scale
-        by s per AO index and the AO matrices, all operators, by 1 / (s_mu s_nu).
+        by s per AO index and the AO matrices, all operators, by 1 / (s_mu s_nu). The
+        orbital levels are shared, not copied.
 
         Args:
             convention: The target AO convention.
 
         Returns:
-            A new wavefunction whose orbitals' basis set has the target convention.
+            A new wavefunction whose basis set has the target convention.
 
         Raises:
-            ValueError: If the orbitals have no coefficients.
+            ValueError: If the wavefunction has no basis set (only orbital levels).
         """
-        orbitals = self.orbitals.with_convention(convention)
-        basis = self.orbitals.basis
-        assert basis is not None  # with_convention raised otherwise
-        update: dict[str, Any] = {"orbitals": orbitals}
+        basis = self.basis
+        if basis is None:
+            raise ValueError(
+                "with_convention() needs the basis set, and this wavefunction has only "
+                "orbital levels: programs return the basis set with the coefficients or "
+                "an AO matrix, on request"
+            )
+        update: dict[str, Any] = {
+            "basis": basis.model_copy(update={"ao_convention": convention})
+        }
+        orbitals = self.orbitals
+        coefficients = {
+            name: basis.transform(c, convention, kind="coefficients")
+            for name in ("coefficients_a", "coefficients_b")
+            if (c := getattr(orbitals, name)) is not None
+        }
+        if coefficients:
+            update["orbitals"] = orbitals.model_copy(update=coefficients)
         for name in _AO_MATRICES:
             matrix = getattr(self, name)
             if matrix is not None:
@@ -221,7 +272,7 @@ class SinglePointData(FileData, CalcInfoData):
             Q^A_ij the integrals of (r - R_A)_i (r - R_A)_j, as for `atomic_dipoles`.
         shell_populations: Electrons in each shell of the basis set,
             sum_{mu in shell} (P S)_mu,mu with P = P_a + P_b, indexed like
-            ``wavefunction.orbitals.basis.shells``. Populations, not charges, which
+            ``wavefunction.basis.shells``. Populations, not charges, which
             depend on method-specific reference occupations.
         shell_atoms: The atom (0-based) of each shell of `shell_populations`, so they
             stand without a basis set; required with them.
@@ -379,13 +430,13 @@ class SinglePointData(FileData, CalcInfoData):
             raise ValueError("shell_atoms must be atom indices >= 0")
         if min(self.shell_angular_momenta, default=0) < 0:
             raise ValueError("shell_angular_momenta must be >= 0")
-        basis = self.wavefunction.orbitals.basis if self.wavefunction else None
+        basis = self.wavefunction.basis if self.wavefunction else None
         if basis is not None and (
             self.shell_atoms != [s.center for s in basis.shells]
             or self.shell_angular_momenta != [s.angular_momentum for s in basis.shells]
         ):
             raise ValueError(
-                "shell_populations are indexed like wavefunction.orbitals.basis.shells: "
+                "shell_populations are indexed like wavefunction.basis.shells: "
                 "shell_atoms and shell_angular_momenta must match its shells"
             )
         return self
@@ -457,13 +508,13 @@ def _check_fits_structure(
         raise ValueError(
             f"the orbitals' core_electrons list {len(core)} atoms; the structure has {n}"
         )
-    if orbitals.basis is not None:
-        basis = orbitals.basis
+    basis = results.wavefunction.basis
+    if basis is not None:
         centers = [s.center for s in basis.shells] + [e.center for e in basis.ecp]
         if max(centers, default=0) >= n:
             raise ValueError(
-                f"the orbitals' basis set has functions on atom {max(centers)}; the "
-                f"structure has {n} atoms"
+                f"the wavefunction's basis set has functions on atom {max(centers)}; "
+                f"the structure has {n} atoms"
             )
     if not electrons:
         return

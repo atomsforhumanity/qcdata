@@ -271,11 +271,11 @@ def make_wavefunction(spin="restricted", basis=BASIS, s=S0):
         spin=spin,
         occupations_a=occ_a,
         occupations_b=occ_b,
-        basis=basis,
         **{k: v for k, v in fields.items() if not k.startswith("hamiltonian")},
     )
     return Wavefunction(
         orbitals=orbitals,
+        basis=basis,
         overlap=s,
         core_hamiltonian=h + h.T,
         **{k: v for k, v in fields.items() if k.startswith("hamiltonian")},
@@ -309,7 +309,7 @@ def test_every_conversion_keeps_the_wavefunction_consistent(spin):
     p0 = sum(wf.orbitals.density())
     for conv in ALL_CONVENTIONS:
         there = wf.with_convention(conv)
-        assert there.orbitals.basis.ao_convention == conv
+        assert there.basis.ao_convention == conv
         s = there.overlap
         np.testing.assert_allclose(
             s, independent_overlap(BASIS, water.geometry, conv), atol=1e-12
@@ -351,7 +351,7 @@ def test_conversion_does_not_copy_through_lists(monkeypatch):
     # Fields that do not change are shared, not copied.
     assert there.orbitals.energies_a is wf.orbitals.energies_a
     assert there.orbitals.occupations_b is wf.orbitals.occupations_b
-    assert there.orbitals.basis.shells is wf.orbitals.basis.shells
+    assert there.basis.shells is wf.basis.shells
 
 
 def test_transform_variances():
@@ -468,13 +468,23 @@ def levels(**kw):
 def test_levels_without_coefficients():
     orb = levels()
     assert orb.kind is OrbitalKind.canonical and orb.restricted and orb.nmo == 8
-    assert orb.basis is None and orb.coefficients_a is None
-    for call in (orb.density, lambda: orb.with_convention(MOLDEN_CONVENTION)):
-        with pytest.raises(ValueError, match="coefficients"):
-            call()
+    assert orb.coefficients_a is None
     with pytest.raises(ValueError, match="coefficients"):
-        Wavefunction(orbitals=orb).with_convention(MOLDEN_CONVENTION)
+        orb.density()
+    wf = Wavefunction(orbitals=orb)
+    assert wf.basis is None
+    with pytest.raises(ValueError, match="basis set"):
+        wf.with_convention(MOLDEN_CONVENTION)
     assert Orbitals.model_validate_json(orb.model_dump_json()) == orb
+
+
+def test_the_basis_set_is_the_wavefunctions():
+    """Orbitals hold no basis set and no conversion: the wavefunction owns both."""
+    assert "basis" not in Orbitals.model_fields
+    assert not hasattr(Orbitals, "with_convention")
+    wf = make_wavefunction()
+    with pytest.raises(ValidationError, match="basis"):
+        Orbitals.model_validate({**dict(wf.orbitals), "basis": BASIS.model_dump()})
 
 
 def test_occupations_are_per_spin_and_bounded():
@@ -529,28 +539,62 @@ def test_electronic_temperature_and_fermi_levels():
         levels(electronic_temperature=-1.0)
 
 
-def test_coefficients_come_with_their_basis():
+def test_coefficients_have_one_column_per_orbital():
     occ_a, occ_b = occupations(5, 5)
     c = np.eye(NAO)
     e = np.zeros(NAO)
     base = dict(
         spin="restricted", energies_a=e, occupations_a=occ_a, occupations_b=occ_b
     )
-    with pytest.raises(ValidationError, match="both or neither"):
-        Orbitals(**base, coefficients_a=c)
-    with pytest.raises(ValidationError, match="both or neither"):
-        Orbitals(**base, basis=BASIS)
-    with pytest.raises(ValidationError, match="nao x nmo"):
-        Orbitals(**base, basis=BASIS, coefficients_a=c[:, :3])
+    assert Orbitals(**base, coefficients_a=c).coefficients_a.shape == (NAO, NAO)
+    # More AOs than orbitals (linear dependencies removed) is fine; the rows are the
+    # basis set's to check.
+    occ3 = occupations(2, 2, nmo=3)
+    three = dict(base, energies_a=np.zeros(3), occupations_a=occ3[0])
+    three["occupations_b"] = occ3[1]
+    assert Orbitals(**three, coefficients_a=c[:, :3]).nmo == 3
+    with pytest.raises(ValidationError, match="one column per orbital"):
+        Orbitals(**base, coefficients_a=c[:, :3])
+    with pytest.raises(ValidationError, match="one column per orbital"):
+        Orbitals(**base, coefficients_a=np.zeros(NAO))
     with pytest.raises(ValidationError, match="no coefficients_b"):
-        Orbitals(**base, basis=BASIS, coefficients_a=c, coefficients_b=c)
+        Orbitals(**base, coefficients_a=c, coefficients_b=c)
     unrestricted = dict(base, spin="unrestricted", energies_b=e)
     with pytest.raises(ValidationError, match="need coefficients_b"):
-        Orbitals(**unrestricted, basis=BASIS, coefficients_a=c)
+        Orbitals(**unrestricted, coefficients_a=c)
     with pytest.raises(ValidationError, match="coefficients_b must be"):
-        Orbitals(**unrestricted, basis=BASIS, coefficients_a=c, coefficients_b=c[:-1])
+        Orbitals(**unrestricted, coefficients_a=c, coefficients_b=c[:-1])
     with pytest.raises(ValidationError, match="coefficients_b needs"):
         Orbitals(**unrestricted, coefficients_b=c)
+
+
+def test_coefficients_and_ao_matrices_come_with_the_basis_set():
+    wf = make_wavefunction()
+    with pytest.raises(ValidationError, match="coefficients_a need the basis set"):
+        Wavefunction(orbitals=wf.orbitals)
+    with pytest.raises(ValidationError, match="one row per AO"):
+        Wavefunction(
+            orbitals=wf.orbitals,
+            basis=BasisSet(shells=BASIS.shells[:-1]),
+        )
+    uwf = make_wavefunction("unrestricted")
+    cb = uwf.orbitals.coefficients_b
+    short = Orbitals.model_validate(
+        {
+            **dict(uwf.orbitals),
+            "coefficients_a": uwf.orbitals.coefficients_a[:-1],
+            "coefficients_b": cb[:-1],
+        }
+    )
+    with pytest.raises(ValidationError, match="coefficients_a must have one row"):
+        Wavefunction(orbitals=short, basis=BASIS)
+    # A basis set describes the AOs of something: it never comes alone.
+    with pytest.raises(ValidationError, match="basis comes with the arrays"):
+        Wavefunction(orbitals=levels(), basis=BASIS)
+    # Coefficients alone, with their basis set.
+    alone = Wavefunction(orbitals=wf.orbitals, basis=BASIS)
+    assert alone.overlap is None
+    assert Wavefunction.model_validate_json(alone.model_dump_json()) == alone
 
 
 def test_core_electrons_and_ecps():
@@ -560,12 +604,14 @@ def test_core_electrons_and_ecps():
         levels(core_electrons=[-2, 0, 0])
     # An ECP atom's core must be given: it is what the electron count reflects.
     wf = make_wavefunction()
-    with_ecp = dict(wf.orbitals, basis=make_basis(ecp=[ECP]))
+    with_ecp = make_basis(ecp=[ECP])
     for core in (None, [0, 0, 0], []):
+        orbitals = wf.orbitals.model_copy(update={"core_electrons": core})
         with pytest.raises(ValidationError, match=r"atoms \[0\] have ECPs"):
-            Orbitals.model_validate(dict(with_ecp, core_electrons=core))
-    orb = Orbitals.model_validate(dict(with_ecp, core_electrons=[2, 0, 0]))
-    assert orb.basis.ecp[0].center == 0
+            Wavefunction(orbitals=orbitals, basis=with_ecp, overlap=S0)
+    orbitals = wf.orbitals.model_copy(update={"core_electrons": [2, 0, 0]})
+    ok = Wavefunction(orbitals=orbitals, basis=with_ecp, overlap=S0)
+    assert ok.basis.ecp[0].center == 0
 
 
 def test_density_is_c_n_ct_per_spin():
@@ -576,7 +622,6 @@ def test_density_is_c_n_ct_per_spin():
         energies_a=np.zeros(NAO),
         occupations_a=occ_a,
         occupations_b=occ_b,
-        basis=BASIS,
         coefficients_a=c,
     )
     pa, pb = orb.density()
@@ -600,32 +645,81 @@ def test_wavefunction_needs_orbitals_and_round_trips():
 
 def test_ao_matrices_need_the_basis_and_their_shape():
     wf = make_wavefunction()
-    no_basis = levels()
     for name in ("overlap", "core_hamiltonian"):
-        with pytest.raises(ValidationError, match="basis set"):
-            Wavefunction(orbitals=no_basis, **{name: np.eye(8)})
+        with pytest.raises(ValidationError, match=f"{name} need the basis set"):
+            Wavefunction(orbitals=levels(), **{name: np.eye(8)})
         with pytest.raises(ValidationError, match="nao x nao"):
-            Wavefunction(orbitals=wf.orbitals, **{name: np.eye(NAO - 1)})
+            Wavefunction(orbitals=wf.orbitals, basis=BASIS, **{name: np.eye(NAO - 1)})
     with pytest.raises(ValidationError, match="overlap"):
-        Wavefunction(orbitals=wf.orbitals, hamiltonian_a=wf.hamiltonian_a)
+        Wavefunction(orbitals=wf.orbitals, basis=BASIS, hamiltonian_a=wf.hamiltonian_a)
     with pytest.raises(ValidationError, match="no hamiltonian_b"):
         Wavefunction(
             orbitals=wf.orbitals,
+            basis=BASIS,
             overlap=S0,
             hamiltonian_a=wf.hamiltonian_a,
             hamiltonian_b=wf.hamiltonian_a,
         )
     with pytest.raises(ValidationError, match="hamiltonian_b needs hamiltonian_a"):
-        Wavefunction(orbitals=wf.orbitals, overlap=S0, hamiltonian_b=wf.hamiltonian_a)
+        Wavefunction(
+            orbitals=wf.orbitals,
+            basis=BASIS,
+            overlap=S0,
+            hamiltonian_b=wf.hamiltonian_a,
+        )
     uwf = make_wavefunction("unrestricted")
     with pytest.raises(ValidationError, match="need hamiltonian_b"):
-        Wavefunction(orbitals=uwf.orbitals, overlap=S0, hamiltonian_a=uwf.hamiltonian_a)
+        Wavefunction(
+            orbitals=uwf.orbitals,
+            basis=BASIS,
+            overlap=S0,
+            hamiltonian_a=uwf.hamiltonian_a,
+        )
     natural = wf.orbitals.model_copy(update={"kind": "natural", "energies_a": None})
     natural = Orbitals.model_validate(dict(natural))
     with pytest.raises(ValidationError, match="canonical"):
-        Wavefunction(orbitals=natural, overlap=S0, hamiltonian_a=wf.hamiltonian_a)
+        Wavefunction(
+            orbitals=natural, basis=BASIS, overlap=S0, hamiltonian_a=wf.hamiltonian_a
+        )
     # The overlap and core Hamiltonian alone are fine.
-    assert Wavefunction(orbitals=wf.orbitals, overlap=S0).hamiltonian_a is None
+    plain = Wavefunction(orbitals=wf.orbitals, basis=BASIS, overlap=S0)
+    assert plain.hamiltonian_a is None
+
+
+def test_an_overlap_ships_the_basis_set_and_no_coefficients():
+    """An AO matrix needs only the basis set: levels, S and h, no nao x nmo arrays."""
+    wf = make_wavefunction()
+    orbitals = levels(
+        energies_a=np.linspace(-1.0, 1.0, NAO),
+        occupations_a=occupations(5, 5)[0],
+        occupations_b=occupations(5, 5)[1],
+    )
+    s_only = Wavefunction(
+        orbitals=orbitals,
+        basis=BASIS,
+        overlap=S0,
+        core_hamiltonian=wf.core_hamiltonian,
+    )
+    assert s_only.orbitals.coefficients_a is None
+    assert Wavefunction.model_validate_json(s_only.model_dump_json()) == s_only
+    out = _output(SinglePointData(provenance=PROV, energy=-76.0, wavefunction=s_only))
+    assert out.results.wavefunction.basis.nao == NAO
+    # It converts without coefficients, and back.
+    unit = AOConvention(cartesian_normalization="unit")
+    there = s_only.with_convention(unit)
+    assert there.orbitals is s_only.orbitals
+    assert there.basis.ao_convention == unit
+    np.testing.assert_allclose(
+        there.overlap, independent_overlap(BASIS, water.geometry, unit), atol=1e-12
+    )
+    back = there.with_convention(DEFAULT_AO_CONVENTION)
+    np.testing.assert_allclose(back.overlap, S0, atol=1e-12)
+    np.testing.assert_allclose(back.core_hamiltonian, wf.core_hamiltonian, atol=1e-12)
+    # A hamiltonian implies the orbitals: its eigenvectors come with it.
+    with pytest.raises(ValidationError, match="eigenvectors: orbitals.coefficients_a"):
+        Wavefunction(
+            orbitals=orbitals, basis=BASIS, overlap=S0, hamiltonian_a=wf.hamiltonian_a
+        )
 
 
 def test_old_wavefunction_fields_are_gone():
