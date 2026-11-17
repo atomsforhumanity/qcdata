@@ -85,14 +85,13 @@ Resource keys (`threads`, `memory_gib`, `backend`, `device_memory_gib`) carry
 
 ## Calculation key
 
-A store files each result under `qcdata.calculation_key(inp, context)`: `k1:` followed by
-the sha256 hex digest of a canonical JSON text of the input as given and a context. Two
+A store files each result under `qcdata.calculation_key(inp)`: `k1:` followed by the
+sha256 hex digest of a canonical JSON text of the input as given, and nothing else. Two
 inputs share a key only when they request the same calculation written the same way.
 Every rule errs toward a miss, because a wrong hit returns another calculation's numbers.
 
-The canonical text is the document `{"context": context, "input": input}`, written as
-compact JSON (separators `,` and `:`), keys sorted, non-ASCII characters escaped as
-`\uXXXX`, with:
+The canonical text is the input's canonical form, written as compact JSON (separators `,`
+and `:`), keys sorted, non-ASCII characters escaped as `\uXXXX`, with:
 
 - **numbers normalized**: a float with an integral value is written as an integer (`100.0`
   as `100`, `-0.0` as `0`), any other float in Python's shortest round-trip form
@@ -126,12 +125,15 @@ expanded forms (rule 2), a default written out (`scf.max_iter: 100`), and `null`
 an absent key all give different keys: a cache miss, never a wrong hit. The key
 normalizes only itself; stored values keep `-0.0` and their number types.
 
-The context is what must match beyond the input for a stored result to be reusable: a
-version or numerics epoch for each program the input names (`{"linus": "6", "qcopt":
-"0.3.0"}`), mapping strings to strings. It comes from the store's configuration, so
-computing a key never needs a program installed. A program that changes what a default
-computes (linus's `jk` defaulting to `df`) changes the numbers behind unchanged keys, so
-it moves its numerics epoch, and the store's configuration with it.
+The key names the calculation, never the code that produced its numbers. Which code
+did is each program's numerics identity (its version, or a numerics epoch, an
+executable's version, a model's checksum), which the runner and the store record with
+every run, for the input's program and each subprogram; a store keeps several runs per
+key and reuses one only when its identities match the programs that would run now. So a
+key never changes when code changes, anything holding keys stays valid across releases,
+and computing a key never needs a program installed. A program that changes what a
+default computes (linus's `jk` defaulting to `df`) changes its numerics identity, not
+the key.
 
 Golden keys in qcdata's tests pin the canonical form. Changing any rule, the default of
 any field an input holds (an omitted field would then mean something else), or the type of

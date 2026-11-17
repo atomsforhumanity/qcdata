@@ -1,11 +1,12 @@
 """The calculation key: whether two inputs are the same calculation.
 
-A store files results under ``calculation_key(inp, context)``. The key is the sha256 of a
-canonical JSON form of the input as given, so it never consults a program. Every rule
-errs toward a miss: two inputs share a key only when they request the same calculation
-written the same way, and a wrong hit would return another calculation's numbers.
-`docs/conventions.md` states the rules; golden keys in the tests pin them, and changing
-any of them is a new key version (``k2``).
+A store files results under ``calculation_key(inp)``. The key is the sha256 of a
+canonical JSON form of the input as given, and nothing else: which calculation, never
+which code produced the numbers, so a key never changes when code changes and never
+consults a program. Every rule errs toward a miss: two inputs share a key only when they
+request the same calculation written the same way. `docs/conventions.md` states the
+rules; golden keys in the tests pin them, and changing any of them is a new key version
+(``k2``).
 """
 
 from __future__ import annotations
@@ -34,11 +35,13 @@ _RESOURCE_KEYWORDS = frozenset({"threads", "memory_gib"})
 _COORDINATE_SCALE = 1e10
 
 
-def calculation_key(inp: FileInput | ProgramInput, context: Mapping[str, str]) -> str:
+def calculation_key(inp: FileInput | ProgramInput) -> str:
     """Return the key under which a store files the calculation ``inp`` requests.
 
-    The key is ``"k1:"`` and the sha256 hex digest of the canonical JSON form of
-    ``{"context": context, "input": inp}``. The input enters as given, with:
+    The key is ``"k1:"`` and the sha256 hex digest of the canonical JSON form of the
+    input as given. It names the calculation only: which code produced a stored result
+    (each program's numerics identity) is recorded with each run by the runner and the
+    store, not hashed into the key. The canonical form has:
 
     - keys sorted;
     - numbers normalized: an integral float is written as an integer (``100.0`` as
@@ -61,17 +64,13 @@ def calculation_key(inp: FileInput | ProgramInput, context: Mapping[str, str]) -
     Args:
         inp: The input as given. A bare `ProgramSpec` is not a calculation; bind it to
             a structure with `ProgramInput.from_spec` first.
-        context: What must match beyond the input for a stored result to be reusable,
-            such as a version or numerics epoch per program the input names
-            (``{"linus": "6"}``). It comes from the store's configuration.
 
     Returns:
         The key, ``"k1:"`` followed by 64 hex digits.
 
     Raises:
-        TypeError: ``inp`` is not an input, ``context`` is not strings to strings, or
-            the input holds a value JSON cannot represent (a set, bytes outside
-            ``files``, a mapping with non-string keys).
+        TypeError: ``inp`` is not an input, or it holds a value JSON cannot represent
+            (a set, bytes outside ``files``, a mapping with non-string keys).
         ValueError: The input holds a non-finite number.
     """
     if not isinstance(inp, FileInput) or (
@@ -81,14 +80,8 @@ def calculation_key(inp: FileInput | ProgramInput, context: Mapping[str, str]) -
             "A calculation key needs a ProgramInput or a FileInput, not "
             f"{type(inp).__name__}; bind a ProgramSpec with ProgramInput.from_spec."
         )
-    for name, value in context.items():
-        if not isinstance(name, str) or not isinstance(value, str):
-            raise TypeError(
-                f"A key context maps strings to strings; got {name!r}: {value!r}."
-            )
-    document = {"context": dict(context), "input": _canonical_model(inp)}
     text = json.dumps(
-        document,
+        _canonical_model(inp),
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=True,
