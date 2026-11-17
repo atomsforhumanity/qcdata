@@ -372,22 +372,28 @@ on:
 
 `ErrorInfo.details` holds structured facts about a failure as plain JSON, so a caller never
 parses the message. For `host_memory` and `device_memory` the keys are, each given when
-the program knows it:
+the program knows it, in the terms of the memory keyword (`memory_gib` for host memory,
+`device_memory_gib` for a device's):
 
 | key | meaning |
 |---|---|
-| `required_gib` | the memory (GiB) the calculation needed: its plan's need, or at least what had been allocated plus the request that failed |
-| `available_gib` | the memory (GiB) it could use: its budget (`memory_gib`, `device_memory_gib` or the grant) or what the device had free |
+| `required_gib` | the keyword's value (GiB) with which the calculation would fit: at least, when the program knows only that the failed allocation did not fit |
+| `available_gib` | the keyword's value (GiB) the calculation ran with: the keyword as given, else the grant, else what the device had free |
+
+These are what a caller sets, not raw needs. A program that budgets only part of its
+memory (a DFT program that keeps a share for its workspaces) converts its need: a
+3-index tensor of 1.25 GiB under a budget of 75% of `memory_gib` gives `required_gib`
+1.67. The raw need, where useful, goes under a program key beside them.
 
 ```json
 {"kind": "resource", "code": "host_memory",
- "message": "RI-K needs at least 1.25 GiB for its 3-index exchange tensor, more than its budget of 1.19 GiB",
- "details": {"required_gib": 1.25, "available_gib": 1.19}}
+ "message": "RI-K needs at least 1.25 GiB for its 3-index exchange tensor, which takes memory_gib >= 1.67; it ran with 1.5",
+ "details": {"required_gib": 1.67, "available_gib": 1.5, "tensor_gib": 1.25}}
 ```
 
-A dispatcher that resubmits with more memory reads `required_gib`; qc* itself still
-schedules nothing by memory. Programs may add their own keys beside these, and other
-codes may define theirs.
+A dispatcher that resubmits with `memory_gib` (or `device_memory_gib`) set to
+`required_gib` gets past this failure; qc* itself still schedules nothing by memory.
+Programs may add their own keys beside these, and other codes may define theirs.
 
 ### Errors
 

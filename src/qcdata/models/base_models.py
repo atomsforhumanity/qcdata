@@ -677,8 +677,10 @@ class ErrorInfo(QCDataBaseModel):
             because the SCF did not converge" stays structured through every level.
         details: Structured facts about the failure, as plain JSON, so callers need
             not parse `message`. The conventions name the keys of shared codes:
-            ``required_gib`` and ``available_gib`` (GiB) for ``host_memory`` and
-            ``device_memory``, when the program knows them.
+            ``required_gib`` and ``available_gib`` for ``host_memory`` and
+            ``device_memory``, when the program knows them, in the memory keyword's
+            terms: the ``memory_gib`` (``device_memory_gib``) with which the calculation
+            would fit, and the one it ran with (GiB).
     """
 
     kind: ErrorKind
