@@ -346,13 +346,16 @@ Shared error codes (kind `input`):
 | `not_modeled` | the structure's charge or multiplicity is one the method does not represent (GFN-FF given a radical, a neutral-only ML potential given an ion). The message names the property. A method never runs on, or silently ignores, a charge or multiplicity it cannot model |
 | `unnamed_subprogram` | a calculation ran, through its context (`ctx.compute`, `ctx.session`), a program its input does not name among its subprograms (recursively); the message names it. Refused so that a run's identities cover every program it used |
 
-Shared error codes of other kinds, which runners and schedulers act on:
+Shared error codes of other kinds, which runners, schedulers and retrying workflows act
+on:
 
 | kind | code | meaning |
 |---|---|---|
 | `resource` | `host_memory` | out of host memory (a failed allocation, or the plan's need above the grant); `details` as below |
 | `resource` | `device_memory` | out of GPU memory; `details` as below |
 | `backend` | `device_lost` | a GPU fault poisoned the device context (illegal address, launch failure, device assert, ECC error, launch timeout); nothing more can run in this process. A worker answers the request in flight with it and then exits; in process, the caller should not use the program again |
+| `convergence` | `scf_not_converged` | the SCF ended without meeting its thresholds (out of iterations, or stalled with no rule to accept it). The results hold the last iterate: its energy and, where the program gives them, its orbitals; the record holds what the program keeps of its history |
+| `convergence` | `response_not_converged` | the response equations (CPHF/CPKS, for a Hessian or a property) ended above their tolerance; the results reached are attached |
 | `environment` | `worker_died` | a worker process ended mid-request (a crash, a signal, an out-of-memory kill); set by the client, with the exit status and the tail of the worker's stderr in the message. A worker that exits on purpose answers the request in flight first (`device_lost`), so only later requests see `worker_died` |
 
 `ErrorInfo.details` holds structured facts about a failure as plain JSON, so a caller never
@@ -392,8 +395,11 @@ codes may define theirs.
 | `environment` | the program could not run: not installed, no licence, process died (set by the runner) |
 | `internal` | a failure nobody anticipated: a bug (an exception other than `ProgramError`, a broken invariant, a crash) or, on the codec path, a failure no rule classifies (a reported failure, an unexplained exit, unreadable output). A failure a program or codec anticipates takes the kind that fits it |
 
-`code` refines a kind with a program-defined name callers can branch on (qcopt:
-`max_iter`, `energy_rose`, `not_first_order_saddle`, `irc_incomplete`).
+`code` refines a kind with a name callers can branch on: a shared code above, else the
+program's own. An optimizer's convergence failures keep their own codes (qcopt:
+`max_iter`, `energy_rose`, `not_first_order_saddle`, `irc_incomplete`); an SCF's and a
+response's are the shared `scf_not_converged` and `response_not_converged`, whichever
+program runs them.
 
 A failed calculation raises `ProgramError`, from every program's `compute` and every
 session call alike, carrying its `ErrorInfo` and the partial results; any other exception

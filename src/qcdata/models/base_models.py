@@ -667,9 +667,10 @@ class ErrorInfo(QCDataBaseModel):
     Attributes:
         kind: The kind of failure.
         message: A human-readable explanation.
-        code: A stable snake_case code that refines `kind` (e.g. ``max_iter``,
-            ``energy_rose``, ``not_first_order_saddle``), defined and documented by the
-            program. Callers branch on it instead of parsing `message`.
+        code: A stable snake_case code that refines `kind`: one the conventions share
+            (``scf_not_converged``, ``host_memory``) or one the program defines and
+            documents (``max_iter``, ``energy_rose``, ``not_first_order_saddle``).
+            Callers branch on it instead of parsing `message`.
         program: The subprogram that failed (kind ``program``), or the program that
             failed when it is not the top-level one.
         cause: The subprogram's own error, for kind ``program``: "the gradient failed
