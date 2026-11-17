@@ -579,7 +579,9 @@ class ExecutionInfo(QCDataBaseModel):
             the program's stated round-off, and bitwise only within one.
         timings: Wall-clock seconds per phase of the calculation. The keys are the
             program's; ``total`` is the whole call, and a program with subprograms
-            reports ``subprograms`` (time inside them) beside its own phases.
+            reports ``subprograms`` (time inside them) beside its own phases. An
+            output of a batch also has ``batch``, the whole batch's wall time, set by
+            the runner.
         threads: CPU threads the calculation ran with. Some programs' results depend
             on it at round-off, so it is recorded with every result.
         peak_memory_gib: Peak host memory the calculation used (GiB), as measured.
@@ -593,10 +595,10 @@ class ExecutionInfo(QCDataBaseModel):
             with the run, so an output read back says which code made it. A result
             carried forward to new code keeps the identities that made it. Empty for
             an output no runner made.
-        store_run: Where an output read from a store came from, as ``"<key>/<run>"``
-            (its calculation key and run id); None for an output that ran. The store
-            sets it on the outputs it returns and never stores it, so a cache hit is
-            told from a fresh run by this field alone.
+        store_run: Where the output is filed in a store, as ``"<key>/<run>"`` (its
+            calculation key and run id): set by the store on the outputs it returns
+            and by the runner on an output it has just stored; never stored itself.
+            None for an output no store holds.
         extras: Additional execution information.
     """
 

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.24.0a6] - 2026-11-17
+
+### Changed
+
+- Conventions (no code changes): the shared input code `unnamed_subprogram`; `execution.store_run` names a stored run on every output a store holds, also one a runner has just stored; `timings["batch"]`, a batch's wall time; progress events (`ctx.progress`, the shared key `event`, the runner's `path`). The `ExecutionInfo` docstrings say the same.
+
+
 ## [0.24.0a5] - 2026-11-17
 
 ### Changed

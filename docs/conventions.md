@@ -344,6 +344,7 @@ Shared error codes (kind `input`):
 | `not_applicable` | a setting of another calculation type, or a session request outside the calctypes it was opened for. With kind `unsupported`, an optional output the program cannot give |
 | `no_effect` | made irrelevant by the other values given |
 | `not_modeled` | the structure's charge or multiplicity is one the method does not represent (GFN-FF given a radical, a neutral-only ML potential given an ion). The message names the property. A method never runs on, or silently ignores, a charge or multiplicity it cannot model |
+| `unnamed_subprogram` | a calculation ran, through its context (`ctx.compute`, `ctx.session`), a program its input does not name among its subprograms (recursively); the message names it. Refused so that a run's identities cover every program it used |
 
 Shared error codes of other kinds, which runners and schedulers act on:
 
@@ -421,8 +422,22 @@ names, as the runner saw them when it ran (a program named with several specs jo
 sorted, distinct identities with `;`). The runner sets it on every output it returns and
 the store keeps it with the run, so an output read back from a store names its code
 without a second lookup; a carried result keeps the identities that made it. An output a
-store returned has `execution.store_run`, `"<key>/<run>"`: the store sets it when it
-reads the run and never stores it, so it is None on every output that ran.
+store holds names its run in `execution.store_run`, `"<key>/<run>"`: the store sets it on
+every output it returns, and a runner sets it on an output it has just stored; it is never
+stored itself, and it is None on an output no store holds. An output of a batch also has
+`timings["batch"]`, the whole batch's wall time (s), set by the runner; its `wall_time` is
+its own where the program can tell (a lockstep batch knows when each task finished), else
+the batch's.
+
+### Progress events
+
+A program reports what it is doing through its runner context, `ctx.progress(event)`, when
+the caller listens (it is None otherwise). An event is a small JSON object of the
+program's own (plain JSON values, in the units above, small enough to send every step),
+with one shared key: `event`, a snake_case name of what happened (`step`). Programs
+document their events. The runner adds `path`, the program names from the caller's input
+down to the program that emitted it; programs do not set it. Events are not results:
+nothing in them is stored, and no output depends on whether anyone listened.
 
 ## Saved files
 
