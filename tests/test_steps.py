@@ -277,3 +277,22 @@ def test_program_errors_group_carries_failed_outputs():
     with pytest.raises(ProgramErrors) as info:
         ProgramErrors.check([failed])
     assert info.value.exceptions[0].output is failed and info.value.results == [failed]
+
+
+def test_a_copied_input_with_a_string_calctype_still_works():
+    """model_copy(update=) doesn't validate; qcdata itself must not need the enum."""
+    from qcdata import ProgramInput, ProgramOutput
+
+    h2 = Structure(symbols=["H", "H"], geometry=[[0.0, 0.0, 0.0], [0.0, 0.0, 1.4]])
+    inp = ProgramInput(program="toy", calctype="energy", structure=h2)
+    copied = inp.model_copy(update={"calctype": "gradient"})
+    assert copied.model_dump()["calctype"] == "gradient"
+    assert "gradient" in copied.model_dump_json()
+    out = ProgramOutput(
+        input_data=copied,
+        success=True,
+        results=SinglePointData(
+            provenance=Provenance(program="toy"), energy=-1.1, gradient=np.zeros((2, 3))
+        ),
+    )
+    assert out.results.gradient.shape == (2, 3)

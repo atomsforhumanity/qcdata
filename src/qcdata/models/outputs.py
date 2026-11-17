@@ -162,7 +162,7 @@ class ProgramOutput(OutputBase, Generic[ProgramInputType, DataType]):
 
         if isinstance(self.input_data, ProgramInput):
             if isinstance(self.results, SinglePointData):
-                primary = self.input_data.calctype.value
+                primary = str(self.input_data.calctype)
                 if getattr(self.results, primary) is None:
                     raise ValueError(f"Missing the primary result: {primary}.")
             elif isinstance(self.results, OptimizationData):

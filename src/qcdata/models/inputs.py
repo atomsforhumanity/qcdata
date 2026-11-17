@@ -112,7 +112,7 @@ class ProgramSpec(FileInput):
         for child in subprograms:
             if child.calctype in seen:
                 raise ValueError(
-                    f"Duplicate subprogram calculation type '{child.calctype.value}': "
+                    f"Duplicate subprogram calculation type '{child.calctype}': "
                     "each sibling must have a unique calctype."
                 )
             seen.add(child.calctype)
@@ -123,7 +123,7 @@ class ProgramSpec(FileInput):
         self, calctype: CalcType, _info: FieldSerializationInfo
     ) -> str:
         """Serialize CalcType to string."""
-        return calctype.value
+        return str(calctype)
 
     def get_subprogram(self, calctype: CalcType | str) -> "ProgramSpec":
         """Return an immediate child by CalcType or string value.
@@ -235,13 +235,13 @@ class ProgramInput(ProgramSpec):
         if self.calctype in CHAIN_CALCTYPES:
             if self.structure is not None:
                 raise ValueError(
-                    f"A {self.calctype.value} input takes its structures from "
+                    f"A {self.calctype} input takes its structures from "
                     f"structures[{INITIAL_CHAIN!r}]; leave structure out."
                 )
             chain = self.structures.get(INITIAL_CHAIN)
             if not isinstance(chain, list) or len(chain) < 2:
                 raise ValueError(
-                    f"A {self.calctype.value} input needs structures"
+                    f"A {self.calctype} input needs structures"
                     f"[{INITIAL_CHAIN!r}]: a list of at least two structures, "
                     "endpoints included, in order."
                 )
@@ -251,7 +251,7 @@ class ProgramInput(ProgramSpec):
                     "same atoms in the same order."
                 )
         elif self.structure is None:
-            raise ValueError(f"A {self.calctype.value} input requires a structure.")
+            raise ValueError(f"A {self.calctype} input requires a structure.")
         return self
 
     def require_structure(self) -> Structure:
@@ -266,7 +266,7 @@ class ProgramInput(ProgramSpec):
         """
         if self.structure is None:
             raise ValueError(
-                f"This {self.calctype.value} input has no single structure; its "
+                f"This {self.calctype} input has no single structure; its "
                 f"structures are in structures[{INITIAL_CHAIN!r}]."
             )
         return self.structure
@@ -281,8 +281,7 @@ class ProgramInput(ProgramSpec):
         chain = self.structures.get(INITIAL_CHAIN)
         if not isinstance(chain, list):
             raise ValueError(
-                f"This {self.calctype.value} input has no structures"
-                f"[{INITIAL_CHAIN!r}]."
+                f"This {self.calctype} input has no structures[{INITIAL_CHAIN!r}]."
             )
         return chain
 

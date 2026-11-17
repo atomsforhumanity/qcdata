@@ -356,7 +356,7 @@ def generate_subprograms_string(subprograms: list[ProgramSpec]) -> str:
         }
         items.append(
             f"<li><strong>{html.escape(spec.program)} "
-            f"({spec.calctype.value})</strong>"
+            f"({spec.calctype})</strong>"
             + generate_dictionary_string(
                 {key: html.escape(value) for key, value in details.items()}
             )
@@ -460,7 +460,7 @@ def generate_output_table(*results: ProgramOutput) -> str:
             if res.execution.wall_time is not None
             else "No timing data"
         }</td>
-            <td>{structured.calctype.name if structured else ""}</td>
+            <td>{structured.calctype if structured else ""}</td>
             <td>{html.escape(res.input_data.program)}</td>
             <td>{
             f"{res.results.provenance.program} {res.results.provenance.program_version or ''}"

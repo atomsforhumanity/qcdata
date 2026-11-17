@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.24.0a8] - 2026-11-17
+
+### Fixed
+
+- An input made with `model_copy(update={"calctype": "..."})` holds a plain string, since pydantic doesn't validate updates; qcdata no longer reads `.calctype.value`, so such an input serializes and builds outputs.
+
+### Changed
+
+- The install lines give minimum versions of the alpha set instead of exact pins.
+
+
 ## [0.24.0a7] - 2026-11-17
 
 ### Added
