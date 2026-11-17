@@ -155,7 +155,11 @@ new_input_dict = prog_input.model_dump()
 new_input_dict["keywords"]["maxiter"] = 300
 # Instantiate a new object
 new_prog_input = ProgramInput.model_validate(new_input_dict)
+# The same input as a Hessian
+hessian_input = ProgramInput.model_validate(prog_input.model_dump() | {"calctype": "hessian"})
 ```
+
+Don't use pydantic's `model_copy(update=...)` to make a variant: it does not validate the new values, so a `calctype` given as `"hessian"` stays a plain string instead of becoming `CalcType.hessian`.
 
 To make an input at a new geometry, move its structure with `with_geometry` (a validated copy at new positions, in bohr) and bind the input's specification to it. `given` results, which belong to the old geometry, are left out.
 

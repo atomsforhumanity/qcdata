@@ -154,6 +154,11 @@ class ProgramInput(ProgramSpec):
     this by calculation type, so ``structure`` is always set for every other one; use
     ``require_structure()`` where a type checker needs to know that.
 
+    Make a variant by validating changed values,
+    ``ProgramInput.model_validate(inp.model_dump() | {"calctype": "hessian"})``, or at a
+    new geometry with ``from_spec``. Pydantic's ``model_copy(update=...)`` does not
+    validate: it would leave ``calctype`` a plain string.
+
     Attributes:
         structure: The primary/start/reference structure; None only for chain
             calculation types (``path_optimization``).

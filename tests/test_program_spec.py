@@ -323,3 +323,32 @@ def test_data_type_lookup():
         assert get_data_type(CalcType(calctype)) is data_type
     with pytest.raises(ValueError):
         get_data_type("not-a-calculation")
+
+
+def test_a_variant_of_an_input_is_validated(water):
+    """The documented way to vary an input converts and checks the new values."""
+    from qcdata import calculation_key
+
+    inp = ProgramInput(
+        program="test",
+        calctype="gradient",
+        structure=water,
+        model={"method": "gfn2"},
+        keywords={"accuracy": {"energy": 1e-6}},
+    )
+    variant = ProgramInput.model_validate(inp.model_dump() | {"calctype": "hessian"})
+    assert variant.calctype is CalcType.hessian
+    direct = ProgramInput(
+        program="test",
+        calctype="hessian",
+        structure=water,
+        model={"method": "gfn2"},
+        keywords={"accuracy": {"energy": 1e-6}},
+    )
+    assert variant == direct
+    assert calculation_key(variant) == calculation_key(direct)
+    with pytest.raises(ValidationError):
+        ProgramInput.model_validate(inp.model_dump() | {"calctype": "not_a_calctype"})
+    # model_copy does not validate (pydantic's documented behavior)
+    copied = inp.model_copy(update={"calctype": "hessian"})
+    assert not isinstance(copied.calctype, CalcType)
