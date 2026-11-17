@@ -19,16 +19,21 @@ from qcdata import (
     MOLDEN_CONVENTION,
     AOConvention,
     BasisSet,
+    CalcType,
     CartesianNormalization,
     CartesianOrder,
     Ecp,
     EcpTerm,
+    Frame,
     OrbitalKind,
     Orbitals,
+    ProgramInput,
+    ProgramOutput,
     Provenance,
     Shell,
     SinglePointData,
     SphericalOrder,
+    Structure,
     Wavefunction,
 )
 from qcdata.utils import water
@@ -671,3 +676,105 @@ def test_populations_and_atomic_multipoles():
         )
     with pytest.raises(ValidationError, match="quadrupole_kind"):
         SinglePointData(provenance=PROV, quadrupole_kind="traceless")
+
+
+# --------------------------------------------- results that know their structure
+
+
+def _output(results, structure=water):
+    return ProgramOutput(
+        input_data=ProgramInput(
+            program="test", calctype=CalcType.energy, structure=structure
+        ),
+        success=True,
+        results=results,
+    )
+
+
+def _with_cores(wf, core_electrons):
+    basis = make_basis(core_electrons)
+    return wf.model_copy(
+        update={"orbitals": wf.orbitals.model_copy(update={"basis": basis})}
+    )
+
+
+def test_occupations_hold_the_structures_electrons():
+    wf = make_wavefunction()  # 5 + 5 electrons, all-electron water
+    out = _output(SinglePointData(provenance=PROV, energy=-76.0, wavefunction=wf))
+    assert out.results.wavefunction.orbitals.occupations_a.sum() == 5
+    frame = Frame(success=True, structure=water, results=out.results)
+    assert frame.results is not None
+    cation = Structure(
+        symbols=water.symbols, geometry=water.geometry, charge=1, multiplicity=2
+    )
+    with pytest.raises(ValidationError, match="hold 10 electrons"):
+        _output(SinglePointData(provenance=PROV, energy=-76.0, wavefunction=wf), cation)
+    with pytest.raises(ValidationError, match="hold 10 electrons"):
+        Frame(success=True, structure=cation, results=out.results)
+    # A valence-only method: oxygen's 1s is a core, so 8 electrons in the orbitals.
+    valence = _with_cores(wf, [2, 0, 0])
+    with pytest.raises(ValidationError, match="core electrons leave 8"):
+        _output(SinglePointData(provenance=PROV, energy=-17.0, wavefunction=valence))
+    occ_a, occ_b = occupations(4, 4)
+    orbitals = valence.orbitals.model_copy(
+        update={"occupations_a": occ_a, "occupations_b": occ_b}
+    )
+    ok = valence.model_copy(update={"orbitals": orbitals})
+    _output(SinglePointData(provenance=PROV, energy=-17.0, wavefunction=ok))
+    # Levels without a basis set cannot be counted: core electrons live in the basis.
+    _output(
+        SinglePointData(
+            provenance=PROV, energy=-76.0, wavefunction=Wavefunction(orbitals=levels())
+        )
+    )
+
+
+def test_per_atom_results_fit_the_structure():
+    hydroxide = Structure(symbols=["O", "H"], geometry=water.geometry[:2], charge=-1)
+    with pytest.raises(ValidationError, match="core_electrons for 3 atoms"):
+        _output(
+            SinglePointData(
+                provenance=PROV, energy=-1.0, wavefunction=make_wavefunction()
+            ),
+            hydroxide,
+        )
+    for name, value in (
+        ("atomic_dipoles", np.zeros((2, 3))),
+        ("atomic_quadrupoles", np.zeros((4, 3, 3))),
+    ):
+        with pytest.raises(ValidationError, match=name):
+            _output(SinglePointData(provenance=PROV, energy=-1.0, **{name: value}))
+    with pytest.raises(ValidationError, match="atomic_spin_populations"):
+        _output(
+            SinglePointData(
+                provenance=PROV,
+                energy=-1.0,
+                atomic_spin_populations=[0.5, 0.5],
+                atomic_spin_populations_kind="mulliken",
+            )
+        )
+    with pytest.raises(ValidationError, match="shell_atoms names atom 3"):
+        _output(
+            SinglePointData(
+                provenance=PROV,
+                energy=-1.0,
+                shell_populations=[2.0],
+                shell_atoms=[3],
+                shell_angular_momenta=[0],
+            )
+        )
+
+
+def test_given_wavefunctions_fit_atoms_but_may_hold_other_electrons():
+    cation = Structure(
+        symbols=water.symbols, geometry=water.geometry, charge=1, multiplicity=2
+    )
+    given = SinglePointData(provenance=PROV, wavefunction=make_wavefunction())
+    # A neutral wavefunction is a fine guess for the cation.
+    inp = ProgramInput(program="test", calctype="energy", structure=cation, given=given)
+    assert inp.given.wavefunction is not None
+    other_atoms = Structure(symbols=["O", "H"], geometry=water.geometry[:2])
+    with pytest.raises(ValidationError, match="core_electrons for 3 atoms"):
+        ProgramInput(
+            program="test", calctype="energy", structure=other_atoms, given=given
+        )

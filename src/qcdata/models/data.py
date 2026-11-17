@@ -437,6 +437,63 @@ class SinglePointData(FileData, CalcInfoData):
         return None
 
 
+#: How far the orbitals' occupations may sum from the structure's electron count:
+#: Fermi smearing solves for the Fermi level to about 1e-8 electrons.
+_ELECTRON_COUNT_TOLERANCE = 1e-6
+
+
+def _check_fits_structure(
+    results: SinglePointData, structure: Structure, *, electrons: bool
+) -> None:
+    """Raise unless per-atom results and the wavefunction fit the structure.
+
+    Args:
+        results: Results at the structure.
+        structure: The structure they belong to.
+        electrons: Also check that the orbitals hold the structure's electrons,
+            sum(Z - core_electrons) - charge (possible only with a basis set, which
+            gives the core electrons).
+
+    Raises:
+        ValueError: If they do not fit.
+    """
+    n = len(structure.symbols)
+    shapes = {
+        "atomic_spin_populations": (n,),
+        "atomic_dipoles": (n, 3),
+        "atomic_quadrupoles": (n, 3, 3),
+    }
+    for name, shape in shapes.items():
+        value = getattr(results, name)
+        if value is not None and value.shape != shape:
+            raise ValueError(
+                f"{name} has shape {value.shape}; the structure's {n} atoms need {shape}"
+            )
+    if results.shell_atoms and max(results.shell_atoms) >= n:
+        raise ValueError(
+            f"shell_atoms names atom {max(results.shell_atoms)}; the structure has "
+            f"{n} atoms"
+        )
+    orbitals = results.wavefunction.orbitals if results.wavefunction else None
+    if orbitals is None or orbitals.basis is None:
+        return
+    core = orbitals.basis.core_electrons
+    if len(core) != n:
+        raise ValueError(
+            f"the orbitals' basis set has core_electrons for {len(core)} atoms; the "
+            f"structure has {n}"
+        )
+    if not electrons:
+        return
+    expected = sum(structure.atomic_numbers) - sum(core) - structure.charge
+    held = float(orbitals.occupations_a.sum() + orbitals.occupations_b.sum())
+    if abs(held - expected) > _ELECTRON_COUNT_TOLERANCE:
+        raise ValueError(
+            f"the orbitals hold {held:.10g} electrons, but the structure's nuclei, "
+            f"charge and the basis set's core electrons leave {expected}"
+        )
+
+
 class Frame(OutputBase):
     """One structure inside a larger calculation, with what was computed there.
 
@@ -496,6 +553,12 @@ class Frame(OutputBase):
                     else input_data.structure
                 )
         return value
+
+    @model_validator(mode="after")
+    def _check_results_fit(self) -> Self:
+        """Per-atom results and the orbitals' electrons fit the frame's structure."""
+        _check_fits_structure(self.results, self.structure, electrons=True)
+        return self
 
     @classmethod
     def from_output(cls, output: ProgramOutput[Any, Any]) -> Self:

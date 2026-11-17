@@ -19,6 +19,7 @@ from .data import (
     ScanData,
     SinglePointData,
     StructuredData,
+    _check_fits_structure,
     get_data_type,
 )
 from .inputs import FileInput, ProgramInput, ProgramSpec
@@ -160,6 +161,19 @@ class ProgramOutput(OutputBase, Generic[ProgramInputType, DataType]):
                 f"failure; received {type(value).__name__}."
             )
         return value
+
+    @model_validator(mode="after")
+    def _check_results_fit_structure(self) -> Self:
+        """Per-atom results and the orbitals' electrons fit the input's structure."""
+        if (
+            isinstance(self.input_data, ProgramInput)
+            and self.input_data.structure is not None
+            and isinstance(self.results, SinglePointData)
+        ):
+            _check_fits_structure(
+                self.results, self.input_data.structure, electrons=True
+            )
+        return self
 
     @model_validator(mode="after")
     def _validate_completion(self) -> Self:
