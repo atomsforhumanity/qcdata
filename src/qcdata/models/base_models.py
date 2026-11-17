@@ -436,8 +436,8 @@ class ExecutionInfo(QCDataBaseModel):
         host_cpu: The number of logical CPUs on the host, not the allocated CPU count.
         host_mem_gib: The host's total memory in GiB, not the allocated memory.
         timings: Wall-clock seconds per phase of the calculation. The keys are the
-            program's; ``total`` is the whole call, and drivers report ``children``
-            (time inside child calculations) beside their own phases.
+            program's; ``total`` is the whole call, and a program with subprograms
+            reports ``children`` (time inside its subprograms) beside its own phases.
         threads: CPU threads the calculation ran with. Some programs' results depend
             on it at round-off, so it is recorded with every result.
         peak_memory_gib: Peak host memory the calculation used (GiB), as measured.
@@ -470,7 +470,7 @@ class ErrorKind(StrEnum):
         numerical: A numerical failure: non-finite values, singular matrices.
         resource: Not enough memory, disk, or another resource as set up.
         backend: The hardware backend failed (no usable GPU, a device error).
-        program: A child calculation failed; `ErrorInfo.cause` holds its error.
+        program: A subprogram failed; `ErrorInfo.cause` holds its error.
         timeout: The calculation ran out of time (set by the runner).
         environment: The program could not be run at all: not installed, no licence,
             the process died (set by the runner).
@@ -501,10 +501,10 @@ class ErrorInfo(QCDataBaseModel):
         code: A stable snake_case code that refines `kind` (e.g. ``max_iter``,
             ``energy_rose``, ``not_first_order_saddle``), defined and documented by the
             program. Callers branch on it instead of parsing `message`.
-        program: The program that failed, when it is a child of the calculation (kind
-            ``program``) or differs from the top-level program.
-        cause: The child's own error, for kind ``program``: "the gradient failed because
-            the SCF did not converge" stays structured through drivers.
+        program: The subprogram that failed (kind ``program``), or the program that
+            failed when it is not the top-level one.
+        cause: The subprogram's own error, for kind ``program``: "the gradient failed
+            because the SCF did not converge" stays structured through every level.
     """
 
     kind: ErrorKind

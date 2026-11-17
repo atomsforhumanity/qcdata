@@ -91,8 +91,9 @@ so its runner's `key_context` names the new numerics epoch.
 
 ## Calculation types
 
-`energy`, `gradient`, `hessian`, and the driver types (`optimization`,
-`transition_state`, `irc`, `path_optimization`, `conformer_search`, ...). A `hessian`
+`energy`, `gradient`, `hessian`, and the types made of many evaluations
+(`optimization`, `transition_state`, `irc`, `path_optimization`, `conformer_search`, ...),
+usually run by a program with subprograms. A `hessian`
 result also holds the energy and gradient at the same geometry and, when the program can
 make them, the harmonic analysis (`vibrational_analysis`) and thermochemistry
 (`thermochemistry`), tuned or switched off with `freq.*`.
@@ -225,7 +226,7 @@ Shared error codes of other kinds, which runners and schedulers act on:
 | `numerical` | non-finite values, singular matrices |
 | `resource` | not enough memory or another resource as set up |
 | `backend` | the hardware backend failed |
-| `program` | a child calculation failed; `cause` holds its error |
+| `program` | a subprogram failed; `cause` holds its error |
 | `timeout` | out of time (set by the runner) |
 | `environment` | the program could not run: not installed, no licence, process died (set by the runner) |
 | `internal` | a bug in the program; on the codec path, any failure the codec does not classify (a reported failure, an unexplained exit, unreadable output) |
@@ -233,18 +234,23 @@ Shared error codes of other kinds, which runners and schedulers act on:
 `code` refines a kind with a program-defined name callers can branch on (qcopt:
 `max_iter`, `energy_rose`, `not_first_order_saddle`, `irc_incomplete`).
 
-A driver reports any failure of a child as kind `program`, whether the child's plan
-refused its settings or its run failed. `program` names the child, `cause` holds the
-child's own `ErrorInfo`, and the message starts with the child and calctype
-(`linus (gradient): ...`). Callers follow `cause` to the first error that is not of kind
-`program` to learn what went wrong. A child that fails for one task of a round (a session
-that will not open, a failed request) fails that task only. A child that is a Python
-callable rather than a program (qcopt's in-process evaluator) is reported the same way,
-with `program` None. Its `ProgramError` gives the cause; any other exception becomes a
-cause of kind `internal`, as qccompute treats a program's bug.
+A failed calculation raises `ProgramError`, from every program's `compute` and every
+session call alike, carrying its `ErrorInfo` and the partial results; any other exception
+is a bug. A runner turns it into a failed `ProgramOutput` only where it needs data (a
+store, the outputs of a list, a worker's reply).
+
+A program reports any failure of a subprogram as kind `program`, whether the
+subprogram's plan refused its settings or its run failed. `program` names the
+subprogram, `cause` holds the subprogram's own `ErrorInfo`, and the message starts with
+the subprogram and calctype (`linus (gradient): ...`). Callers follow `cause` to the first
+error that is not of kind `program` to learn what went wrong. A subprogram that fails for
+one task of a round (a session that will not open, a failed request) fails that task
+only. A Python callable standing in for a subprogram (qcopt's in-process evaluator) is
+reported the same way, with `program` None. Its `ProgramError` gives the cause; any other
+exception becomes a cause of kind `internal`, as qccompute treats a program's bug.
 
 ### Timings and provenance
 
-`execution.timings` holds seconds per phase (`total` for the whole call; drivers add
-`children`). `results.provenance` names the `program`, `program_version` and
+`execution.timings` holds seconds per phase (`total` for the whole call; a program with
+subprograms adds `children`, the time inside them). `results.provenance` names the `program`, `program_version` and
 `program_commit`.

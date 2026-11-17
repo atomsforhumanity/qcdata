@@ -139,7 +139,7 @@ def test_nested_execution_and_provenance_roundtrip(
     output = ProgramOutput(
         input_data=prog_input_factory("scan"),
         success=True,
-        results=ScanData(provenance=Provenance(program="scan-driver"), points=[opt]),
+        results=ScanData(provenance=Provenance(program="qcopt"), points=[opt]),
         execution=ExecutionInfo(
             scratch_dir="/tmp/scan",
             wall_time=5,
@@ -155,7 +155,7 @@ def test_nested_execution_and_provenance_roundtrip(
     assert reopened == output
     assert pickle.loads(pickle.dumps(output)) == output
     assert ProgramOutput.model_validate_json(output.model_dump_json()) == output
-    assert reopened.results.provenance.program == "scan-driver"
+    assert reopened.results.provenance.program == "qcopt"
     opt = reopened.results.points[0]
     step = opt.results.frames[0]
     assert opt.results.provenance.program == "geometric"

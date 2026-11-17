@@ -2,8 +2,8 @@
 
 A session (an execution concept, defined in qccompute) evaluates one molecule at many
 geometries. What a step asks for (`Request`, `Accuracy`) and how it fails
-(`ProgramError`, the exception form of `ErrorInfo`) are data, shared by every program and
-driver without importing an execution package. A step's result is a `Frame`.
+(`ProgramError`, the exception form of `ErrorInfo`) are data, shared by every program
+without importing an execution package. A step's result is a `Frame`.
 """
 
 from __future__ import annotations
@@ -165,10 +165,13 @@ class Request(QCDataBaseModel):
 
 
 class ProgramError(Exception):
-    """A failed step of a session, or an input a program refuses: `ErrorInfo` raised.
+    """A failed calculation: `ErrorInfo` raised, with what was computed before it failed.
 
-    Programs raise it (or a subclass) and drivers catch this one class, whichever
-    program they drive.
+    Every program's ``compute`` and every session call raise it (or a subclass) when a
+    calculation fails, an input the program refuses included; any other exception is a
+    bug. A program catches this one class from its subprograms, whichever programs they
+    are. A runner turns it into a failed `ProgramOutput` only where it needs data: a
+    store, the outputs of a list, a worker's reply.
 
     Attributes:
         error: What went wrong, as a kind and code callers can branch on.
