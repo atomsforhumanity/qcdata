@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from typing import Any, Generic, Self, get_args
 
 from pydantic import ValidationInfo, field_validator, model_validator
@@ -195,18 +194,29 @@ ConformerSearchData.model_rebuild()
 ScanData.model_rebuild()
 
 
-def _register_program_output_classes() -> None:
-    """Required so that pickle can find the concrete classes for serialization."""
+def __getattr__(name: str) -> Any:
+    """Make a concrete `ProgramOutput` class on first lookup by name.
+
+    Pickle finds a parametrized output's class by its name in this module
+    (``ProgramOutput[ProgramInput, SinglePointData]``). Each is made when first looked
+    up, not at import, and kept here so later lookups return the same class.
+
+    Args:
+        name: The attribute looked up.
+
+    Returns:
+        The concrete output class of that name.
+
+    Raises:
+        AttributeError: If no concrete output class has that name.
+    """
     # Parameterized with runtime class objects, which mypy cannot treat as types.
     generic_output: Any = ProgramOutput
     for spec_type, data_type in [(FileInput, FileData)] + [
         (ProgramInput, data_type) for data_type in get_args(StructuredData)
     ]:
-        _class = generic_output[spec_type, data_type]
-        name = _class.__name__
-        this_module = sys.modules[__name__]
-        if name not in this_module.__dict__:
-            setattr(this_module, name, _class)
-
-
-_register_program_output_classes()
+        if name == f"ProgramOutput[{spec_type.__name__}, {data_type.__name__}]":
+            cls = generic_output[spec_type, data_type]
+            globals()[name] = cls
+            return cls
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

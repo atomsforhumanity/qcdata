@@ -273,6 +273,36 @@ def test_output_generic_registration():
     for input_type, data_type in pairs:
         cls = ProgramOutput[input_type, data_type]
         assert getattr(outputs, cls.__name__) is cls
+    with pytest.raises(AttributeError):
+        outputs.ProgramOutput_unknown  # noqa: B018
+
+
+def test_a_fresh_process_unpickles_an_output(recursive_input):
+    """Pickle finds an output's class by name before the process has made it."""
+    import subprocess
+    import sys
+
+    output = ProgramOutput(
+        input_data=recursive_input,
+        results=ConformerSearchData(provenance={"program": "workflow"}),
+        success=False,
+        traceback="test failure",
+    )
+    code = (
+        "import pickle, sys; out = pickle.loads(sys.stdin.buffer.read()); "
+        "print(type(out).__name__, out.input_data.program)"
+    )
+    done = subprocess.run(
+        [sys.executable, "-c", code],
+        input=pickle.dumps(output),
+        capture_output=True,
+        check=True,
+    )
+    assert done.stdout.decode().split() == [
+        "ProgramOutput[ProgramInput,",
+        "ConformerSearchData]",
+        "workflow",
+    ]
 
 
 @pytest.mark.parametrize(

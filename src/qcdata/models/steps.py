@@ -8,7 +8,6 @@ without importing an execution package. A step's result is a `Frame`.
 
 from __future__ import annotations
 
-import difflib
 import json
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Annotated, Any
@@ -167,6 +166,8 @@ class Accuracy(QCDataBaseModel):
             )
         unknown = sorted(set(value) - set(_TARGETS))
         if unknown:
+            import difflib  # imported on use: only a refusal needs it
+
             hints = [
                 f"accuracy.{k}"
                 + "".join(

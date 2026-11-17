@@ -10,8 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
-import toml
-import yaml
 from pydantic import (
     BaseModel,
     Field,
@@ -176,8 +174,12 @@ class QCDataBaseModel(BaseModel, ABC):
         context = {array_files.DIRECTORY: filepath.parent}
 
         if filepath.suffix in [".yaml", ".yml"]:
+            import yaml  # imported on use: most callers never read YAML
+
             return cls.model_validate(yaml.safe_load(data), context=context)
         elif filepath.suffix == ".toml":
+            import toml
+
             return cls.model_validate(toml.loads(data), context=context)
 
         # Assume json for all other file extensions
@@ -202,8 +204,12 @@ class QCDataBaseModel(BaseModel, ABC):
         data = filepath.read_text()
 
         if filepath.suffix in [".yaml", ".yml"]:
+            import yaml
+
             return [cls.model_validate(d) for d in yaml.safe_load(data)]
         elif filepath.suffix == ".toml":
+            import toml
+
             return [cls.model_validate(d) for d in toml.loads(data)]
 
         # Assume json for all other file extensions
@@ -295,9 +301,13 @@ class QCDataBaseModel(BaseModel, ABC):
         model_dict, array_paths = sink.place(model_dict, filepath.parent, filepath.stem)
 
         if filepath.suffix in [".yaml", ".yml"]:
+            import yaml
+
             data = yaml.dump(model_dict, indent=indent)
 
         elif filepath.suffix == ".toml":
+            import toml
+
             data = toml.dumps(model_dict)
 
         elif indent is None:
