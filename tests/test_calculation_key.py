@@ -16,6 +16,7 @@ from qcdata import (
     FileInput,
     ProgramInput,
     ProgramSpec,
+    Provenance,
     SinglePointData,
     Structure,
     calculation_key,
@@ -142,6 +143,23 @@ def test_canonical_text_is_documented_form():
         f'"notes/\\u00c5.txt":"{unicode_file}"}},"program":"orca"}}}}'
     )
     assert files["key"] == "k1:" + hashlib.sha256(text.encode()).hexdigest()
+
+    given = next(c for c in GOLDEN if c["name"] == "transition_state_nested_given")
+    hessian = np.array(given["input"]["given"]["hessian"], dtype="<f8") + 0.0
+    digest = hashlib.sha256(hessian.tobytes(order="C")).hexdigest()
+    text = (
+        '{"context":{"axtb":"0.1.1","findiff":"0.1.0","qcopt":"0.3.0"},"input":{'
+        '"calctype":"transition_state","given":{"energy":-5.0704,"hessian":'
+        f'{{"array":[9,9],"dtype":"float64","sha256":"{digest}"}},'
+        '"provenance":{"program":"axtb","program_version":"0.1.1"}},'
+        '"program":"qcopt","structure":{"geometry":[[0,0,-1294000000],'
+        "[0,14941000000,10274000000],[0,-14941000000,10274000000]],"
+        '"symbols":["O","H","H"]},"subprograms":[{"calctype":"gradient",'
+        '"model":{"method":"gxtb"},"program":"axtb"},{"calctype":"hessian",'
+        '"keywords":{"step":0.005},"program":"findiff","subprograms":[{'
+        '"calctype":"gradient","model":{"method":"gxtb"},"program":"axtb"}]}]}}'
+    )
+    assert given["key"] == "k1:" + hashlib.sha256(text.encode()).hexdigest()
 
 
 def test_key_format():
@@ -307,6 +325,64 @@ def test_given_arrays_count_to_the_last_bit():
         provenance={"program": "axtb", "program_version": "x"}, hessian=hessian
     )
     assert _key(_input(given=a)) != _key(_input(given=c))
+
+
+def _given(hessian: Any) -> ProgramInput:
+    given = SinglePointData(provenance=Provenance(program="axtb"), hessian=hessian)
+    return _input(given=given)
+
+
+def test_array_fields_count_by_value_not_layout():
+    rng = np.random.default_rng(11)
+    hessian = rng.normal(size=(9, 9))
+    plain = _key(_given(hessian))
+    assert _key(_given(np.asfortranarray(hessian))) == plain
+    assert _key(_given(hessian.astype(">f8"))) == plain
+    assert _key(_given(hessian.tolist())) == plain
+    zeros = np.zeros((9, 9))
+    signed = zeros.copy()
+    signed[0, 0] = -0.0
+    assert _key(_given(signed)) == _key(_given(zeros))
+
+
+def test_array_fields_enter_by_shape_dtype_and_digest():
+    from qcdata.key import _array
+
+    floats = np.array([[1.0, -0.0], [0.5, 2.0]])
+    assert _array(floats) == {
+        "array": [2, 2],
+        "dtype": "float64",
+        "sha256": hashlib.sha256(
+            np.array([[1.0, 0.0], [0.5, 2.0]], dtype="<f8").tobytes()
+        ).hexdigest(),
+    }
+    assert _array(floats.reshape(4))["sha256"] == _array(floats)["sha256"]
+    assert _array(floats.reshape(4)) != _array(floats)
+    ints = np.array([1, 2, 3], dtype=">i4")
+    assert _array(ints) == {
+        "array": [3],
+        "dtype": "int32",
+        "sha256": hashlib.sha256(
+            np.array([1, 2, 3], dtype="<i4").tobytes()
+        ).hexdigest(),
+    }
+    assert _array(np.array([1, 2, 3]))["dtype"] == "int64"
+    with pytest.raises(ValueError, match="finite"):
+        _array(np.array([1.0, np.inf]))
+    with pytest.raises(TypeError):
+        _array(np.array([1j]))
+
+
+def test_free_form_arrays_stay_json_numbers():
+    as_array = _key(_input(keywords={"w": np.array([[0.5, 1.0]])}))
+    assert as_array == _key(_input(keywords={"w": [[0.5, 1]]}))
+
+
+def test_non_finite_given_arrays_are_refused():
+    hessian = np.eye(9)
+    hessian[2, 2] = np.nan
+    with pytest.raises(ValueError, match="finite"):
+        _key(_given(hessian))
 
 
 def test_files_count_by_name_and_content():

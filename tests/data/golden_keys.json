@@ -165,7 +165,7 @@
   },
   {
     "name": "transition_state_nested_given",
-    "covers": "subprograms two levels deep, and given results (a Hessian holding 1.0 and -0.0, provenance, extras left out)",
+    "covers": "subprograms two levels deep, and given results: a Hessian by its bytes (with -0.0 read as 0.0), provenance, extras left out",
     "context": {"qcopt": "0.3.0", "findiff": "0.1.0", "axtb": "0.1.1"},
     "input": {
       "program": "qcopt",
@@ -207,7 +207,7 @@
         "extras": {"from": "an earlier search"}
       }
     },
-    "key": "k1:087c126e1046d6a2c0d11fee8b0346d5c9e1eccb43fb385e23d4899a9eb36c75"
+    "key": "k1:638e87664ea23db4c7b5b41100578fdb06990baff6a2c15df10c5da93b1bbf65"
   },
   {
     "name": "file_input",

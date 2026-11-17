@@ -104,10 +104,16 @@ compact JSON (separators `,` and `:`), keys sorted, non-ASCII characters escaped
 - **coordinates** of `structure` and of every structure in `structures`: bohr times 10¹⁰,
   rounded to integers (half to even), atom order kept. Symbols, charge, multiplicity and
   connectivity count as given;
+- **every other array field** (a `given` Hessian, orbital coefficients) as
+  `{"array": shape, "dtype": "float64", "sha256": digest}`, the digest of its C-order
+  little-endian float64 bytes with `-0.0` as `0.0`. The digest tells values apart exactly
+  as their JSON numbers would, at a small fraction of the cost. Integer arrays enter the
+  same way in their own dtype. Non-finite values are refused;
 - **files** (of the input, of each subprogram and of `given`) by the sha256 hex digest of
   their bytes, text as UTF-8;
 - **subprograms** canonicalized the same way, in order;
-- tuples as lists, numpy arrays and scalars as their values.
+- tuples as lists; numpy arrays and scalars inside free-form values (`keywords`) as
+  JSON numbers, as they are once saved.
 
 Left out: `extras` at every level, structure `identifiers`, and the keywords `threads` and
 `memory_gib` at the top level of `keywords`, in the input and in every subprogram
@@ -127,9 +133,10 @@ computing a key never needs a program installed. A program that changes what a d
 computes (linus's `jk` defaulting to `df`) changes the numbers behind unchanged keys, so
 it moves its numerics epoch, and the store's configuration with it.
 
-Golden keys in qcdata's tests pin the canonical form. Changing any rule, or the default of
-any field an input holds (an omitted field would then mean something else), is a new key
-version, `k2`, released deliberately.
+Golden keys in qcdata's tests pin the canonical form. Changing any rule, the default of
+any field an input holds (an omitted field would then mean something else), or the type of
+a field between a list of numbers and an array (`list[float]` and a digest enter
+differently) is a new key version, `k2`, released deliberately.
 
 ## Calculation types
 
