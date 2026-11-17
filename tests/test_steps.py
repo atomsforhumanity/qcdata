@@ -89,6 +89,50 @@ def test_program_errors_carry_the_failed_frame_and_pickle():
     assert ProgramError.of("numerical", "nan").frame is None
 
 
+def test_program_errors_carry_a_whole_failed_output_and_pickle():
+    from qcdata import OptimizationData, ProgramInput, ProgramOutput, Resolved
+
+    he2 = Structure(symbols=["He", "He"], geometry=[[0.0, 0.0, 0.0], [0.0, 0.0, 5.6]])
+    error = ErrorInfo(kind=ErrorKind.convergence, message="2 steps", code="max_iter")
+    frames = [
+        Frame(
+            success=True,
+            structure=he2,
+            results=SinglePointData(provenance=Provenance(program="toy"), energy=e),
+        )
+        for e in (-5.6, -5.7)
+    ]
+    inp = ProgramInput(
+        program="qcopt",
+        calctype="optimization",
+        structure=he2,
+        subprograms=[{"program": "toy", "calctype": "gradient"}],
+    )
+    out = ProgramOutput.failure(
+        inp,
+        error,
+        results=OptimizationData(provenance=Provenance(program="qcopt"), frames=frames),
+        record={"steps": 2},
+        resolved=Resolved(settings={"convergence": {"max_iter": 2}}),
+    )
+
+    e = ProgramError(out.error, output=out)
+    assert e.output is out and e.frame is None
+    assert e.results is out.results
+    assert isinstance(e.results, OptimizationData) and len(e.results.frames) == 2
+
+    back = pickle.loads(pickle.dumps(e))
+    assert back.error == error and back.output == out and back.results == out.results
+    assert back.output.record == {"steps": 2}
+    assert back.output.resolved == out.resolved
+    assert back.output.results.frames[-1].results.energy == -5.7
+
+    explicit = OptimizationData(provenance=Provenance(program="qcopt"))
+    assert ProgramError(error, explicit, output=out).results is explicit
+    assert ProgramError(error, frame=frames[-1], output=out).results is out.results
+    assert ProgramError(error).output is None
+
+
 def test_inputs_carry_results_given_at_their_structure():
     from qcdata import ProgramInput
 

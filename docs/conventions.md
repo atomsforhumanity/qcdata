@@ -278,7 +278,10 @@ Shared error codes of other kinds, which runners and schedulers act on:
 
 A failed calculation raises `ProgramError`, from every program's `compute` and every
 session call alike, carrying its `ErrorInfo` and the partial results; any other exception
-is a bug. A runner turns it into a failed `ProgramOutput` only where it needs data (a
+is a bug. A program whose result is one output attaches it whole,
+`ProgramError(out.error, output=out)`, so a trajectory's frames, record and resolved
+settings reach the caller as `exc.output`; a failed session step attaches its `frame`. A
+runner turns the exception into a failed `ProgramOutput` only where it needs data (a
 store, the outputs of a list, a worker's reply).
 
 A program reports any failure of a subprogram as kind `program`, whether the
