@@ -282,32 +282,6 @@ class SinglePointData(FileData, CalcInfoData):
     vibrational_analysis: VibrationalAnalysis | None = None
     thermochemistry: list[Thermochemistry] = []
 
-    @model_validator(mode="before")
-    @classmethod
-    def _drop_empty_pre_024_fields(cls, values: Any) -> Any:
-        """Load files saved before 0.24, which wrote empty frequency fields.
-
-        Frequencies, normal modes and free energies now live only in
-        `vibrational_analysis` and `thermochemistry`. Empty old fields carry nothing
-        and are dropped; filled ones cannot be converted (their masses and model
-        are unknown) and are rejected with that reason.
-        """
-        if not isinstance(values, dict):
-            return values
-        old = ("freqs_wavenumber", "normal_modes_cartesian", "gibbs_free_energy")
-        present = [k for k in old if k in values]
-        if not present:
-            return values
-        filled = [k for k in present if values[k] not in (None, [], ())]
-        if filled:
-            raise ValueError(
-                f"{', '.join(filled)} were removed in qcdata 0.24: frequencies and normal "
-                "modes live in vibrational_analysis, free energies in thermochemistry. "
-                "Recompute the Hessian, or rebuild the analysis with "
-                "qcinf.vibrational_analysis."
-            )
-        return {k: v for k, v in values.items() if k not in old}
-
     @field_validator("scf_quadrupole_moment", "polarizability")
     @classmethod
     def _validate_three_by_three(
@@ -519,11 +493,7 @@ class Frame(OutputBase):
     @model_validator(mode="before")
     @classmethod
     def _from_program_output(cls, value: Any) -> Any:
-        """Accept a ProgramOutput, or its saved form, as a frame.
-
-        Trajectories saved before frames existed hold one ProgramOutput per step; the
-        step's structure is its input's structure.
-        """
+        """Accept a ProgramOutput as a frame, at its input's structure."""
         from .outputs import ProgramOutput
 
         if isinstance(value, ProgramOutput):
@@ -538,17 +508,6 @@ class Frame(OutputBase):
                 "record": value.record,
                 "structure": value.input_data.structure,
             }
-        if isinstance(value, dict) and "input_data" in value:
-            value = dict(value)
-            # A whole calculation's settings; its parent keeps its own.
-            value.pop("resolved", None)
-            input_data = value.pop("input_data")
-            if "structure" not in value:
-                value["structure"] = (
-                    input_data["structure"]
-                    if isinstance(input_data, dict)
-                    else input_data.structure
-                )
         return value
 
     @model_validator(mode="after")
@@ -778,10 +737,7 @@ class ConformerSearchData(_FrameSeries, FileData):
     """Data from a conformer search calculation.
 
     Conformers and rotamers are `Frame`s, sorted by energy (lowest first; frames
-    without an energy last). Constructing or loading with lists of structures and
-    separate energy arrays (``conformer_energies``, ``rotamer_energies``), the form
-    before frames, still works: each structure becomes a frame with its energy. The
-    shared reading interface (``structures``, ``energies``, ``to_xyz``,
+    without an energy last). The shared reading interface (``structures``, ``energies``, ``to_xyz``,
     ``save("*.xyz")``) reads the conformers.
 
     Attributes:
@@ -796,38 +752,6 @@ class ConformerSearchData(_FrameSeries, FileData):
 
     conformers: list[Frame] = []
     rotamers: list[Frame] = []
-
-    @model_validator(mode="before")
-    @classmethod
-    def _frames_from_structures(cls, payload: Any) -> Any:
-        """Turn structures plus an energies array into frames."""
-        if not isinstance(payload, dict):
-            return payload
-        payload = dict(payload)
-        provenance = payload.get("provenance")
-        for kind in ("conformers", "rotamers"):
-            items = list(payload.get(kind, []))
-            energies = payload.pop(f"{kind[:-1]}_energies", None)
-            energies = [] if energies is None else list(np.asarray(energies).ravel())
-            if energies and len(energies) != len(items):
-                raise ValueError(
-                    f"The number of {kind[:-1]} energies must match the number of "
-                    f"{kind}."
-                )
-            if not items or not _is_structure(items[0]):
-                continue
-            payload[kind] = [
-                {
-                    "success": True,
-                    "structure": item,
-                    "results": {
-                        "provenance": provenance,
-                        "energy": float(energies[i]) if energies else None,
-                    },
-                }
-                for i, item in enumerate(items)
-            ]
-        return payload
 
     @model_validator(mode="after")
     def _sort_by_energy(self) -> Self:
@@ -860,13 +784,6 @@ class ConformerSearchData(_FrameSeries, FileData):
     def rotamer_energies_relative(self) -> np.ndarray:
         """Each rotamer's energy above the lowest, in Hartree; `np.nan` if unknown."""
         return _relative(self.rotamer_energies)
-
-
-def _is_structure(item: Any) -> bool:
-    """Whether an item is a structure (or its dict), not a frame."""
-    if isinstance(item, Structure):
-        return True
-    return isinstance(item, dict) and "symbols" in item and "structure" not in item
 
 
 class ScanData(FileData, CalcInfoData):

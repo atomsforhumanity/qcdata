@@ -233,8 +233,7 @@ def test_conformer_search_reads_like_any_series(water):
     """Conformers share the reading interface: structures, energies, xyz."""
     data = ConformerSearchData(
         provenance=PROVENANCE,
-        conformers=[water, _moved(water, 1.0)],
-        conformer_energies=[0.2, 0.1],
+        conformers=[_frame(water, 0.2), _frame(_moved(water, 1.0), 0.1)],
     )
     assert data.structures == [f.structure for f in data.conformers]
     assert np.array_equal(data.energies, [0.1, 0.2])
@@ -242,12 +241,11 @@ def test_conformer_search_reads_like_any_series(water):
 
 
 def test_conformer_search_holds_frames(water):
-    """Structures plus energies become frames; saved files round-trip."""
+    """Conformers and rotamers are frames, sorted by energy; saved files round-trip."""
     data = ConformerSearchData(
         provenance=PROVENANCE,
-        conformers=[water, _moved(water, 1.0)],
-        conformer_energies=[0.2, 0.1],
-        rotamers=[water],
+        conformers=[_frame(water, 0.2), _frame(_moved(water, 1.0), 0.1)],
+        rotamers=[_frame(water, None)],
     )
     assert all(type(f) is Frame for f in data.conformers + data.rotamers)
     assert data.conformers[0].results.energy == 0.1

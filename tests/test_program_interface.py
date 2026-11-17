@@ -108,10 +108,12 @@ def test_frames_keep_warnings_errors_and_records_but_not_settings(energy_input):
     assert frame.warnings[0].code == "w"
     assert frame.record == {"r": 1}
     assert not hasattr(frame, "resolved")
-    saved = OptimizationData(provenance=PROV, frames=[out]).model_dump(mode="json")
-    saved["frames"] = [out.model_dump(mode="json")]  # a ProgramOutput saved as a step
-    loaded = OptimizationData.model_validate(saved)
-    assert loaded.frames[0].error.message == "SCF"
+    data = OptimizationData(provenance=PROV, frames=[out])  # an output passed as a step
+    assert data.frames[0].error.message == "SCF"
+    saved = data.model_dump(mode="json")
+    saved["frames"] = [out.model_dump(mode="json")]  # a saved output is not a frame
+    with pytest.raises(ValidationError):
+        OptimizationData.model_validate(saved)
 
 
 # -------------------------------------------------------------- single points
@@ -230,12 +232,8 @@ def test_frequencies_live_only_in_the_analysis():
         3700.0,
     ]
     assert loaded.thermochemistry[1].temperature == 310.0
-    # Files saved before 0.24 wrote the old fields empty: they still load.
-    old_empty = {"freqs_wavenumber": [], "normal_modes_cartesian": None}
-    assert (
-        SinglePointData.model_validate({"provenance": PROV, **old_empty}).energy is None
-    )
-    # Filled ones cannot be converted, and say where the data lives now.
-    with pytest.raises(ValidationError, match="vibrational_analysis"):
-        SinglePointData.model_validate({"provenance": PROV, "freqs_wavenumber": [1.0]})
+    # The fields before 0.24 are not accepted, even empty.
+    for old in ({"freqs_wavenumber": []}, {"normal_modes_cartesian": None}):
+        with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+            SinglePointData.model_validate({"provenance": PROV, **old})
     assert "freqs_wavenumber" not in SinglePointData.model_fields

@@ -94,8 +94,16 @@ def test_conformer_view_filters_duplicates(water, prog_input_factory, monkeypatc
         input_data=prog_input_factory("conformer_search"),
         results=ConformerSearchData(
             provenance={"program": "crest"},
-            conformers=[water, water],
-            conformer_energies=[-1.0, -1.0],
+            conformers=[
+                Frame(
+                    success=True,
+                    structure=water,
+                    results=SinglePointData(
+                        provenance={"program": "crest"}, energy=-1.0
+                    ),
+                )
+            ]
+            * 2,
         ),
         success=True,
     )
