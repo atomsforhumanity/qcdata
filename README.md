@@ -13,10 +13,10 @@ Data structures for quantum chemistry inputs and results, with Jupyter visualiza
 These packages work together to make quantum chemistry fast, structured, and interoperable.
 
 - [qcref](https://github.com/atomsforhumanity/qcref) - Reference data for computational chemistry: CODATA physical constants, conversion factors, a periodic table, and solvent properties, each value with its source.
-- [qcdata](https://github.com/atomsforhumanity/qcdata) - Data structures for quantum chemistry inputs and results, with Jupyter visualizations. [Documentation](https://qcdata.docs.afh.org)
+- [qcdata](https://github.com/atomsforhumanity/qcdata) - Data structures for quantum chemistry inputs and results, with Jupyter visualizations. [Documentation](https://qcdata.docs.afh.org/next/)
 - [qcinf](https://github.com/atomsforhumanity/qcinf) - Cheminformatics algorithms and structure utilities for [qcdata](https://github.com/atomsforhumanity/qcdata) structures.
-- [qccompute](https://github.com/atomsforhumanity/qccompute) - Runs programs on [qcdata](https://github.com/atomsforhumanity/qcdata) inputs, one calculation or many, in this process or in workers, with an optional store, and returns structured results. [Documentation](https://qccompute.docs.afh.org)
-- [qccodec](https://github.com/atomsforhumanity/qccodec) - The optional add-on for external programs (ORCA, Psi4, xtb, CREST, ...): writes their native inputs, runs them and parses their outputs, registering each as a program qccompute runs.
+- [qccompute](https://github.com/atomsforhumanity/qccompute) - Runs programs on [qcdata](https://github.com/atomsforhumanity/qcdata) inputs, one calculation or many, in this process or in workers, with an optional store, and returns structured results. [Documentation](https://qccompute.docs.afh.org/next/)
+- [qccodec](https://github.com/atomsforhumanity/qccodec) - The optional add-on for external programs (ORCA, Psi4, xtb, CREST, ...): writes their native inputs, runs them and parses their outputs, registering each as a program qccompute runs. [Documentation](https://qccodec.docs.afh.org/next/)
 - [qcstore](https://github.com/atomsforhumanity/qcstore) - Keeps results under their calculation key: immutable runs, tags, and an optional index.
 - [BigChem](https://github.com/mtzgroup/bigchem) - Distributed execution of qccompute calculations across clusters of computers or the cloud.
 - [ChemCloud](https://github.com/mtzgroup/chemcloud-client) - A [web application](https://github.com/mtzgroup/chemcloud-server) and [Python client](https://github.com/mtzgroup/chemcloud-client) that expose a BigChem cluster securely over the internet.
@@ -27,11 +27,22 @@ These packages work together to make quantum chemistry fast, structured, and int
 python -m pip install qcdata
 ```
 
-The alpha of the next release, with the packages that run programs and store results:
+installs the stable release. This README describes the next release, which is in alpha;
+install it pinned (`--prerelease=allow` lets the resolver take pre-releases):
 
 ```bash
-uv pip install --prerelease=allow "qcdata==0.24.0a2" "qccompute[qccodec]==0.23.0a1" "qcstore==0.1.0a1"
+uv pip install --prerelease=allow "qcdata==0.24.0a6"
 ```
+
+With the visualizations (`view` extra), or with the packages that run programs and store
+results:
+
+```bash
+uv pip install --prerelease=allow "qcdata[view]==0.24.0a6" "qcinf==0.6.0a1"
+uv pip install --prerelease=allow "qcdata==0.24.0a6" "qccompute[qccodec]==0.23.0a5" "qccodec==0.22.0a4" "qcstore==0.1.0a4"
+```
+
+The alpha's documentation is at [qcdata.docs.afh.org/next](https://qcdata.docs.afh.org/next/); the site root documents the stable release.
 
 ## Quickstart
 
