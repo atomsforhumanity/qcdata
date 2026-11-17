@@ -90,8 +90,10 @@ class Wavefunction(QCDataBaseModel):
         core_hamiltonian: Every density-independent one-electron term of the run (Eh):
             the kinetic energy, the attraction of nuclei with charges
             Z - core_electrons, the ECPs, and external point charges and fields where a
-            program supports them; tr((P_a + P_b) h) is the energy's ``one_electron``
-            component.
+            program supports them. tr((P_a + P_b) h), with P the density of the SCF's
+            last input, is the energy's ``one_electron`` component; with
+            `Orbitals.density`, the density a reader has, the two agree to the SCF
+            residual, so compare them at SCF tolerance, not at round-off.
     """
 
     orbitals: Orbitals

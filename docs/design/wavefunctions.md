@@ -95,7 +95,10 @@ what each implies. `overlap` and `core_hamiltonian` imply only the basis set;
   canonical, and restricted orbitals have one Hamiltonian.
 - `core_hamiltonian` is every density-independent one-electron term of the run: T, V_ne
   with charges Z − core_electrons, V_ecp, and external point charges and fields once a
-  program supports them. Then tr(P h) is `energy_components`' `one_electron` term.
+  program supports them. tr(P h), with P the density of the SCF's last input, is
+  `energy_components`' `one_electron` term. With P = `Orbitals.density()`, the density a
+  reader has, the two agree only to the SCF residual, as for the `hamiltonian`: compare
+  them at SCF tolerance, never at round-off.
 - Every matrix is nao × nao of `basis`, and the coefficients have one row per AO of it;
   an AO-indexed array without a basis set, or a basis set without one, is refused.
 - `Wavefunction.with_convention` converts the coefficients and every matrix together, each
