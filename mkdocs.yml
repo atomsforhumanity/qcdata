@@ -112,6 +112,7 @@ nav:
       - Vibrations: api/vibrations.md
       - Orbitals: api/orbitals.md
       - Session steps: api/steps.md
+      - Calculation key: api/key.md
       - Utilities: api/utils.md
       - Visualizations:
           - View: api/view.md

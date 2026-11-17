@@ -6,10 +6,6 @@ program produced them. This page is the single place for them; a program's own d
 covers only what is specific to it. How programs are run (the program and session
 protocol, plans, workers) is qccompute's: see its program interface design.
 
-!!! note "Status"
-    The settings names below are what the linus, axtb and qcopt sessions agreed on
-    2026-11-11. They await Colton's sign-off.
-
 ## Units
 
 Atomic units at every interface: energies in hartree (Eh), positions in bohr, gradients in
@@ -41,13 +37,13 @@ Python keyword arguments spell it. The rules:
    another program's vocabulary (`rijcosx`, `rhf`) may be accepted on input but are never
    echoed back. A group may take a scalar that stands for its main key (linus: `jk: "df"`
    is `{"kind": "df"}`); the schema shows both forms and `resolved.settings` reports the
-   expanded one. The store keys the input as given, so the two forms are separate cache
-   entries: callers that store results use one.
+   expanded one. The [calculation key](#calculation-key) takes the input as given, so the
+   two forms are separate cache entries: callers that store results use one.
 3. `"auto"` means the program decides; `null` or absent means the default. Every output
    reports what each `auto` became in `resolved.settings`, and why in `resolved.reasons`.
 4. Tolerances end in `_tol`, iteration limits are `max_iter`, units appear in names only
    exactly (`memory_gib`). Booleans only for two-state choices.
-5. **Every setting given must affect the calculation** (Colton, 2026-11-11, linus D41).
+5. **Every setting given must affect the calculation.**
    Unknown keys, settings that do not apply to the calculation type, and settings made
    irrelevant by other values are errors of kind `input` (codes `unknown_key`,
    `not_applicable`, `no_effect`), with a did-you-mean suggestion where one exists.
@@ -84,10 +80,56 @@ factor; its ALPB/GBSA models are parametrized per solvent name, so no `solvent.e
 rejects it with kind `unsupported` rather than ignoring it.
 
 Resource keys (`threads`, `memory_gib`, `backend`, `device_memory_gib`) carry
-`x-concern: "resource"`. The store's calculation key hashes the input as given, defaults
-omitted, leaving out only `threads` and `memory_gib`. A program that changes what a
-default computes (linus's `jk` becoming `df`) changes the numbers behind an unchanged key,
-so its runner's `key_context` names the new numerics epoch.
+`x-concern: "resource"`. The [calculation key](#calculation-key) leaves out `threads` and
+`memory_gib` only.
+
+## Calculation key
+
+A store files each result under `qcdata.calculation_key(inp, context)`: `k1:` followed by
+the sha256 hex digest of a canonical JSON text of the input as given and a context. Two
+inputs share a key only when they request the same calculation written the same way.
+Every rule errs toward a miss, because a wrong hit returns another calculation's numbers.
+
+The canonical text is the document `{"context": context, "input": input}`, written as
+compact JSON (separators `,` and `:`), keys sorted, non-ASCII characters escaped as
+`\uXXXX`, with:
+
+- **numbers normalized**: a float with an integral value is written as an integer (`100.0`
+  as `100`, `-0.0` as `0`), any other float in Python's shortest round-trip form
+  (`1e-08`), integers exactly. `true` and `1` stay distinct. Non-finite numbers are
+  refused;
+- **fields at their default left out** (`charge: 0`, `keywords: {}`, `basis: null`), so
+  adding a field to qcdata never changes an old key. Inside `keywords` nothing is a
+  default: values stay as given, `null`s and empty groups included;
+- **coordinates** of `structure` and of every structure in `structures`: bohr times 10¹⁰,
+  rounded to integers (half to even), atom order kept. Symbols, charge, multiplicity and
+  connectivity count as given;
+- **files** (of the input, of each subprogram and of `given`) by the sha256 hex digest of
+  their bytes, text as UTF-8;
+- **subprograms** canonicalized the same way, in order;
+- tuples as lists, numpy arrays and scalars as their values.
+
+Left out: `extras` at every level, structure `identifiers`, and the keywords `threads` and
+`memory_gib` at the top level of `keywords`, in the input and in every subprogram
+(`scf.threads` would count). These two may change results at most at round-off.
+Everything else counts: `given`, `cmdline_args`, and settings such as `backend` and
+precision that can change numbers.
+
+Spellings are not normalized. `B3LYP` and `b3lyp`, a synonym, a group's scalar and
+expanded forms (rule 2), a default written out (`scf.max_iter: 100`), and `null` against
+an absent key all give different keys: a cache miss, never a wrong hit. The key
+normalizes only itself; stored values keep `-0.0` and their number types.
+
+The context is what must match beyond the input for a stored result to be reusable: a
+version or numerics epoch for each program the input names (`{"linus": "6", "qcopt":
+"0.3.0"}`), mapping strings to strings. It comes from the store's configuration, so
+computing a key never needs a program installed. A program that changes what a default
+computes (linus's `jk` defaulting to `df`) changes the numbers behind unchanged keys, so
+it moves its numerics epoch, and the store's configuration with it.
+
+Golden keys in qcdata's tests pin the canonical form. Changing any rule, or the default of
+any field an input holds (an omitted field would then mean something else), is a new key
+version, `k2`, released deliberately.
 
 ## Calculation types
 
@@ -254,3 +296,23 @@ exception becomes a cause of kind `internal`, as qccompute treats a program's bu
 `execution.timings` holds seconds per phase (`total` for the whole call; a program with
 subprograms adds `children`, the time inside them). `results.provenance` names the `program`, `program_version` and
 `program_commit`.
+
+## Saved files
+
+`save` writes a model as JSON, YAML or TOML. An array field whose float64 size exceeds
+1 MiB (more than 131,072 numbers) goes to its own `.npy` file beside the saved file, named
+by the file's stem and the array's path in the document, and the document holds a pointer
+in its place:
+
+```json
+"hessian": {"path": "output.results.hessian.npy", "shape": [480, 480],
+            "dtype": "float64", "sha256": "..."}
+```
+
+`sha256` is the digest of the `.npy` file's bytes. Path parts other than letters, digits,
+`_` and `-` are written as `%XX` (a structure role `qm.mm` gives
+`structures.qm%2Emm.geometry`). `open` reads every array back and checks its digest,
+shape and dtype, so models always hold arrays and no field is a file reference. `save`
+returns every file it wrote, the model's file first. Smaller arrays and free-form values
+(`extras`, `record`) stay in the document, where JSON and YAML keep every float exactly;
+TOML loses the sign of `-0.0`.
