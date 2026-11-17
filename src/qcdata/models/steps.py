@@ -136,8 +136,11 @@ class Request(QCDataBaseModel):
         outputs: Optional outputs that do not change the surface but may cost extra.
             A name that fills a top-level `SinglePointData` field is that field's name
             (``scf_dipole_moment``, ``polarizability``); others name what they add
-            (``ir``, ``orbitals``, ``density``). A program rejects ones it does not
-            support with kind ``unsupported``.
+            (``ir``). The wavefunction's parts are ``orbitals``, ``overlap``,
+            ``hamiltonian`` and ``core_hamiltonian``; a program fills in what one
+            implies (``hamiltonian`` brings ``overlap`` and ``orbitals``), as the
+            conventions list. A program refuses an output it cannot give with kind
+            ``unsupported``, code ``not_applicable``.
         seed: Lineages to start from, in order, when ``lineage`` has no history yet:
             the first with history is used, and with none the request starts fresh.
             Both IRC branches start from the transition state's lineage this way. A

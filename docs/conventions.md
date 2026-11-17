@@ -72,7 +72,7 @@ Settings that mean the same in several programs are spelled the same:
 | `scf.max_iter`, `scf.e_tol`, `scf.g_tol`, `scf.guess` | SCF iteration limit, energy and orbital-gradient tolerances, starting guess |
 | `solvent.name`, `solvent.model`, `solvent.eps` | implicit solvent: name, continuum model, permittivity |
 | `freq.temperature`, `freq.pressure`, `freq.scale`, `freq.imaginary_cutoff` | thermochemistry conditions, frequency scale factor, imaginary-mode cutoff (cm⁻¹) |
-| `output.orbitals`, `output.density`, `output.molden`, `output.bond_orders` | optional outputs; `output.molden` is `off`, `spherical` or `cartesian` and returns `files["orbitals.molden"]` |
+| `output.orbitals`, `output.overlap`, `output.hamiltonian`, `output.core_hamiltonian`, `output.molden`, `output.bond_orders` | optional outputs: the [wavefunction outputs](#wavefunction-outputs) by name; `output.molden` is `off`, `spherical` or `cartesian` and returns `files["orbitals.molden"]` |
 | `convergence.max_iter`, `convergence.g_tol`, `convergence.e_tol`, `convergence.d_tol` | geometry optimizer convergence |
 
 A program that cannot honour a shared setting (axtb's SCF thresholds follow xtb's accuracy
@@ -235,6 +235,24 @@ normalization scales coefficients by s per AO, densities by s_μ s_ν and operat
 (`overlap`, `hamiltonian_a/_b`, `core_hamiltonian`) by 1/(s_μ s_ν); `BasisSet.transform`
 takes the array's `kind` and never guesses it.
 
+### Wavefunction outputs
+
+The optional parts of `SinglePointData.wavefunction` are requested by name, in a session
+request's `outputs` or as the keyword `output.<name>`:
+
+| output | adds | implies |
+|---|---|---|
+| `orbitals` | `Orbitals.basis`, `coefficients_a/_b` | |
+| `overlap` | `Wavefunction.overlap` | `orbitals` |
+| `hamiltonian` | `Wavefunction.hamiltonian_a/_b` | `overlap`, `orbitals` |
+| `core_hamiltonian` | `Wavefunction.core_hamiltonian` | `orbitals` |
+
+A program fills in what an output implies instead of refusing it, since requesting an
+output changes no other number. It refuses an output it cannot give with kind
+`unsupported`, code `not_applicable`, and a message naming the reason: a mode whose last
+diagonalization is not of one build refuses `hamiltonian`; a force field has none of the
+four. There is no `density` output: the SCF density is `Orbitals.density()`.
+
 ### Given results
 
 `ProgramInput.given` holds results already known at the input's structure (a
@@ -276,7 +294,7 @@ Shared error codes (kind `input`):
 | code | meaning |
 |---|---|
 | `unknown_key` | not a setting of this program |
-| `not_applicable` | a setting of another calculation type, or a session request outside the calctypes it was opened for |
+| `not_applicable` | a setting of another calculation type, or a session request outside the calctypes it was opened for. With kind `unsupported`, an optional output the program cannot give |
 | `no_effect` | made irrelevant by the other values given |
 | `not_modeled` | the structure's charge or multiplicity is one the method does not represent (GFN-FF given a radical, a neutral-only ML potential given an ion). The message names the property. A method never runs on, or silently ignores, a charge or multiplicity it cannot model |
 

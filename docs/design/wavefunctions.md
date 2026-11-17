@@ -27,7 +27,7 @@ inside a session). Given orbitals (`ProgramInput.given`) may at most seed a gues
 | `electronic_temperature` | K; 0 for aufbau occupations |
 | `fermi_level_a/_b` | Eh; None at 0 K, both given above it. Open shells are filled per spin at fixed n_α and n_β, so there are two |
 | `core_electrons` | one per atom: the electrons the orbitals do not represent, ECP cores or the core a valence-only method leaves out (bookkeeping only; Zn's core is 28 in GFN2 and g-xTB). None: all-electron |
-| `basis`, `coefficients_a/_b` | optional, both or neither; only on request |
+| `basis`, `coefficients_a/_b` | optional, both or neither; only on request (output `orbitals`) |
 
 - Tight binding's open shells (GFN2-xTB) are restricted orbitals of one spin-averaged
   Hamiltonian with per-spin occupations. They are not ROHF.
@@ -67,6 +67,9 @@ inside a session). Given orbitals (`ProgramInput.given`) may at most seed a gues
   the SCF basis.
 
 ## Wavefunction: AO matrices, on request
+
+Each is requested by its output name, the field's (`overlap`, `hamiltonian`,
+`core_hamiltonian`); the conventions list what each implies.
 
 | field | HF and DFT | tight binding |
 |---|---|---|
@@ -159,9 +162,11 @@ What H contains:
 - Saving decides by float64 size: an array of more than 1 MiB (131,072 numbers; square
   matrices from nao ≥ 363) goes to a file beside the JSON, so the same result always saves
   the same way. Caffeine in def2-SVP stays inline; def2-TZVP does not.
-- The file is one HDF5 file per saved output; dataset path = field path; little-endian
-  float64, C order, uncompressed (compression saves about 4% on coefficients). The JSON
-  records shape, dtype and sha256.
+- Each such array is its own `.npy` file beside the saved file, named by the file's stem
+  and the field path (`output.results.wavefunction.orbitals.coefficients_a.npy`):
+  little-endian float64, C order, uncompressed (compression saves about 4% on
+  coefficients). The JSON holds a pointer in its place with the file's path, the shape,
+  the dtype and the file's sha256.
 - Inline floats round-trip exactly.
 - JSON costs 21.8–23.2 bytes per float64, against 8 in binary. A 2000-function matrix is
   32 MB binary and 87–93 MB as JSON (1.2 s in `json.dumps`).
