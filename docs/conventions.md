@@ -304,8 +304,8 @@ exception becomes a cause of kind `internal`, as qccompute treats a program's bu
 ### Timings and provenance
 
 `execution.timings` holds seconds per phase (`total` for the whole call; a program with
-subprograms adds `children`, the time inside them). `results.provenance` names the `program`, `program_version` and
-`program_commit`.
+subprograms adds `subprograms`, the time inside them). `results.provenance` names the
+`program`, `program_version` and `program_commit`.
 
 ## Saved files
 
