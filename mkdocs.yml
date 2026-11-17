@@ -42,7 +42,7 @@ theme:
     repo: fontawesome/brands/github-alt
 
 repo_url: https://github.com/atomsforhumanity/qcdata
-edit_uri: edit/master/docs/
+edit_uri: edit/next/docs/
 site_author: Colton Hicks
 plugins:
   - search
@@ -134,4 +134,4 @@ nav:
       - Structure: visualizations/structure.ipynb
       - Results: visualizations/results.ipynb
       - Core Views: visualizations/coreviews.ipynb
-  - Changelog: https://github.com/atomsforhumanity/qcdata/blob/master/CHANGELOG.md
+  - Changelog: https://github.com/atomsforhumanity/qcdata/blob/next/CHANGELOG.md

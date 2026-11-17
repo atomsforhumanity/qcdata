@@ -34,7 +34,7 @@ classifiers = [
 Homepage = "https://github.com/atomsforhumanity/qcdata"
 Documentation = "https://qcdata.docs.afh.org"
 Source = "https://github.com/atomsforhumanity/qcdata"
-Changelog = "https://github.com/atomsforhumanity/qcdata/blob/master/CHANGELOG.md"
+Changelog = "https://github.com/atomsforhumanity/qcdata/blob/next/CHANGELOG.md"
 "Bug Tracker" = "https://github.com/atomsforhumanity/qcdata/issues"
 repository = "https://github.com/atomsforhumanity/qcdata"
 
