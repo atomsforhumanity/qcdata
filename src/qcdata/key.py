@@ -46,6 +46,10 @@ def calculation_key(inp: FileInput | ProgramInput, context: Mapping[str, str]) -
     - fields at their default left out, so adding a field to qcdata never changes an
       old key;
     - coordinates in bohr rounded to 1e-10 and written as integers, atom order kept;
+    - every other array field (a `given` Hessian, orbital coefficients) as
+      ``{"array": shape, "dtype": dtype, "sha256": digest}``, the digest of its C-order
+      little-endian bytes: float64 with ``-0.0`` as ``0.0``, integers in their own
+      dtype. Arrays inside free-form values such as ``keywords`` stay JSON numbers;
     - attached files by the sha256 of their bytes (UTF-8 for text);
     - subprograms canonicalized the same way, in order.
 
@@ -108,6 +112,8 @@ def _canonical_model(model: BaseModel) -> dict[str, Any]:
                 continue
         if isinstance(model, Structure) and name == "geometry":
             out[name] = _coordinates(value)
+        elif isinstance(value, np.ndarray):
+            out[name] = _array(value)
         elif isinstance(model, Files) and name == "files":
             out[name] = {
                 filename: hashlib.sha256(
@@ -138,6 +144,28 @@ def _coordinates(geometry: np.ndarray) -> list[list[int]]:
     if not np.isfinite(scaled).all():
         raise ValueError("A calculation key needs finite coordinates.")
     return [[round(x) for x in atom] for atom in scaled.tolist()]
+
+
+def _array(array: np.ndarray) -> dict[str, Any]:
+    """An array field by its shape, dtype and the sha256 of its bytes.
+
+    Floats as C-order little-endian float64 with -0.0 as 0.0, so the digest compares
+    values exactly as the JSON form of numbers would; integers and booleans in their
+    own dtype, little-endian.
+    """
+    if array.dtype.kind == "f":
+        if not np.isfinite(array).all():
+            raise ValueError("A calculation key needs finite numbers in arrays.")
+        data = np.ascontiguousarray(array, dtype="<f8") + 0.0
+    elif array.dtype.kind in "iub":
+        data = np.ascontiguousarray(array, dtype=array.dtype.newbyteorder("<"))
+    else:
+        raise TypeError(f"A calculation key cannot represent a {array.dtype} array.")
+    return {
+        "array": list(array.shape),
+        "dtype": data.dtype.name,
+        "sha256": hashlib.sha256(data.data).hexdigest(),
+    }
 
 
 def _canonical(value: Any) -> Any:

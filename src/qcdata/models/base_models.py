@@ -437,7 +437,7 @@ class ExecutionInfo(QCDataBaseModel):
         host_mem_gib: The host's total memory in GiB, not the allocated memory.
         timings: Wall-clock seconds per phase of the calculation. The keys are the
             program's; ``total`` is the whole call, and a program with subprograms
-            reports ``children`` (time inside its subprograms) beside its own phases.
+            reports ``subprograms`` (time inside them) beside its own phases.
         threads: CPU threads the calculation ran with. Some programs' results depend
             on it at round-off, so it is recorded with every result.
         peak_memory_gib: Peak host memory the calculation used (GiB), as measured.
