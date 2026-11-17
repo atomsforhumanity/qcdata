@@ -1,7 +1,7 @@
 [project]
 name = "qcdata"
 version = "0.24.0a6"
-description = "Beautiful and user friendly data structures for quantum chemistry."
+description = "Data structures for quantum chemistry inputs and results, with Jupyter visualizations."
 readme = "README.md"
 authors = [{ name = "Colton Hicks", email = "github@coltonhicks.com" }]
 license = { file = "LICENSE" }
