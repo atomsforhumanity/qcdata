@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.24.0a4] - 2026-11-17
+
+### Added
+
+- `ExecutionInfo.identities`: `{program: numerics}` for the input's program and every subprogram, set by the runner and stored with the run, so every output says which code made it.
+- The shared keyword `accuracy`: an object of `Accuracy` targets (energy, gradient, hessian), the default target of `compute` and of session requests that give none. `Accuracy.from_keywords(keywords)` reads it the same way in every program.
+- `qcdata.array_files`, public (was `qcdata._array_files`), with `POINTER_KEYS` and an API page.
+
+### Changed
+
+- **Breaking:** `SinglePointData.scf_dipole_moment` and `scf_quadrupole_moment` are `dipole_moment` and `quadrupole_moment`: the moments of the method's charge distribution, whatever the method. No aliases.
+- **Breaking:** `qcdata._array_files` is `qcdata.array_files`.
+- Keywords hold plain JSON: a pydantic model given in `ProgramSpec` or `ProgramInput` keywords is stored as its JSON form, so an input saves, reloads and keys the same.
+- `Request.accuracy` replaces the input's `accuracy` keyword for that request.
+- `internal` means a failure nobody anticipated; an anticipated failure takes the kind that fits it.
+
+
 ## [0.24.0a3] - 2026-11-17
 
 ### Added
