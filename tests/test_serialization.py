@@ -103,7 +103,41 @@ def test_serialized_scientific_arrays_match_schema(water):
             "frequencies": [1.0, 2.0],
             "normal_modes_cartesian": np.arange(18).reshape(2, 3, 3),
         },
-        wavefunction=Wavefunction(scf_eigenvalues_a=[-1.0, -0.5]),
+        wavefunction=Wavefunction(
+            orbitals={
+                "spin": "restricted",
+                "energies_a": [-0.5],
+                "occupations_a": [1.0],
+                "occupations_b": [1.0],
+                "core_electrons": [2, 0, 0],
+                "basis": {
+                    "shells": [
+                        {
+                            "center": 0,
+                            "angular_momentum": 0,
+                            "pure": True,
+                            "exponents": [1.0],
+                            "coefficients": [0.71],
+                        }
+                    ],
+                    "ecp": [
+                        {
+                            "center": 0,
+                            "local": [
+                                {"power": -2, "exponent": 1.0, "coefficient": 2.0}
+                            ],
+                            "semilocal": [],
+                        }
+                    ],
+                },
+                "coefficients_a": [[1.0]],
+            },
+            overlap=[[1.0]],
+            hamiltonian_a=[[-0.5]],
+            core_hamiltonian=[[-1.0]],
+        ),
+        atomic_dipoles=np.zeros((3, 3)),
+        atomic_quadrupoles=np.zeros((3, 3, 3)),
     )
     for obj in [water, data, ConformerSearchData(provenance={"program": "producer"})]:
         schema = type(obj).model_json_schema(mode="serialization")

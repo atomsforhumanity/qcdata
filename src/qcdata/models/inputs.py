@@ -169,7 +169,11 @@ class ProgramInput(ProgramSpec):
 
     @model_validator(mode="after")
     def _check_given(self) -> Self:
-        """Given results belong to ``structure``: the same atoms, in its shapes."""
+        """Given results belong to ``structure``: the same atoms, in its shapes.
+
+        A given wavefunction may come from another charge or multiplicity (a guess),
+        so its electrons are not checked.
+        """
         if self.given is None:
             return self
         if self.structure is None:
@@ -185,6 +189,9 @@ class ProgramInput(ProgramSpec):
                     f"given.{name} has shape {value.shape}; the structure's {n} atoms "
                     f"need {shape}."
                 )
+        from .data import _check_fits_structure
+
+        _check_fits_structure(self.given, self.structure, electrons=False)
         return self
 
     @model_validator(mode="after")

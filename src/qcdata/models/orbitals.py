@@ -1,11 +1,14 @@
 """Basis sets and molecular orbitals.
 
-`Orbitals` holds MO coefficients (nao x nmo, one orbital per column), energies and
-occupations per spin, together with the `BasisSet` they expand in. A `BasisSet` is a
-list of `Shell` objects placed on the structure's atoms, in AO order, and an explicit
-`AOConvention` saying how the functions within a shell are ordered and normalized, so
-coefficients from any program can be stored as produced and converted when needed
-(`Orbitals.with_convention`).
+`Orbitals` is the one home of a calculation's orbital levels: energies and occupations
+per spin, the electronic temperature and Fermi levels, the electrons each atom keeps
+outside the orbitals (`core_electrons`) and, on request, the MO coefficients (nao x nmo,
+one orbital per column) with the `BasisSet` they expand in. A `BasisSet` is a list of
+`Shell` objects placed on the structure's atoms, in AO order; its effective core
+potentials (`Ecp`); and an explicit `AOConvention` saying how the functions within a
+shell are ordered and normalized, so coefficients from any program can be stored as
+produced and converted when needed (`Orbitals.with_convention`,
+`Wavefunction.with_convention`).
 
 Coefficients of a shell multiply the *unnormalized* primitives r^l exp(-a r^2) and
 include all normalization: the x^l Cartesian component of the contracted shell, and so
@@ -15,8 +18,7 @@ to spherical transformation of unit-normalized real solid harmonics for pure she
 with no convention left to guess except the ones `AOConvention` names. General
 contractions are split into one shell per contracted function.
 
-Contributed from linus (``linus.models``); converters to PySCF and Molden live outside
-qcdata.
+Converters to PySCF, Molden and TREXIO live outside qcdata.
 """
 
 # l is the conventional symbol for angular momentum.
@@ -26,10 +28,10 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from qcdata.helper_types import SerializableMatrix, SerializableVector
 
@@ -40,6 +42,9 @@ __all__ = [
     "BasisSet",
     "CartesianNormalization",
     "CartesianOrder",
+    "Ecp",
+    "EcpTerm",
+    "OrbitalKind",
     "OrbitalSpin",
     "Orbitals",
     "Shell",
@@ -50,6 +55,12 @@ __all__ = [
 ]
 
 L_LETTERS = "spdfghiklmn"
+
+#: How an AO-indexed array changes with the AO convention: ``coefficients`` (the first
+#: index is an AO: MO coefficients), ``operator`` (both indices are AOs of a matrix of
+#: integrals <mu|O|nu>: overlap, Hamiltonians) or ``density`` (both indices are AOs of a
+#: matrix that contracts with operators: C n C^T).
+AOArrayKind = Literal["coefficients", "operator", "density"]
 
 
 class SphericalOrder(StrEnum):
@@ -191,18 +202,78 @@ class Shell(QCDataBaseModel):
         return self.coefficients / _xl_norm(self.angular_momentum, self.exponents)
 
 
+class EcpTerm(QCDataBaseModel):
+    """One Gaussian term of an ECP channel: coefficient * r^power * exp(-exponent r^2).
+
+    Attributes:
+        power: The power of r, -2 or more. Basis Set Exchange JSON and NWChem write n
+            for r^(n-2), so their power is n - 2.
+        exponent: Gaussian exponent (bohr^-2), positive.
+        coefficient: Coefficient (Eh bohr^-power).
+    """
+
+    power: int
+    exponent: float
+    coefficient: float
+
+    @model_validator(mode="after")
+    def _check(self) -> EcpTerm:
+        if self.power < -2:
+            raise ValueError(
+                f"power must be -2 or more: r^{self.power} has no finite integrals"
+            )
+        if not self.exponent > 0:
+            raise ValueError("exponent must be positive")
+        return self
+
+
+class Ecp(QCDataBaseModel):
+    """The scalar effective core potential of one atom.
+
+    The potential is U_L(r) + sum_{l<L} (U_l(r) - U_L(r)) P_l, with P_l the projector on
+    angular momentum l about the atom and L = ``len(semilocal)``: the layout of Basis Set
+    Exchange, NWChem, PySCF and Psi4. Spin-orbit terms have no place here. The electrons
+    it replaces are its atom's `Orbitals.core_electrons`.
+
+    Attributes:
+        center: Index of the atom (0-based) in the structure the basis set belongs to.
+        local: The terms of U_L, felt by every angular momentum.
+        semilocal: ``semilocal[l]``, for l = 0..L-1: the terms of U_l - U_L.
+    """
+
+    center: int
+    local: list[EcpTerm]
+    semilocal: list[list[EcpTerm]]
+
+
 class BasisSet(QCDataBaseModel):
     """A basis set placed on the atoms of a structure, in AO order.
+
+    A basis set belongs to one geometry: a tight-binding basis whose contraction depends
+    on the geometry (g-xTB's q-vSZP) differs from frame to frame.
 
     Attributes:
         name: The basis set's name (e.g. ``"def2-svp"``), if it has one.
         shells: The contracted shells; the AOs are their functions in this order.
+        ecp: The effective core potentials, at most one per atom; the electrons each
+            replaces are `Orbitals.core_electrons`.
         ao_convention: Order and normalization of the functions within each shell.
+        nao: `@property` The number of AOs.
     """
 
     name: str | None = None
     shells: list[Shell]
-    ao_convention: AOConvention = AOConvention()
+    ecp: list[Ecp] = []
+    ao_convention: AOConvention = Field(default_factory=AOConvention)
+
+    @model_validator(mode="after")
+    def _check(self) -> BasisSet:
+        centers = [e.center for e in self.ecp]
+        if any(c < 0 for c in centers):
+            raise ValueError("Ecp centers must be atom indices >= 0")
+        if len(set(centers)) != len(centers):
+            raise ValueError("at most one Ecp per atom")
+        return self
 
     @property
     def nao(self) -> int:
@@ -245,37 +316,63 @@ class BasisSet(QCDataBaseModel):
 
     def transform(
         self,
-        coefficients: Any,
+        array: Any,
         convention: AOConvention,
+        *,
+        kind: AOArrayKind,
         shell_order: Sequence[int] | None = None,
     ) -> np.ndarray:
-        """Convert AO-indexed rows to another AO convention and shell order.
+        """Convert an AO-indexed array to another AO convention and shell order.
+
+        A target AO is a source AO divided by s, the ratio of the function's norm in
+        this convention to its norm in the target (1 for every spherical function and
+        for a reordering alone). Coefficients therefore scale by s per AO index,
+        densities by s_mu s_nu and operators by 1 / (s_mu s_nu); a reordering permutes
+        the AO indices of all three alike.
 
         Args:
-            coefficients: An array whose first index is the AO (e.g. MO coefficients,
-                nao x nmo).
+            array: The array in this basis set's convention.
             convention: The target convention.
+            kind: How the array transforms: ``coefficients`` (its first index is an AO,
+                e.g. MO coefficients, nao x nmo), ``operator`` (an nao x nao matrix of
+                integrals <mu|O|nu>: overlap, Hamiltonians) or ``density`` (an
+                nao x nao matrix that contracts with operators, e.g. C n C^T).
             shell_order: The shells' order in the target, as indices into `shells`;
                 None keeps the order.
 
         Returns:
-            The rows permuted and scaled into the target convention.
+            A new array in the target convention.
 
         Raises:
-            ValueError: If the rows do not match the basis set's AOs.
+            ValueError: If `kind` is unknown or the array does not match the basis set's
+                AOs.
         """
+        if kind not in ("coefficients", "operator", "density"):
+            raise ValueError(
+                f"kind must be coefficients, operator or density, not {kind!r}"
+            )
+        a = np.asarray(array, dtype=float)
+        nao = self.nao
         perm, scale = _ao_map(self, convention, shell_order)
-        c = np.asarray(coefficients, dtype=float)
-        if c.shape[0] != self.nao:
-            raise ValueError(f"expected {self.nao} rows (AOs), got {c.shape[0]}")
-        return c[perm] * scale.reshape((-1,) + (1,) * (c.ndim - 1))
+        if kind == "coefficients":
+            if a.ndim == 0 or a.shape[0] != nao:
+                raise ValueError(f"expected {nao} rows (AOs), got shape {a.shape}")
+            return a[perm] * scale.reshape((-1,) + (1,) * (a.ndim - 1))
+        if a.shape != (nao, nao):
+            raise ValueError(f"expected an {nao} x {nao} matrix, got shape {a.shape}")
+        moved = a[np.ix_(perm, perm)]
+        pair = np.outer(scale, scale)
+        return moved / pair if kind == "operator" else moved * pair
 
 
 class OrbitalSpin(StrEnum):
     """Whether alpha and beta electrons share spatial orbitals.
 
     Attributes:
-        restricted: One set of spatial orbitals for both spins (RHF, RKS, ROHF).
+        restricted: One set of spatial orbitals for both spins, occupied per spin: RHF
+            and RKS; ROHF; and tight binding's open shells (GFN2-xTB), the eigenvectors
+            of one spin-averaged Hamiltonian with per-spin occupations, which are not
+            ROHF.
         unrestricted: Separate alpha and beta orbitals (UHF, UKS).
     """
 
@@ -283,112 +380,245 @@ class OrbitalSpin(StrEnum):
     unrestricted = "unrestricted"
 
 
-class Orbitals(QCDataBaseModel):
-    """Molecular orbitals in a basis set.
+class OrbitalKind(StrEnum):
+    """What a set of orbitals is.
+
+    Values are added when a program produces them.
 
     Attributes:
-        basis: The basis set the orbitals expand in (centers refer to the structure's atoms).
-        spin: ``restricted`` (one set of orbitals: the ``_b`` coefficients and energies are
-            None) or ``unrestricted``.
-        kind: What the orbitals are: ``canonical`` (default), ``natural``, ``localized``...
-        coefficients_a: nao x nmo; column i is orbital i (alpha, or both spins).
-        coefficients_b: Beta orbitals (unrestricted only).
-        energies_a: Orbital energies (Eh), if they have any.
-        energies_b: Beta orbital energies (unrestricted only).
-        occupations_a: Alpha occupation of each orbital (0..1).
-        occupations_b: Beta occupation of each orbital (0..1); for restricted orbitals of
-            an open shell (ROHF) it differs from the alpha one. None: as alpha.
+        canonical: The eigenvectors of the Hamiltonian, with their energies.
+        natural: The eigenvectors of a density, with their occupations; no energies.
+        localized: Localized orbitals, with no energies; `Orbitals.localization` names
+            the method.
     """
 
-    basis: BasisSet
+    canonical = "canonical"
+    natural = "natural"
+    localized = "localized"
+
+
+class Orbitals(QCDataBaseModel):
+    """The orbital levels of a calculation and, on request, the orbitals themselves.
+
+    The one home of orbital energies and occupations. The levels are cheap and come with
+    every wavefunction; the coefficients (nao x nmo numbers per spin) and the basis set
+    they expand in come only on request. Every per-orbital vector has one value per
+    orbital, in the order of the coefficient matrices' columns.
+
+    Where the structure is known (a `ProgramOutput` or a `Frame`), the occupations add
+    up to sum(Z - core_electrons) - charge.
+
+    Attributes:
+        spin: ``restricted``: one set of spatial orbitals (one coefficient matrix, one
+            set of energies, one Hamiltonian), occupied per spin. ``unrestricted``:
+            everything per spin.
+        kind: What the orbitals are: ``canonical`` (with energies), ``natural`` or
+            ``localized`` (without).
+        localization: The method that localized ``localized`` orbitals (e.g.
+            ``"boys"``, ``"pipek_mezey"``); None for every other kind.
+        energies_a: Orbital energies (Eh) of canonical orbitals: alpha, or both spins.
+        energies_b: Beta orbital energies (Eh) of unrestricted canonical orbitals.
+        occupations_a: Alpha electrons in each orbital, between 0 and 1.
+        occupations_b: Beta electrons in each orbital, between 0 and 1; for restricted
+            orbitals of an open shell they differ from the alpha ones.
+        electronic_temperature: The temperature (K) of the Fermi smearing that set the
+            occupations; 0 for aufbau occupations.
+        fermi_level_a: The alpha Fermi level (Eh) of smeared occupations; None at 0 K.
+        fermi_level_b: The beta Fermi level (Eh); None at 0 K. Each spin is filled at its
+            own fixed electron count, so an open shell has two levels; a closed shell's
+            are equal.
+        core_electrons: One per atom of the structure: the electrons the orbitals do not
+            represent, those an ECP replaces (required for every ECP atom of `basis`) or
+            a valence-only method leaves out (28 for Zn in GFN2-xTB and g-xTB). None:
+            every electron is in the orbitals.
+        basis: The basis set the coefficients expand in (its centers refer to the
+            structure's atoms); only with coefficients.
+        coefficients_a: nao x nmo; column i is orbital i (alpha, or both spins). Only
+            on request, with `basis`.
+        coefficients_b: The beta orbitals, nao x nmo: unrestricted orbitals with
+            coefficients only.
+        nmo: `@property` The number of orbitals.
+    """
+
     spin: OrbitalSpin
-    kind: str = "canonical"
-    coefficients_a: SerializableMatrix
-    coefficients_b: SerializableMatrix | None = None
+    kind: OrbitalKind = OrbitalKind.canonical
+    localization: str | None = None
     energies_a: SerializableVector | None = None
     energies_b: SerializableVector | None = None
-    occupations_a: SerializableVector | None = None
-    occupations_b: SerializableVector | None = None
+    occupations_a: SerializableVector
+    occupations_b: SerializableVector
+    electronic_temperature: float = 0.0
+    fermi_level_a: float | None = None
+    fermi_level_b: float | None = None
+    core_electrons: list[int] | None = None
+    basis: BasisSet | None = None
+    coefficients_a: SerializableMatrix | None = None
+    coefficients_b: SerializableMatrix | None = None
 
     @model_validator(mode="after")
     def _check(self) -> Orbitals:
-        nao = self.basis.nao
-        ca = self.coefficients_a
-        if ca.ndim != 2 or ca.shape[0] != nao:
+        occ_a, occ_b = self.occupations_a, self.occupations_b
+        if occ_a.ndim != 1 or occ_b.shape != occ_a.shape:
             raise ValueError(
-                f"coefficients_a must be nao x nmo with nao = {nao}, not {ca.shape}"
+                "occupations_a and occupations_b must be vectors of one value per "
+                f"orbital, not shapes {occ_a.shape} and {occ_b.shape}"
             )
-        nmo = ca.shape[1]
-        if self.spin == OrbitalSpin.restricted:
-            if self.coefficients_b is not None or self.energies_b is not None:
+        nmo = occ_a.shape[0]
+        for name, occ in (("occupations_a", occ_a), ("occupations_b", occ_b)):
+            if not np.all((occ >= 0) & (occ <= 1)):
+                raise ValueError(f"{name} must be between 0 and 1 (electrons per spin)")
+        unrestricted = self.spin == OrbitalSpin.unrestricted
+        self._check_energies(nmo, unrestricted)
+        if (self.kind == OrbitalKind.localized) != (self.localization is not None):
+            raise ValueError(
+                "localization names the method of localized orbitals: required for "
+                "them, None for every other kind"
+            )
+        self._check_smearing()
+        self._check_coefficients(nmo, unrestricted)
+        self._check_core_electrons()
+        return self
+
+    def _check_energies(self, nmo: int, unrestricted: bool) -> None:
+        if not unrestricted and self.energies_b is not None:
+            raise ValueError(
+                "restricted orbitals have one set of energies: no energies_b"
+            )
+        if self.kind == OrbitalKind.canonical:
+            if self.energies_a is None or (unrestricted and self.energies_b is None):
                 raise ValueError(
-                    "restricted orbitals have no coefficients_b or energies_b"
+                    "canonical orbitals need their energies: energies_a, and energies_b "
+                    "when unrestricted"
                 )
-        elif self.coefficients_b is None:
-            raise ValueError("unrestricted orbitals need coefficients_b")
-        if self.coefficients_b is not None and self.coefficients_b.shape != ca.shape:
-            raise ValueError("coefficients_b must have the shape of coefficients_a")
-        for name in ("energies_a", "energies_b", "occupations_a", "occupations_b"):
+        elif self.energies_a is not None or self.energies_b is not None:
+            raise ValueError(f"{self.kind.value} orbitals have no energies")
+        for name in ("energies_a", "energies_b"):
             v = getattr(self, name)
             if v is not None and v.shape != (nmo,):
                 raise ValueError(
                     f"{name} must have one value per orbital ({nmo}), not shape {v.shape}"
                 )
-        return self
 
-    @property
-    def nao(self) -> int:
-        """Number of atomic orbitals."""
-        return self.coefficients_a.shape[0]
+    def _check_smearing(self) -> None:
+        if not self.electronic_temperature >= 0:
+            raise ValueError("electronic_temperature must be >= 0 K")
+        levels = (self.fermi_level_a, self.fermi_level_b)
+        if self.electronic_temperature == 0:
+            if levels != (None, None):
+                raise ValueError(
+                    "Fermi levels belong to smeared occupations "
+                    "(electronic_temperature > 0); at 0 K they are None"
+                )
+        elif None in levels:
+            raise ValueError(
+                "smeared occupations (electronic_temperature > 0) need fermi_level_a "
+                "and fermi_level_b"
+            )
+
+    def _check_coefficients(self, nmo: int, unrestricted: bool) -> None:
+        basis, ca, cb = self.basis, self.coefficients_a, self.coefficients_b
+        if (basis is None) != (ca is None):
+            raise ValueError("basis and coefficients_a come together: both or neither")
+        if basis is None or ca is None:
+            if cb is not None:
+                raise ValueError("coefficients_b needs coefficients_a and basis")
+            return
+        shape = (basis.nao, nmo)
+        if ca.shape != shape:
+            raise ValueError(
+                f"coefficients_a must be nao x nmo = {shape}, not {ca.shape}"
+            )
+        if not unrestricted:
+            if cb is not None:
+                raise ValueError(
+                    "restricted orbitals have one coefficient matrix: no coefficients_b"
+                )
+        elif cb is None:
+            raise ValueError(
+                "unrestricted orbitals with coefficients need coefficients_b"
+            )
+        elif cb.shape != shape:
+            raise ValueError(
+                f"coefficients_b must be nao x nmo = {shape}, not {cb.shape}"
+            )
+
+    def _check_core_electrons(self) -> None:
+        core = self.core_electrons
+        if core is not None and min(core, default=0) < 0:
+            raise ValueError("core_electrons must be >= 0")
+        ecp_atoms = [e.center for e in self.basis.ecp] if self.basis else []
+        bare = [a for a in ecp_atoms if core is None or a >= len(core) or core[a] == 0]
+        if bare:
+            raise ValueError(
+                f"atoms {bare} have ECPs, so core_electrons must give the electrons "
+                "each ECP replaces"
+            )
 
     @property
     def nmo(self) -> int:
         """Number of molecular orbitals."""
-        return self.coefficients_a.shape[1]
+        return int(self.occupations_a.shape[0])
 
     @property
     def restricted(self) -> bool:
         """Whether the orbitals are restricted."""
         return self.spin == OrbitalSpin.restricted
 
-    def spin_orbitals(
-        self,
-    ) -> tuple[tuple[np.ndarray, np.ndarray | None, np.ndarray | None], ...]:
-        """((coefficients, energies, occupations) of alpha, of beta)."""
-        occ_a = self.occupations_a
-        occ_b = self.occupations_b if self.occupations_b is not None else occ_a
-        if self.restricted:
-            return (self.coefficients_a, self.energies_a, occ_a), (
-                self.coefficients_a,
-                self.energies_a,
-                occ_b,
-            )
-        assert self.coefficients_b is not None  # validated for unrestricted orbitals
-        return (self.coefficients_a, self.energies_a, occ_a), (
-            self.coefficients_b,
-            self.energies_b,
-            occ_b,
-        )
-
     def density(self) -> tuple[np.ndarray, np.ndarray]:
-        """Alpha and beta AO density matrices C n C^T."""
-        out = []
-        for c, _, occ in self.spin_orbitals():
-            if occ is None:
-                raise ValueError("densities need occupations")
-            out.append((c * occ) @ c.T)
-        return out[0], out[1]
+        """The alpha and beta AO density matrices, C n C^T per spin.
+
+        Returns:
+            Two nao x nao matrices in the basis set's AO convention.
+
+        Raises:
+            ValueError: If the orbitals have no coefficients.
+        """
+        _, ca, cb = self._require_coefficients("density()")
+        return (ca * self.occupations_a) @ ca.T, (cb * self.occupations_b) @ cb.T
 
     def with_convention(self, convention: AOConvention) -> Orbitals:
-        """The same orbitals with the basis functions in another AO convention."""
-        values = self.model_dump()
-        values["basis"]["ao_convention"] = convention.model_dump()
-        values["coefficients_a"] = self.basis.transform(self.coefficients_a, convention)
-        if self.coefficients_b is not None:
-            values["coefficients_b"] = self.basis.transform(
-                self.coefficients_b, convention
+        """The same orbitals with the basis functions in another AO convention.
+
+        `Wavefunction.with_convention` converts the AO matrices with them.
+
+        Args:
+            convention: The target convention.
+
+        Returns:
+            New orbitals whose basis set has the target convention.
+
+        Raises:
+            ValueError: If the orbitals have no coefficients.
+        """
+        basis = self._require_coefficients("with_convention()")[0]
+        update: dict[str, Any] = {
+            "basis": basis.model_copy(update={"ao_convention": convention})
+        }
+        for name in ("coefficients_a", "coefficients_b"):
+            c = getattr(self, name)
+            if c is not None:
+                update[name] = basis.transform(c, convention, kind="coefficients")
+        return self.model_copy(update=update)
+
+    def _require_coefficients(
+        self, what: str
+    ) -> tuple[BasisSet, np.ndarray, np.ndarray]:
+        """The basis set and the alpha and beta coefficients (one matrix if restricted).
+
+        Raises:
+            ValueError: If the orbitals have no coefficients.
+        """
+        if self.basis is None or self.coefficients_a is None:
+            raise ValueError(
+                f"{what} needs the orbitals' coefficients, and these orbitals have only "
+                "their levels: programs return coefficients and the basis set on request"
             )
-        return Orbitals.model_validate(values)
+        cb = (
+            self.coefficients_b
+            if self.coefficients_b is not None
+            else self.coefficients_a
+        )
+        return self.basis, self.coefficients_a, cb
 
 
 # --- AO bookkeeping ---------------------------------------------------------------------

@@ -62,9 +62,12 @@ __all__ = [  # noqa: F405
     "EnthalpyModel",
     # Basis sets and orbitals
     "Orbitals",
+    "OrbitalKind",
     "OrbitalSpin",
     "BasisSet",
     "Shell",
+    "Ecp",
+    "EcpTerm",
     "AOConvention",
     "SphericalOrder",
     "CartesianOrder",
