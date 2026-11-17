@@ -161,7 +161,7 @@ class QCDataBaseModel(BaseModel, ABC):
         self,
         filepath: Path | str,
         exclude_none: bool = True,
-        exclude_unset: bool = True,
+        exclude_unset: bool = False,
         indent: int = 4,
         **kwargs: Any,
     ) -> list[Path]:
@@ -195,9 +195,10 @@ class QCDataBaseModel(BaseModel, ABC):
             filepath: The path to write the object to.
             exclude_none: If True, attributes with a value of None will not be written.
                 Changing default behavior from pydantic.model_dump() to True.
-            exclude_unset: If True, fields omitted during construction are excluded,
-                even if their containers were later modified. Defaults to True for
-                compact files; pass False to include unset/default-valued fields.
+            exclude_unset: If True, fields omitted during construction are not written,
+                even when their containers were filled in later (a `record` a program
+                filled after building the output would be lost). Defaults to False, so
+                a save is lossless.
             indent: The number of spaces to use for indentation in the JSON file. 0
                 creates a more compact JSON file, 4 is more human-readable.
             **kwargs: Additional keyword arguments to pass to the serialization method.
@@ -435,6 +436,11 @@ class ExecutionInfo(QCDataBaseModel):
         hostname: The hostname of the machine where the program ran.
         host_cpu: The number of logical CPUs on the host, not the allocated CPU count.
         host_mem_gib: The host's total memory in GiB, not the allocated memory.
+        cpu_model: The CPU's model name, as the operating system reports it.
+        devices: The names of the GPUs the calculation ran on, in device order.
+        libc: The C library and its version (``glibc 2.39``). With the CPU and the
+            devices it is the run's environment: results agree across environments to
+            the program's stated round-off, and bitwise only within one.
         timings: Wall-clock seconds per phase of the calculation. The keys are the
             program's; ``total`` is the whole call, and a program with subprograms
             reports ``subprograms`` (time inside them) beside its own phases.
@@ -451,6 +457,9 @@ class ExecutionInfo(QCDataBaseModel):
     hostname: str | None = None
     host_cpu: int | None = None
     host_mem_gib: float | None = None
+    cpu_model: str | None = None
+    devices: list[str] = Field(default_factory=list)
+    libc: str | None = None
     timings: dict[str, float] = {}
     threads: int | None = None
     peak_memory_gib: float | None = None

@@ -159,7 +159,7 @@ def test_compact_saves_and_supported_helpers(extension, water, tmp_path):
         program="geometric", calctype="optimization", structure=structure, keywords={}
     )
     path = tmp_path / f"input.{extension}"
-    inp.save(path)
+    inp.save(path, exclude_unset=True)
     compact = loads(path.read_text())
     assert compact["keywords"] == {}  # Explicitly supplied default values are retained.
     for name in ["files", "extras", "cmdline_args", "structures", "subprograms"]:
@@ -168,7 +168,7 @@ def test_compact_saves_and_supported_helpers(extension, water, tmp_path):
     assert compact == json.loads(json_dumps(inp))
     assert json.loads(json_dumps([inp])) == [compact]
 
-    inp.save(path, exclude_unset=False)
+    inp.save(path)  # lossless by default
     expanded = loads(path.read_text())
     assert expanded["files"] == {}
     assert expanded["subprograms"] == []
@@ -229,3 +229,22 @@ def test_json_helper_single_and_list_match(prog_output):
         Model(method="hf").model_dump(exclude_unset=True)["qcdata_version"]
         == __version__
     )
+
+
+def test_save_keeps_containers_filled_after_construction(tmp_path):
+    from qcdata import ProgramInput, ProgramOutput, Provenance, SinglePointData
+
+    structure = Structure(symbols=["He"], geometry=[[0.0, 0.0, 0.0]])
+    inp = ProgramInput(
+        program="toy", calctype="energy", structure=structure, model={"method": "lj"}
+    )
+    out = ProgramOutput(
+        input_data=inp,
+        success=True,
+        results=SinglePointData(provenance=Provenance(program="toy"), energy=-2.8),
+    )
+    out.record["scf"] = {"iterations": 12}  # filled in after the output was built
+    out.save(tmp_path / "out.json")
+    assert ProgramOutput.open(tmp_path / "out.json").record == {
+        "scf": {"iterations": 12}
+    }

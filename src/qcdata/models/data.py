@@ -621,7 +621,7 @@ class _FrameSeries:
         self,
         filepath: Path | str,
         exclude_none: bool = True,
-        exclude_unset: bool = True,
+        exclude_unset: bool = False,
         indent: int = 4,
         **kwargs: Any,
     ) -> list[Path]:
@@ -956,7 +956,7 @@ class ScanData(FileData, CalcInfoData):
         self,
         filepath: Path | str,
         exclude_none: bool = True,
-        exclude_unset: bool = True,
+        exclude_unset: bool = False,
         indent: int = 4,
         **kwargs: Any,
     ) -> list[Path]:

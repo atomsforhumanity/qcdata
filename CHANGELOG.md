@@ -6,12 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.24.0a2] - 2026-11-17
+
 ### Added
 
 - `ProgramErrors`, the group raised when some of several calculations failed (a runner's list, a session's `compute_many`). It holds each failure's `ProgramError` and every result in request order (`results`), and pickles. Programs' sessions raise it with only qcdata imported (`return ProgramErrors.check(frames)`).
+- `ExecutionInfo.cpu_model`, `devices` and `libc`: the run's environment. Results agree across environments to a program's stated round-off, and bitwise only within one.
 
 ### Changed
 
+- **Breaking:** `save()` is lossless by default (`exclude_unset=False`). A container filled after construction, such as a program's `record`, was silently dropped before. Pass `exclude_unset=True` for compact files.
 - **Breaking:** `calculation_key(inp)` takes the input only; program identities are recorded per stored run instead. Every key from 0.24.0a1 changes.
 
 ## [0.24.0a1] - 2026-11-17
