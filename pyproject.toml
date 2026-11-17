@@ -92,6 +92,15 @@ docs = [
 requires = ["hatchling>=1.22"]
 build-backend = "hatchling.build"
 
+# The version is written into the package when it is built (wheel, sdist or editable
+# install), so `import qcdata` reads no package metadata.
+[tool.hatch.build.hooks.version]
+path = "src/qcdata/_version.py"
+template = '''"""The package version, written from pyproject.toml when the package is built."""
+
+__version__ = "{version}"
+'''
+
 [tool.ruff]
 line-length = 88
 target-version = "py311"
