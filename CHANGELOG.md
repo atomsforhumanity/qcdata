@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.24.0a7] - 2026-11-17
+
+### Added
+
+- `ErrorKind.stopped`: a program stopped on request at a step, with its partial results. A runner never stores a stopped output, and a store never reuses one. The conventions get a "Stopping" section.
+- Shared `convergence` codes `scf_not_converged` (results hold the last iterate) and `response_not_converged`, and the shared warning `loosely_converged` for a result accepted under a relaxed rule.
+
+### Changed
+
+- **Breaking:** `ErrorInfo.details` `required_gib` and `available_gib` are in the memory keyword's terms: the `memory_gib` (`device_memory_gib`) with which the calculation would fit, and the one it ran with. A raw need goes under a program key.
+- The conventions state that `results.hessian` is the full Cartesian second derivative at the input geometry, never projected; a program whose code projects undoes it or refuses.
+- `Orbitals` accepts a None Fermi level for a spin whose occupations sum to zero under smearing.
+- Faster import: the version is written at build time (`_version.py` is generated, not tracked); yaml, toml and difflib load on use; the concrete `ProgramOutput[...]` classes are made on first lookup.
+- Docs: how to make a variant of an input (`model_validate`), and why `model_copy(update=)` doesn't validate.
+
+
 ## [0.24.0a6] - 2026-11-17
 
 ### Changed
