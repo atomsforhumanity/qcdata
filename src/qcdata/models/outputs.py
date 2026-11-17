@@ -153,7 +153,7 @@ class ProgramOutput(OutputBase, Generic[ProgramInputType, DataType]):
                 f"specifies {declared.__name__}."
             )
         if isinstance(value, dict):
-            return expected.model_validate(value)
+            return expected.model_validate(value, context=info.context)
         if type(value) is not expected:
             raise ValueError(
                 f"Input requires {expected.__name__} results on both success and "

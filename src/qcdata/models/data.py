@@ -342,7 +342,7 @@ class Frame(OutputBase):
 
     @classmethod
     def from_output(cls, output: ProgramOutput[Any, Any]) -> Self:
-        """Record a child calculation's output as a step, at its input's structure.
+        """Record a subprogram's output as a step, at its input's structure.
 
         Raises:
             ValidationError: The output's results are not `SinglePointData`, or its
@@ -398,7 +398,7 @@ class _FrameSeries:
         exclude_unset: bool = True,
         indent: int = 4,
         **kwargs: Any,
-    ) -> None:
+    ) -> list[Path]:
         """Save to a file; a `.xyz` extension writes the frames' structures.
 
         Args:
@@ -409,12 +409,15 @@ class _FrameSeries:
             indent: The number of spaces to use for indentation in JSON and YAML
                 files. Ignored for `.xyz` files.
             **kwargs: Additional keyword arguments to pass to the json serializer.
+
+        Returns:
+            Every file written, as `QCDataBaseModel.save` returns them.
         """
         filepath = Path(filepath)
         if filepath.suffix == ".xyz":
             filepath.write_text(self.to_xyz())
-            return
-        super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)  # type: ignore[misc]
+            return [filepath]
+        return super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)  # type: ignore[misc]
 
 
 def _renamed(payload: Any, old: str, new: str) -> Any:
@@ -730,7 +733,7 @@ class ScanData(FileData, CalcInfoData):
         exclude_unset: bool = True,
         indent: int = 4,
         **kwargs: Any,
-    ) -> None:
+    ) -> list[Path]:
         """Save a ScanData to a file.
 
         Args:
@@ -743,6 +746,9 @@ class ScanData(FileData, CalcInfoData):
                 files. Ignored for `.xyz` files.
             **kwargs: Additional keyword arguments to pass to the json serializer.
 
+        Returns:
+            Every file written, as `QCDataBaseModel.save` returns them.
+
         Note:
             If the filepath has a `.xyz` extension, each scan point's final structure is saved to a
             multi-structure `xyz` file.
@@ -750,8 +756,8 @@ class ScanData(FileData, CalcInfoData):
         filepath = Path(filepath)
         if filepath.suffix == ".xyz":
             filepath.write_text(self.to_xyz())
-            return
-        super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)
+            return [filepath]
+        return super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)
 
 
 StructuredData = (

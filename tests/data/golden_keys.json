@@ -1,0 +1,283 @@
+[
+  {
+    "name": "energy",
+    "covers": "a plain input: fields at their default left out, coordinates as integers in 1e-10 bohr",
+    "context": {"axtb": "0.1.1"},
+    "input": {
+      "program": "axtb",
+      "calctype": "energy",
+      "model": {"method": "gfn2"},
+      "structure": {
+        "symbols": ["O", "H", "H"],
+        "geometry": [[0.0, 0.0, -0.1294], [0.0, 1.4941, 1.0274], [0.0, -1.4941, 1.0274]]
+      }
+    },
+    "key": "k1:013624a1b6a9980e47787a11e1a29f9a6b77134c0639a054c7e51c1b50bc751c"
+  },
+  {
+    "name": "energy_excluded_and_defaults",
+    "covers": "the energy input with what the key leaves out: threads and memory_gib, structure identifiers, extras at every level, fields written at their default, a saved version stamp; same key as energy",
+    "context": {"axtb": "0.1.1"},
+    "input": {
+      "program": "axtb",
+      "calctype": "energy",
+      "model": {"method": "gfn2", "basis": null, "extras": {"note": "scratch"}},
+      "keywords": {"threads": 8, "memory_gib": 4.0},
+      "structure": {
+        "symbols": ["O", "H", "H"],
+        "geometry": [[0.0, 0.0, -0.1294], [0.0, 1.4941, 1.0274], [0.0, -1.4941, 1.0274]],
+        "charge": 0,
+        "multiplicity": 1,
+        "connectivity": [],
+        "identifiers": {"name": "water", "smiles": "O"},
+        "extras": {"xyz_comments": ["from a file"]}
+      },
+      "structures": {},
+      "given": null,
+      "subprograms": [],
+      "files": {},
+      "cmdline_args": [],
+      "extras": {"campaign": "golden"},
+      "qcdata_version": "0.23.1"
+    },
+    "key": "k1:013624a1b6a9980e47787a11e1a29f9a6b77134c0639a054c7e51c1b50bc751c"
+  },
+  {
+    "name": "energy_rounded_coordinates",
+    "covers": "the energy input with coordinates that differ by less than 5e-11 bohr and a -0.0; same key as energy",
+    "context": {"axtb": "0.1.1"},
+    "input": {
+      "program": "axtb",
+      "calctype": "energy",
+      "model": {"method": "gfn2"},
+      "structure": {
+        "symbols": ["O", "H", "H"],
+        "geometry": [
+          [-0.0, 3e-11, -0.12940000004],
+          [4e-11, 1.49409999996, 1.0274],
+          [0.0, -1.4941, 1.02740000002]
+        ]
+      }
+    },
+    "key": "k1:013624a1b6a9980e47787a11e1a29f9a6b77134c0639a054c7e51c1b50bc751c"
+  },
+  {
+    "name": "energy_empty_context",
+    "covers": "the energy input with an empty context: the context counts",
+    "context": {},
+    "input": {
+      "program": "axtb",
+      "calctype": "energy",
+      "model": {"method": "gfn2"},
+      "structure": {
+        "symbols": ["O", "H", "H"],
+        "geometry": [[0.0, 0.0, -0.1294], [0.0, 1.4941, 1.0274], [0.0, -1.4941, 1.0274]]
+      }
+    },
+    "key": "k1:8a90dfdfb34efc05e2160dd87c49fea07dfccf9aedb995265da51631500470be"
+  },
+  {
+    "name": "gradient_keywords",
+    "covers": "keywords with floats, integers, booleans, strings, null and nested groups",
+    "context": {"axtb": "0.1.1"},
+    "input": {
+      "program": "axtb",
+      "calctype": "gradient",
+      "model": {"method": "gfn2"},
+      "structure": {
+        "symbols": ["O", "H", "H"],
+        "geometry": [[0.0, 0.0, -0.1294], [0.0, 1.4941, 1.0274], [0.0, -1.4941, 1.0274]]
+      },
+      "keywords": {
+        "accuracy_scale": 0.5,
+        "electronic_temperature": 300,
+        "scf": {"max_iter": 100.0, "e_tol": 1e-8, "guess": "sad", "level_shift": -0.0},
+        "output": {"bond_orders": true, "orbitals": false},
+        "solvent": {"name": "water", "model": null}
+      }
+    },
+    "key": "k1:965e0390a3bd6189cdfff65907e1fda2967e4fc38150710bc6a0626386fa78c0"
+  },
+  {
+    "name": "gradient_keywords_normalized",
+    "covers": "the same keywords in another order, with numbers written differently (100 for 100.0, 0 for -0.0, 300.0 for 300, 1e-08 for 1e-8, 5e-1 for 0.5) and threads added; same key as gradient_keywords",
+    "context": {"axtb": "0.1.1"},
+    "input": {
+      "structure": {
+        "geometry": [[0.0, 0.0, -0.1294], [0.0, 1.4941, 1.0274], [0.0, -1.4941, 1.0274]],
+        "symbols": ["O", "H", "H"]
+      },
+      "keywords": {
+        "threads": 2,
+        "solvent": {"model": null, "name": "water"},
+        "scf": {"level_shift": 0, "guess": "sad", "e_tol": 1e-08, "max_iter": 100},
+        "output": {"orbitals": false, "bond_orders": true},
+        "electronic_temperature": 300.0,
+        "accuracy_scale": 5e-1
+      },
+      "model": {"method": "gfn2"},
+      "calctype": "gradient",
+      "program": "axtb"
+    },
+    "key": "k1:965e0390a3bd6189cdfff65907e1fda2967e4fc38150710bc6a0626386fa78c0"
+  },
+  {
+    "name": "hessian_open_shell",
+    "covers": "charge, multiplicity, connectivity and a basis set: values that differ from their defaults",
+    "context": {"linus": "6"},
+    "input": {
+      "program": "linus",
+      "calctype": "hessian",
+      "model": {"method": "b3lyp", "basis": "def2-svp"},
+      "structure": {
+        "symbols": ["O", "H", "H"],
+        "geometry": [[0.0, 0.0, -0.1294], [0.0, 1.4941, 1.0274], [0.0, -1.4941, 1.0274]],
+        "charge": 1,
+        "multiplicity": 2,
+        "connectivity": [[0, 1, 1.0], [0, 2, 1.0]]
+      },
+      "keywords": {"freq": {"temperature": 298.15}}
+    },
+    "key": "k1:de66be05f6b2afb6202c4ff5f6ca927017bb0f8f060dea3297095abad21a6ebf"
+  },
+  {
+    "name": "optimization_subprogram",
+    "covers": "a subprogram, whose threads and memory_gib are left out as at the top level",
+    "context": {"qcopt": "0.3.0", "axtb": "0.1.1"},
+    "input": {
+      "program": "qcopt",
+      "calctype": "optimization",
+      "structure": {
+        "symbols": ["O", "H", "H"],
+        "geometry": [[0.0, 0.0, -0.1294], [0.0, 1.4941, 1.0274], [0.0, -1.4941, 1.0274]]
+      },
+      "keywords": {"convergence": {"max_iter": 200}},
+      "subprograms": [
+        {
+          "program": "axtb",
+          "calctype": "gradient",
+          "model": {"method": "gfn2"},
+          "keywords": {"threads": 4, "memory_gib": 1.5, "accuracy_scale": 1.0}
+        }
+      ]
+    },
+    "key": "k1:47b41df3cc2e403c8d2d1f3f1d6675144499241a7bbcc282cf92edc912cc83f9"
+  },
+  {
+    "name": "transition_state_nested_given",
+    "covers": "subprograms two levels deep, and given results (a Hessian holding 1.0 and -0.0, provenance, extras left out)",
+    "context": {"qcopt": "0.3.0", "findiff": "0.1.0", "axtb": "0.1.1"},
+    "input": {
+      "program": "qcopt",
+      "calctype": "transition_state",
+      "structure": {
+        "symbols": ["O", "H", "H"],
+        "geometry": [[0.0, 0.0, -0.1294], [0.0, 1.4941, 1.0274], [0.0, -1.4941, 1.0274]]
+      },
+      "subprograms": [
+        {"program": "axtb", "calctype": "gradient", "model": {"method": "gxtb"}},
+        {
+          "program": "findiff",
+          "calctype": "hessian",
+          "keywords": {"step": 0.005, "threads": 16},
+          "subprograms": [
+            {
+              "program": "axtb",
+              "calctype": "gradient",
+              "model": {"method": "gxtb"},
+              "keywords": {"threads": 1}
+            }
+          ]
+        }
+      ],
+      "given": {
+        "provenance": {"program": "axtb", "program_version": "0.1.1"},
+        "energy": -5.0704,
+        "hessian": [
+          [0.5, -0.0, 0.0, -0.25, 0.0, 0.0, -0.25, 0.0, 0.0],
+          [-0.0, 0.62, 0.0, 0.0, -0.31, 0.11, 0.0, -0.31, -0.11],
+          [0.0, 0.0, 0.48, 0.0, 0.09, -0.24, 0.0, -0.09, -0.24],
+          [-0.25, 0.0, 0.0, 1.0, 0.0, 0.0, -0.75, 0.0, 0.0],
+          [0.0, -0.31, 0.09, 0.0, 0.33, -0.1, 0.0, -0.02, 0.01],
+          [0.0, 0.11, -0.24, 0.0, -0.1, 0.25, 0.0, -0.01, -0.01],
+          [-0.25, 0.0, 0.0, -0.75, 0.0, 0.0, 1.0, 0.0, 0.0],
+          [0.0, -0.31, -0.09, 0.0, -0.02, -0.01, 0.0, 0.33, 0.1],
+          [0.0, -0.11, -0.24, 0.0, 0.01, -0.01, 0.0, 0.1, 0.25]
+        ],
+        "extras": {"from": "an earlier search"}
+      }
+    },
+    "key": "k1:087c126e1046d6a2c0d11fee8b0346d5c9e1eccb43fb385e23d4899a9eb36c75"
+  },
+  {
+    "name": "file_input",
+    "covers": "a FileInput: text and binary files by sha256, a non-ASCII file name and text, command-line arguments",
+    "context": {"orca": "6.0.1"},
+    "input": {
+      "program": "orca",
+      "cmdline_args": ["input.inp"],
+      "files": {
+        "input.inp": "! B3LYP def2-SVP\n* xyzfile 0 1 water.xyz\n",
+        "guess.gbw": "base64:AAEC/0dCVw==",
+        "notes/Å.txt": "Ångström\n"
+      }
+    },
+    "key": "k1:40567febe03639fed72e7ae30961c018d21a2607eec0a08becb5797c521c8278"
+  },
+  {
+    "name": "energy_native_files",
+    "covers": "a ProgramInput with native files and command-line arguments",
+    "context": {"psi4": "1.11"},
+    "input": {
+      "program": "psi4",
+      "calctype": "energy",
+      "model": {"method": "b3lyp", "basis": "def2-svp"},
+      "structure": {
+        "symbols": ["O", "H", "H"],
+        "geometry": [[0.0, 0.0, -0.1294], [0.0, 1.4941, 1.0274], [0.0, -1.4941, 1.0274]]
+      },
+      "files": {"grid.dat": "0.0 0.0 1.0\n"},
+      "cmdline_args": ["--verbose"]
+    },
+    "key": "k1:75777afb79066d36f8ddd35cc68ff3bdb46bd50dabfb4bbfd37dc58130583bc1"
+  },
+  {
+    "name": "path_optimization_chain",
+    "covers": "a chain in structures with no structure: a list of structures, in order",
+    "context": {"qcopt": "0.3.0", "axtb": "0.1.1"},
+    "input": {
+      "program": "qcopt",
+      "calctype": "path_optimization",
+      "structures": {
+        "initial_chain": [
+          {"symbols": ["H", "H", "H"], "geometry": [[0.0, 0.0, 0.0], [0.0, 0.0, 1.4], [0.0, 0.0, 5.0]]},
+          {"symbols": ["H", "H", "H"], "geometry": [[0.0, 0.0, 0.0], [0.0, 0.0, 2.2], [0.0, 0.0, 4.4]]},
+          {"symbols": ["H", "H", "H"], "geometry": [[0.0, 0.0, 0.0], [0.0, 0.0, 3.6], [0.0, 0.0, 5.0]]}
+        ]
+      },
+      "subprograms": [{"program": "axtb", "calctype": "gradient", "model": {"method": "gfn2"}}]
+    },
+    "key": "k1:554d8690621cdb1b232c50df47db82f4d18d5b49bb35cd7ed08d97bfcd8a011a"
+  },
+  {
+    "name": "gradient_environment",
+    "covers": "a structure and a structure under a role (a QM/MM environment)",
+    "context": {"linus": "6"},
+    "input": {
+      "program": "linus",
+      "calctype": "gradient",
+      "model": {"method": "r2scan-3c"},
+      "structure": {
+        "symbols": ["O", "H", "H"],
+        "geometry": [[0.0, 0.0, -0.1294], [0.0, 1.4941, 1.0274], [0.0, -1.4941, 1.0274]]
+      },
+      "structures": {
+        "environment": {
+          "symbols": ["O", "H", "H"],
+          "geometry": [[5.0, 0.0, -0.1294], [5.0, 1.4941, 1.0274], [5.0, -1.4941, 1.0274]]
+        }
+      }
+    },
+    "key": "k1:1540e5513a5198024f2e428c2a43c9fc0ce88a08a36464f202a802a41208bfde"
+  }
+]

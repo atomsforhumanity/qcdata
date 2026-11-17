@@ -12,6 +12,7 @@ import toml
 import yaml
 from pydantic import (
     BaseModel,
+    Field,
     FieldSerializationInfo,
     SerializerFunctionWrapHandler,
     computed_field,
@@ -21,7 +22,7 @@ from pydantic import (
     model_validator,
 )
 
-from .. import _version
+from .. import _array_files, _version
 from ..helper_types import FreeDict, StrOrPath
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -104,6 +105,9 @@ class QCDataBaseModel(BaseModel, ABC):
     def open(cls, filepath: Path | str) -> Self:
         """Instantiate an object from data saved to disk.
 
+        Arrays that `save` put in their own `.npy` files are read back from beside the
+        file, each checked against the sha256, shape and dtype saved with it.
+
         Args:
             filepath: The path to the object on disk.
 
@@ -117,14 +121,15 @@ class QCDataBaseModel(BaseModel, ABC):
         """
         filepath = Path(filepath)
         data = filepath.read_text()
+        context = {_array_files.DIRECTORY: filepath.parent}
 
         if filepath.suffix in [".yaml", ".yml"]:
-            return cls.model_validate(yaml.safe_load(data))
+            return cls.model_validate(yaml.safe_load(data), context=context)
         elif filepath.suffix == ".toml":
-            return cls.model_validate(toml.loads(data))
+            return cls.model_validate(toml.loads(data), context=context)
 
         # Assume json for all other file extensions
-        return cls.model_validate_json(data)
+        return cls.model_validate_json(data, context=context)
 
     @classmethod
     def open_multi(cls, filepath: Path | str) -> list[Self]:
@@ -159,11 +164,20 @@ class QCDataBaseModel(BaseModel, ABC):
         exclude_unset: bool = True,
         indent: int = 4,
         **kwargs: Any,
-    ) -> None:
+    ) -> list[Path]:
         """Save an object to disk as `json`, `yaml`, or `toml`.
 
         Objects such as `Structure` and `OptimizationData` can additionally be saved
         as `xyz` files.
+
+        Every array field whose float64 size exceeds 1 MiB is written to its own `.npy`
+        file beside the saved file, named by the file's stem and the array's path in
+        the document (`output.results.hessian.npy` for `output.json`). The document
+        holds a pointer in its place: `{"path", "shape", "dtype", "sha256"}`, the
+        digest being the `.npy` file's. `open` reads the arrays back, so a model never
+        holds a file reference. Array files are written first and the model's file
+        last. Smaller arrays stay in the document, where every float round-trips
+        exactly through JSON and YAML.
 
         Note:
             By default the object will be saved as a `json` file. If the file extension
@@ -188,6 +202,10 @@ class QCDataBaseModel(BaseModel, ABC):
                 creates a more compact JSON file, 4 is more human-readable.
             **kwargs: Additional keyword arguments to pass to the serialization method.
 
+        Returns:
+            Every file written: the model's file first, then one `.npy` file per array
+            saved apart, in document order.
+
         Example:
             ```python
             my_obj.save("path/to/file.json")
@@ -208,12 +226,15 @@ class QCDataBaseModel(BaseModel, ABC):
         filepath = Path(filepath)
         filepath.parent.mkdir(exist_ok=True, parents=True)
 
+        sink = _array_files.ArraySink()
         model_dict = self.model_dump(
             mode="json",
             exclude_none=exclude_none,
             exclude_unset=exclude_unset,
+            context={_array_files.SINK: sink},
             **kwargs,
         )
+        model_dict, array_files = sink.place(model_dict, filepath.parent, filepath.stem)
 
         if filepath.suffix in [".yaml", ".yml"]:
             data = yaml.dump(model_dict, indent=indent)
@@ -226,6 +247,7 @@ class QCDataBaseModel(BaseModel, ABC):
             data = json.dumps(model_dict, indent=indent)
 
         filepath.write_text(data)
+        return [filepath, *array_files]
 
     def __repr_args__(self) -> "ReprArgs":
         """Only show non empty fields in repr but always show success even if false."""
@@ -414,8 +436,8 @@ class ExecutionInfo(QCDataBaseModel):
         host_cpu: The number of logical CPUs on the host, not the allocated CPU count.
         host_mem_gib: The host's total memory in GiB, not the allocated memory.
         timings: Wall-clock seconds per phase of the calculation. The keys are the
-            program's; ``total`` is the whole call, and drivers report ``children``
-            (time inside child calculations) beside their own phases.
+            program's; ``total`` is the whole call, and a program with subprograms
+            reports ``children`` (time inside its subprograms) beside its own phases.
         threads: CPU threads the calculation ran with. Some programs' results depend
             on it at round-off, so it is recorded with every result.
         peak_memory_gib: Peak host memory the calculation used (GiB), as measured.
@@ -448,7 +470,7 @@ class ErrorKind(StrEnum):
         numerical: A numerical failure: non-finite values, singular matrices.
         resource: Not enough memory, disk, or another resource as set up.
         backend: The hardware backend failed (no usable GPU, a device error).
-        program: A child calculation failed; `ErrorInfo.cause` holds its error.
+        program: A subprogram failed; `ErrorInfo.cause` holds its error.
         timeout: The calculation ran out of time (set by the runner).
         environment: The program could not be run at all: not installed, no licence,
             the process died (set by the runner).
@@ -479,10 +501,10 @@ class ErrorInfo(QCDataBaseModel):
         code: A stable snake_case code that refines `kind` (e.g. ``max_iter``,
             ``energy_rose``, ``not_first_order_saddle``), defined and documented by the
             program. Callers branch on it instead of parsing `message`.
-        program: The program that failed, when it is a child of the calculation (kind
-            ``program``) or differs from the top-level program.
-        cause: The child's own error, for kind ``program``: "the gradient failed because
-            the SCF did not converge" stays structured through drivers.
+        program: The subprogram that failed (kind ``program``), or the program that
+            failed when it is not the top-level one.
+        cause: The subprogram's own error, for kind ``program``: "the gradient failed
+            because the SCF did not converge" stays structured through every level.
     """
 
     kind: ErrorKind
@@ -555,7 +577,7 @@ class OutputBase(QCDataBaseModel):
     success: bool
     logs: str | None = None
     traceback: str | None = None
-    execution: ExecutionInfo = ExecutionInfo()
+    execution: ExecutionInfo = Field(default_factory=ExecutionInfo)
     warnings: list[ProgramWarning] = []
     error: ErrorInfo | None = None
     record: FreeDict = {}

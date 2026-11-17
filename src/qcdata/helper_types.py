@@ -14,6 +14,8 @@ from pydantic import (
 )
 from pydantic_core import PydanticSerializationError
 
+from ._array_files import serialize_array, validate_array
+
 StrOrPath = Annotated[str | Path, PlainSerializer(lambda x: str(x))]
 
 
@@ -24,12 +26,13 @@ def _array_schema(dimensions: int) -> dict[str, Any]:
     return schema
 
 
-# Coerce to independent float64 arrays and dump as ordinary nested Python lists.
-# Field validators handle scientific shapes; schemas describe canonical output.
+# Coerce to independent float64 arrays and dump as ordinary nested Python lists; a save
+# puts large ones in their own files (see _array_files). Field validators handle
+# scientific shapes; schemas describe canonical output.
 SerializableNDArray = Annotated[
     SkipValidation[np.ndarray],
-    BeforeValidator(lambda x: np.array(x, dtype=np.float64)),
-    PlainSerializer(lambda x: np.asarray(x).tolist()),
+    BeforeValidator(validate_array),
+    PlainSerializer(serialize_array),
     WithJsonSchema({"type": "array"}),
 ]
 SerializableVector = Annotated[SerializableNDArray, WithJsonSchema(_array_schema(1))]

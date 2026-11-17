@@ -6,7 +6,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 import numpy as np
 from pydantic import (
+    Field,
     FieldSerializationInfo,
+    ValidationInfo,
     field_serializer,
     field_validator,
     model_validator,
@@ -96,7 +98,7 @@ class Structure(QCDataBaseModel):
     geometry: SerializableMatrix  # Coerced to 2D array
     charge: int = 0
     multiplicity: int = 1
-    identifiers: Identifiers = Identifiers()
+    identifiers: Identifiers = Field(default_factory=Identifiers)
     connectivity: list[tuple[int, int, float]] = []
     _xyz_comment_key: ClassVar[str] = "xyz_comments"
 
@@ -206,7 +208,7 @@ class Structure(QCDataBaseModel):
         exclude_unset: bool = True,
         indent: int = 4,
         **kwargs: Any,
-    ) -> None:
+    ) -> list[Path]:
         """Save a Structure to a file.
 
         Args:
@@ -218,6 +220,9 @@ class Structure(QCDataBaseModel):
             indent: The number of spaces to use for indentation in the JSON file. 0
                 creates a more compact JSON file, 4 is more human-readable.
             **kwargs: Additional keyword arguments to pass to the json serializer.
+
+        Returns:
+            Every file written, as `QCDataBaseModel.save` returns them.
 
         Notes:
             If the filepath has a `.xyz` extension, the structure will be saved to an
@@ -236,8 +241,8 @@ class Structure(QCDataBaseModel):
         filepath = Path(filepath)
         if filepath.suffix == ".xyz":
             filepath.write_text(self.to_xyz(**kwargs))
-            return
-        super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)
+            return [filepath]
+        return super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)
 
     @property
     def ids(self) -> Identifiers:
@@ -486,21 +491,25 @@ class Structure(QCDataBaseModel):
         self.__pydantic_fields_set__.add("identifiers")
 
     @model_validator(mode="before")
-    def _validate_symbols_and_geometry(cls, values: Any) -> dict[str, Any]:
-        """Ensure symbols are valid atomic symbols and geometry is correct."""
+    def _validate_symbols(cls, values: Any) -> dict[str, Any]:
+        """Ensure symbols are valid atomic symbols."""
         values = dict(values)
         symbols = [symbol.capitalize() for symbol in values.get("symbols", [])]
         for symbol in symbols:
             if not hasattr(pt, symbol):
                 raise ValueError(f"Invalid atomic symbol: '{symbol}'")
         values["symbols"] = symbols
-
-        geometry = values.get("geometry")
-        if geometry is not None:
-            n_atoms = len(values["symbols"])
-            values["geometry"] = np.array(geometry).reshape(n_atoms, 3)
-
         return values
+
+    @field_validator("geometry")
+    @classmethod
+    def _geometry_per_atom(
+        cls, geometry: np.ndarray, info: ValidationInfo
+    ) -> np.ndarray:
+        """Shape the geometry n_atoms x 3."""
+        if "symbols" not in info.data:
+            return geometry  # The symbols' own error is reported.
+        return geometry.reshape(len(info.data["symbols"]), 3)
 
     @field_validator("connectivity", mode="after")
     @classmethod

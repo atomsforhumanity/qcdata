@@ -2,22 +2,25 @@
 
 A session (an execution concept, defined in qccompute) evaluates one molecule at many
 geometries. What a step asks for (`Request`, `Accuracy`) and how it fails
-(`ProgramError`, the exception form of `ErrorInfo`) are data, shared by every program and
-driver without importing an execution package. A step's result is a `Frame`.
+(`ProgramError`, the exception form of `ErrorInfo`) are data, shared by every program
+without importing an execution package. A step's result is a `Frame`.
 """
 
 from __future__ import annotations
 
 import json
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 import numpy as np
 from pydantic import AfterValidator, field_validator
 
 from ..helper_types import SerializableMatrix
 from .base_models import ErrorInfo, ErrorKind, QCDataBaseModel
-from .data import Frame, SinglePointData
+from .data import Data, Frame
 from .inputs import CalcType
+
+if TYPE_CHECKING:
+    from .outputs import ProgramOutput
 
 __all__ = ["Accuracy", "Lineage", "Request", "ProgramError", "lineage_key"]
 
@@ -165,42 +168,62 @@ class Request(QCDataBaseModel):
 
 
 class ProgramError(Exception):
-    """A failed step of a session, or an input a program refuses: `ErrorInfo` raised.
+    """A failed calculation: `ErrorInfo` raised, with what was computed before it failed.
 
-    Programs raise it (or a subclass) and drivers catch this one class, whichever
-    program they drive.
+    Every program's ``compute`` and every session call raise it (or a subclass) when a
+    calculation fails, an input the program refuses included; any other exception is a
+    bug. A program catches this one class from its subprograms, whichever programs they
+    are. A runner turns it into a failed `ProgramOutput` only where it needs data: a
+    store, the outputs of a list, a worker's reply.
+
+    A program whose result is one output raises ``ProgramError(out.error, output=out)``
+    with its failed output, so that nothing it reached is lost (a trajectory's frames,
+    its record and resolved settings); callers read ``exc.output``. A failed session
+    step raises with its ``frame``.
 
     Attributes:
         error: What went wrong, as a kind and code callers can branch on.
         frame: The failed step, when there was one: its structure, partial results,
             warnings and record (an SCF's iteration history, its stability analyses).
-        results: What was computed before the failure, if anything.
+        output: The whole failed output, when the program has one.
+        results: What was computed before the failure, if anything: of the output's
+            results type for a whole output, `SinglePointData` for a step.
     """
 
     def __init__(
         self,
         error: ErrorInfo,
-        results: SinglePointData | None = None,
+        results: Data | None = None,
         *,
         frame: Frame | None = None,
+        output: ProgramOutput[Any, Any] | None = None,
     ):
         """Create the exception.
 
         Args:
             error: What went wrong.
-            results: Partial results, if any; taken from ``frame`` when not given.
+            results: Partial results, if any; when not given, taken from ``output``,
+                else from ``frame``.
             frame: The failed step, if any.
+            output: The failed output, if any.
         """
         super().__init__(f"{error.kind}: {error.message}")
         self.error = error
         self.frame = frame
-        self.results = (
-            results if results is not None or frame is None else frame.results
-        )
+        self.output = output
+        if results is None and output is not None:
+            results = output.results
+        if results is None and frame is not None:
+            results = frame.results
+        self.results = results
 
     def __reduce__(self) -> tuple[Any, ...]:
-        """Pickle with the error and frame, for worker processes."""
-        return (type(self), (self.error, self.results), {"frame": self.frame})
+        """Pickle with the error, frame and output, for worker processes."""
+        return (
+            type(self),
+            (self.error, self.results),
+            {"frame": self.frame, "output": self.output},
+        )
 
     @classmethod
     def of(
