@@ -693,7 +693,8 @@ class ProgramWarning(QCDataBaseModel):
     """Something the program wants the caller to know about a calculation that ran.
 
     Attributes:
-        code: A stable snake_case code, defined and documented by the program.
+        code: A stable snake_case code: one the conventions share
+            (``loosely_converged``) or one the program defines and documents.
         message: A human-readable explanation.
         path: The settings key the warning concerns, as a dotted path (``scf.max_iter``),
             if any.

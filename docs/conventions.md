@@ -326,13 +326,14 @@ settings (rule 5) applies to it differently:
 `ProgramWarning(code, message, path)`: `code` is stable snake_case; `path` is the dotted
 settings key concerned, if any. Settings problems are errors, not warnings (rule 5), so
 warnings report what happened during a run (a fallback taken, a probe fired, slow
-convergence). One shared code:
+convergence). Shared codes:
 
 | code | meaning |
 |---|---|
 | `deprecated_key` | after a program's 1.0, an old key still accepted for a stated period; the message names the new one. Before 1.0 a program rejects old keys (`unknown_key`) instead |
 | `resource_capped` | a resource request in the keywords (`threads`, `memory_gib`, ...) above what the runner granted; the program used the grant (it uses the smaller of request and grant, or the grant alone when nothing was requested) |
 | `backend_fallback` | the calculation ran on another backend than first chosen (a GPU out of memory, so the CPU), which `backend: auto` allows; an explicit backend fails instead |
+| `loosely_converged` | an iterative procedure (an SCF, response equations) missed its thresholds and was accepted under a relaxed rule (a stalled SCF accepted on an energy plateau, ORCA's continuation after "near convergence"). The message gives the residual reached and the rule that accepted it; `path` names the threshold missed (`scf.g_tol`), if it is a setting. Without this warning a success met its thresholds |
 
 Programs define further codes in their own documentation.
 
