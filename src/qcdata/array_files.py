@@ -14,6 +14,18 @@ directory, named by the saved file's stem and the array's path in the document
 array back, checking its digest, shape and dtype, so a loaded model holds arrays again.
 Only array fields (`SerializableNDArray`) are saved apart; free-form values such as
 ``extras`` and ``record`` stay inline.
+
+`QCDataBaseModel.save` and `QCDataBaseModel.open` use this module, and any other writer
+of qcdata documents with arrays beside them (a worker's wire) can do the same:
+
+```python
+from qcdata.array_files import DIRECTORY, SINK, ArraySink
+
+sink = ArraySink()
+document = model.model_dump(mode="json", context={SINK: sink})
+document, written = sink.place(document, directory, stem)  # arrays to .npy files
+model = type(model).model_validate(document, context={DIRECTORY: directory})
+```
 """
 
 from __future__ import annotations
@@ -28,13 +40,24 @@ from typing import Any
 import numpy as np
 from pydantic import SerializationInfo, ValidationInfo
 
-#: An array field is saved apart when its float64 size exceeds this many bytes (1 MiB).
+__all__ = [
+    "ARRAY_FILE_BYTES",
+    "DIRECTORY",
+    "POINTER_KEYS",
+    "SINK",
+    "ArraySink",
+    "serialize_array",
+    "validate_array",
+]
+
 ARRAY_FILE_BYTES = 1 << 20
-#: Serialization context key: the `ArraySink` collecting arrays to save apart.
+"""An array field is saved apart when its float64 size exceeds this many bytes (1 MiB)."""
 SINK = "qcdata.array_sink"
-#: Validation context key: the directory holding the saved arrays.
+"""Serialization context key: the `ArraySink` collecting arrays to save apart."""
 DIRECTORY = "qcdata.array_directory"
-_POINTER_KEYS = frozenset({"path", "shape", "dtype", "sha256"})
+"""Validation context key: the directory holding the saved arrays."""
+POINTER_KEYS = frozenset({"path", "shape", "dtype", "sha256"})
+"""The keys of the pointer that stands in a document for an array saved apart."""
 
 
 class ArraySink:
@@ -129,7 +152,7 @@ def _write(array: np.ndarray, path: Path) -> dict[str, Any]:
 
 def _read(pointer: dict[str, Any], directory: Path | None) -> np.ndarray:
     """Read the array a pointer names, checking it is the one that was saved."""
-    if set(pointer) != _POINTER_KEYS:
+    if set(pointer) != POINTER_KEYS:
         raise ValueError(
             "An array field takes numbers, or the pointer a save writes for an array "
             "in its own file (path, shape, dtype, sha256)."

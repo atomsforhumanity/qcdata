@@ -210,3 +210,17 @@ def test_pointers_are_names_beside_the_file(pointer, match, tmp_path):
 def test_xyz_saves_list_their_one_file(tmp_path):
     water = Structure(symbols=["H", "H"], geometry=[[0, 0, 0], [0, 0, 1.4]])
     assert water.save(tmp_path / "w.xyz") == [tmp_path / "w.xyz"]
+
+
+def test_the_module_serves_writers_other_than_save(tmp_path):
+    """A writer of its own (a worker's wire) puts arrays apart with the public API."""
+    from qcdata.array_files import DIRECTORY, POINTER_KEYS, SINK, ArraySink
+
+    data = _charges(LIMIT + 1)
+    sink = ArraySink()
+    document = data.model_dump(mode="json", context={SINK: sink})
+    document, written = sink.place(document, tmp_path, "msg")
+    assert written == [tmp_path / "msg.atomic_charges.npy"]
+    assert set(document["atomic_charges"]) == POINTER_KEYS
+    back = SinglePointData.model_validate(document, context={DIRECTORY: tmp_path})
+    assert _same_bits(back.atomic_charges, data.atomic_charges)

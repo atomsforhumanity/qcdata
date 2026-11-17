@@ -21,7 +21,7 @@ from pydantic import (
     model_validator,
 )
 
-from .. import _array_files, _version
+from .. import _version, array_files
 from ..helper_types import FreeDict, StrOrPath
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -170,7 +170,7 @@ class QCDataBaseModel(BaseModel, ABC):
         """
         filepath = Path(filepath)
         data = filepath.read_text()
-        context = {_array_files.DIRECTORY: filepath.parent}
+        context = {array_files.DIRECTORY: filepath.parent}
 
         if filepath.suffix in [".yaml", ".yml"]:
             return cls.model_validate(yaml.safe_load(data), context=context)
@@ -276,15 +276,15 @@ class QCDataBaseModel(BaseModel, ABC):
         filepath = Path(filepath)
         filepath.parent.mkdir(exist_ok=True, parents=True)
 
-        sink = _array_files.ArraySink()
+        sink = array_files.ArraySink()
         model_dict = self.model_dump(
             mode="json",
             exclude_none=exclude_none,
             exclude_unset=exclude_unset,
-            context={_array_files.SINK: sink},
+            context={array_files.SINK: sink},
             **kwargs,
         )
-        model_dict, array_files = sink.place(model_dict, filepath.parent, filepath.stem)
+        model_dict, array_paths = sink.place(model_dict, filepath.parent, filepath.stem)
 
         if filepath.suffix in [".yaml", ".yml"]:
             data = yaml.dump(model_dict, indent=indent)
@@ -297,7 +297,7 @@ class QCDataBaseModel(BaseModel, ABC):
             data = json.dumps(model_dict, indent=indent)
 
         filepath.write_text(data)
-        return [filepath, *array_files]
+        return [filepath, *array_paths]
 
     def __repr_args__(self) -> "ReprArgs":
         """Only show non empty fields in repr but always show success even if false."""

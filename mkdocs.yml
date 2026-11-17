@@ -113,6 +113,7 @@ nav:
       - Orbitals: api/orbitals.md
       - Session steps: api/steps.md
       - Calculation key: api/key.md
+      - Array files: api/array_files.md
       - Utilities: api/utils.md
       - Visualizations:
           - View: api/view.md
