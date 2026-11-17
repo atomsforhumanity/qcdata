@@ -29,7 +29,7 @@ __all__ = ["calculation_key"]
 _VERSION = "k1"
 #: Top-level keywords left out of the key, in the input and in every subprogram: they
 #: may change results at most at round-off.
-_RESOURCE_KEYWORDS = frozenset({"threads", "memory_gib"})
+_RESOURCE_KEYWORDS = frozenset({"threads", "memory_gib", "device_memory_gib"})
 #: Coordinates (bohr) enter the key times 1e10, rounded to integers: in units of 1e-10
 #: bohr. 1e10 is exact in binary, so the product is correctly rounded.
 _COORDINATE_SCALE = 1e10
@@ -56,10 +56,11 @@ def calculation_key(inp: FileInput | ProgramInput) -> str:
     - attached files by the sha256 of their bytes (UTF-8 for text);
     - subprograms canonicalized the same way, in order.
 
-    Left out: ``extras`` at every level, structure identifiers, and the keywords
-    ``threads`` and ``memory_gib`` at the top level of ``keywords``, in the input and in
-    every subprogram. Everything else counts, ``given`` included. Spellings are not
-    normalized: a synonym or a default written out explicitly gives another key.
+    Left out: ``extras`` at every level, structure identifiers, and the resource
+    keywords ``threads``, ``memory_gib`` and ``device_memory_gib`` at the top level of
+    ``keywords``, in the input and in every subprogram. Everything else counts,
+    ``given`` and ``backend`` included. Spellings are not normalized: a synonym or a
+    default written out explicitly gives another key.
 
     Args:
         inp: The input as given. A bare `ProgramSpec` is not a calculation; bind it to

@@ -15,12 +15,12 @@
   },
   {
     "name": "energy_excluded_and_defaults",
-    "covers": "the energy input with what the key leaves out: threads and memory_gib, structure identifiers, extras at every level, fields written at their default, a saved version stamp; same key as energy",
+    "covers": "the energy input with what the key leaves out: threads, memory_gib and device_memory_gib, structure identifiers, extras at every level, fields written at their default, a saved version stamp; same key as energy",
     "input": {
       "program": "axtb",
       "calctype": "energy",
       "model": {"method": "gfn2", "basis": null, "extras": {"note": "scratch"}},
-      "keywords": {"threads": 8, "memory_gib": 4.0},
+      "keywords": {"threads": 8, "memory_gib": 4.0, "device_memory_gib": 40},
       "structure": {
         "symbols": ["O", "H", "H"],
         "geometry": [[0.0, 0.0, -0.1294], [0.0, 1.4941, 1.0274], [0.0, -1.4941, 1.0274]],

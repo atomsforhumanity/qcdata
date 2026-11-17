@@ -176,6 +176,8 @@ def test_key_format():
         ({"weights": [0.5, 1.0]}, {"weights": np.array([0.5, 1.0])}),
         ({"a": 1, "b": {"c": 2, "d": 3}}, {"b": {"d": 3, "c": 2}, "a": 1}),
         ({}, {"threads": 4, "memory_gib": 2.5}),
+        ({}, {"device_memory_gib": 40}),
+        ({"backend": "gpu"}, {"backend": "gpu", "device_memory_gib": 4.0}),
         ({"scf": {"max_iter": 50}}, {"scf": {"max_iter": 50}, "threads": 4}),
     ],
 )
@@ -227,6 +229,7 @@ def test_subprogram_resources_and_extras_left_out():
     for changed in (
         spec(threads=8),
         spec(memory_gib=3.0),
+        spec(device_memory_gib=16),
         {**spec(), "extras": {"note": "x"}},
     ):
         inp = _input(program="qcopt", calctype="optimization", subprograms=[changed])
@@ -274,7 +277,7 @@ def test_keying_changes_nothing():
         ({"scf": {"threads": 4}}, {}),
         ({"weights": [0.5, 1.0]}, {"weights": [1.0, 0.5]}),
         ({"weights": [[0.5, 1.0]]}, {"weights": [0.5, 1.0]}),
-        ({"device_memory_gib": 4.0}, {}),
+        ({"gpu": {"device_memory_gib": 4.0}}, {}),
         ({"backend": "gpu"}, {"backend": "cpu"}),
         ({"accuracy": {"gradient": 1e-6}}, {"accuracy": {"gradient": 1e-7}}),
         ({"accuracy": {"gradient": 1e-6}}, {}),

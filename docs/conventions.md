@@ -83,8 +83,9 @@ factor; its ALPB/GBSA models are parametrized per solvent name, so no `solvent.e
 rejects it with kind `unsupported` rather than ignoring it.
 
 Resource keys (`threads`, `memory_gib`, `backend`, `device_memory_gib`) carry
-`x-concern: "resource"`. The [calculation key](#calculation-key) leaves out `threads` and
-`memory_gib` only.
+`x-concern: "resource"`. The [calculation key](#calculation-key) leaves out `threads`,
+`memory_gib` and `device_memory_gib`, which change results at most at round-off; `backend`
+(which device runs the calculation) counts.
 
 ### Accuracy targets
 
@@ -139,11 +140,11 @@ and `:`), keys sorted, non-ASCII characters escaped as `\uXXXX`, with:
 - tuples as lists; numpy arrays and scalars inside free-form values (`keywords`) as
   JSON numbers, as they are once saved.
 
-Left out: `extras` at every level, structure `identifiers`, and the keywords `threads` and
-`memory_gib` at the top level of `keywords`, in the input and in every subprogram
-(`scf.threads` would count). These two may change results at most at round-off.
-Everything else counts: `given`, `cmdline_args`, and settings such as `backend`,
-precision and `accuracy` that can change numbers.
+Left out: `extras` at every level, structure `identifiers`, and the resource keywords
+`threads`, `memory_gib` and `device_memory_gib` at the top level of `keywords`, in the
+input and in every subprogram (`scf.threads` would count). These three may change results
+at most at round-off. Everything else counts: `given`, `cmdline_args`, and settings such
+as `backend` (pinning the device), precision and `accuracy` that can change numbers.
 
 Spellings are not normalized. `B3LYP` and `b3lyp`, a synonym, a group's scalar and
 expanded forms (rule 2), a default written out (`scf.max_iter: 100`), and `null` against
