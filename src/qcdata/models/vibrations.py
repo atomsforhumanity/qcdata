@@ -106,7 +106,8 @@ class VibrationalAnalysis(QCDataBaseModel):
 
     Attributes:
         masses: Mass of each atom used (u), in structure order.
-        projection: What was projected out of the mass-weighted Hessian.
+        projection: What was projected out of the mass-weighted Hessian before it was
+            diagonalized; `SinglePointData.hessian` itself is never projected.
         frequencies: Frequency of every mode analysed (cm^-1), ascending; imaginary
             modes are negative. Without full projection the translation/rotation-like
             modes are included and flagged in `external`.

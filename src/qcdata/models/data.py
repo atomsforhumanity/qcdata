@@ -242,7 +242,10 @@ class SinglePointData(FileData, CalcInfoData):
     Attributes:
         energy: The electronic energy of the structure in `Hartrees`.
         gradient: The gradient of the structure in `Hartrees/Bohr`.
-        hessian: The hessian of the structure in `Hartrees/Bohr^2`.
+        hessian: The full Cartesian second derivative of the energy at the input
+            geometry (Eh/bohr^2), 3N x 3N, never projected. Away from a stationary point
+            the gradient gives rotations a part in it, which projection would lose.
+            Projection belongs to `vibrational_analysis`, which records it.
         nuclear_repulsion_energy: The nuclear repulsion energy of the structure in
             Hartrees.
 

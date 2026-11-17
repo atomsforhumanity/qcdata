@@ -189,6 +189,17 @@ result also holds the energy and gradient at the same geometry and, when the pro
 make them, the harmonic analysis (`vibrational_analysis`) and thermochemistry
 (`thermochemistry`), tuned or switched off with `freq.*`.
 
+`results.hessian` is the full Cartesian second derivative of the energy at the input
+geometry, never projected. Hessians are used away from stationary points (the start of a
+transition-state search, an IRC's updates), where the gradient gives rotations a part in
+the Hessian that projecting them out would lose. Only translational invariance holds
+exactly, and that is physics, not projection. Projection belongs to the harmonic analysis,
+which records what it projected (`VibrationalAnalysis.projection`). A program whose
+underlying code projects the Hessian undoes the projection (from the gradient and the
+rigid-body modes, or by reading an unprojected matrix the code also writes), or refuses
+with kind `unsupported` where it cannot: at a geometry whose gradient is not zero, the
+projection changed the matrix.
+
 ## Outputs
 
 ### Standard fields first
