@@ -89,6 +89,24 @@ def test_golden_key_survives_json_and_save(case, tmp_path):
         )
 
 
+def test_key_survives_arrays_saved_apart(tmp_path):
+    n = 128  # a 384 x 384 Hessian, over 1 MiB, goes to its own file
+    rng = np.random.default_rng(5)
+    structure = Structure(symbols=["C"] * n, geometry=rng.normal(size=(n, 3)) * 3)
+    hessian = rng.normal(size=(3 * n, 3 * n))
+    hessian[0, :3] = [-0.0, 1.0, 1e300]
+    inp = ProgramInput(
+        program="qcopt",
+        calctype="transition_state",
+        structure=structure,
+        subprograms=[{"program": "axtb", "calctype": "hessian"}],
+        given=SinglePointData(provenance={"program": "axtb"}, hessian=hessian),
+    )
+    paths = inp.save(tmp_path / "input.json")
+    assert [p.name for p in paths] == ["input.json", "input.given.hessian.npy"]
+    assert _key(ProgramInput.open(tmp_path / "input.json")) == _key(inp)
+
+
 def test_canonical_text_is_documented_form():
     """The key is sha256 of exactly this text: compact JSON, keys sorted, ASCII."""
     energy = next(c for c in GOLDEN if c["name"] == "energy")
