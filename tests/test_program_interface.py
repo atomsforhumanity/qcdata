@@ -124,7 +124,6 @@ def test_single_point_typed_fields():
         energy_components={"nuclear_repulsion": 0.5, "one_electron": -2.0, "xc": 0.5},
         scf_iterations=9,
         scf_quadrupole_moment=np.arange(9.0),
-        quadrupole_kind="traceless",
         polarizability=[[1, 0, 0], [0, 2, 0], [0, 0, 3]],
         atomic_charges=[0.1, -0.1],
         atomic_charges_kind="mulliken",

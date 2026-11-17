@@ -136,6 +136,8 @@ def test_serialized_scientific_arrays_match_schema(water):
             hamiltonian_a=[[-0.5]],
             core_hamiltonian=[[-1.0]],
         ),
+        atomic_dipoles=np.zeros((3, 3)),
+        atomic_quadrupoles=np.zeros((3, 3, 3)),
     )
     for obj in [water, data, ConformerSearchData(provenance={"program": "producer"})]:
         schema = type(obj).model_json_schema(mode="serialization")

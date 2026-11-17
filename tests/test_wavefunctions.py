@@ -25,11 +25,15 @@ from qcdata import (
     EcpTerm,
     OrbitalKind,
     Orbitals,
+    Provenance,
     Shell,
+    SinglePointData,
     SphericalOrder,
     Wavefunction,
 )
 from qcdata.utils import water
+
+PROV = Provenance(program="test")
 
 # ------------------------------------------------------- an independent overlap
 
@@ -617,3 +621,53 @@ def test_old_wavefunction_fields_are_gone():
         Wavefunction.model_validate(
             {"orbitals": levels().model_dump(), "scf_eigenvalues_a": [1.0]}
         )
+
+
+# ---------------------------------------------------- populations and multipoles
+
+
+def test_populations_and_atomic_multipoles():
+    shells = BASIS.shells
+    sp = SinglePointData(
+        provenance=PROV,
+        atomic_spin_populations=[0.6, 0.2, 0.2],
+        atomic_spin_populations_kind="mulliken",
+        atomic_dipoles=np.arange(9.0),
+        atomic_quadrupoles=np.zeros(27),
+        shell_populations=np.ones(len(shells)),
+        shell_atoms=[s.center for s in shells],
+        shell_angular_momenta=[s.angular_momentum for s in shells],
+        wavefunction=make_wavefunction(),
+    )
+    assert sp.atomic_dipoles.shape == (3, 3)
+    assert sp.atomic_quadrupoles.shape == (3, 3, 3)
+    assert SinglePointData.model_validate_json(sp.model_dump_json()) == sp
+    with pytest.raises(ValidationError, match="both or neither"):
+        SinglePointData(provenance=PROV, atomic_spin_populations=[0.5])
+    with pytest.raises(ValidationError, match="all or none"):
+        SinglePointData(provenance=PROV, shell_populations=[1.0, 2.0])
+    with pytest.raises(ValidationError, match="one value per shell"):
+        SinglePointData(
+            provenance=PROV,
+            shell_populations=[1.0, 2.0],
+            shell_atoms=[0],
+            shell_angular_momenta=[0, 1],
+        )
+    # Without a basis set they stand alone; with one, they describe its shells.
+    alone = SinglePointData(
+        provenance=PROV,
+        shell_populations=[1.9, 4.2],
+        shell_atoms=[0, 0],
+        shell_angular_momenta=[0, 1],
+    )
+    assert alone.shell_atoms == [0, 0]
+    with pytest.raises(ValidationError, match="must match its shells"):
+        SinglePointData(
+            provenance=PROV,
+            shell_populations=np.ones(len(shells)),
+            shell_atoms=[0] * len(shells),
+            shell_angular_momenta=[s.angular_momentum for s in shells],
+            wavefunction=make_wavefunction(),
+        )
+    with pytest.raises(ValidationError, match="quadrupole_kind"):
+        SinglePointData(provenance=PROV, quadrupole_kind="traceless")

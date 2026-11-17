@@ -12,6 +12,7 @@ from pydantic import BaseModel, field_validator, model_validator
 from qcdata.helper_types import (
     SerializableMatrix,
     SerializableNDArray,
+    SerializableTensor3D,
     SerializableVector,
 )
 
@@ -198,6 +199,28 @@ class SinglePointData(FileData, CalcInfoData):
             is the program's; `atomic_charges_kind` names it.
         atomic_charges_kind: The partitioning scheme of `atomic_charges`:
             ``mulliken``, ``lowdin``, ``eeq``, ``eeqbc``, ``cm5``, ``hirshfeld``, ...
+        atomic_spin_populations: Alpha minus beta electrons on each atom (e), ordered
+            like the structure's atoms, in the partition `atomic_spin_populations_kind`
+            names.
+        atomic_spin_populations_kind: The partitioning scheme of
+            `atomic_spin_populations`, from the values of `atomic_charges_kind`;
+            required with them.
+        atomic_dipoles: n_atoms x 3: each atom's electronic dipole moment (e bohr)
+            about its own nucleus, mu_A = -sum_{mu on A} (P D^A)_mu,mu with
+            P = P_a + P_b and D^A_nu,mu = <nu| r - R_A |mu>, the integrals about the
+            atom of the column AO. Electrons only: no nuclear charge.
+        atomic_quadrupoles: n_atoms x 3 x 3: each atom's electronic quadrupole moment
+            (e bohr^2) about its own nucleus, in Buckingham's traceless form
+            (3/2) M - (1/2) tr(M) I, with M_ij = -sum_{mu on A} (P Q^A_ij)_mu,mu and
+            Q^A_ij the integrals of (r - R_A)_i (r - R_A)_j, as for `atomic_dipoles`.
+        shell_populations: Electrons in each shell of the basis set,
+            sum_{mu in shell} (P S)_mu,mu with P = P_a + P_b, indexed like
+            ``wavefunction.orbitals.basis.shells``. Populations, not charges, which
+            depend on method-specific reference occupations.
+        shell_atoms: The atom (0-based) of each shell of `shell_populations`, so they
+            stand without a basis set; required with them.
+        shell_angular_momenta: The angular momentum l of each shell of
+            `shell_populations`; required with them.
         point_charge_gradient: n_charges x 3 gradient of the energy with respect
             to the positions of external point charges, in `Hartrees/Bohr`, ordered
             like the point charges given to the calculation (QM/MM electrostatic
@@ -213,11 +236,10 @@ class SinglePointData(FileData, CalcInfoData):
         scf_iterations: Number of SCF iterations of the final SCF.
         scf_s_squared: Expectation value of S^2 of the SCF reference (dimensionless);
             S(S+1) for a pure spin state, so the excess is the spin contamination.
-        scf_quadrupole_moment: 3 x 3 quadrupole moment (e bohr^2) about the coordinate
-            origin, in the form `quadrupole_kind` names; programs with another form
-            convert to one of those.
-        quadrupole_kind: ``traceless``: Buckingham's
-            (1/2) sum q (3 r_i r_j - r^2 delta_ij); ``second_moment``: sum q r_i r_j.
+        scf_quadrupole_moment: 3 x 3 quadrupole moment (e bohr^2) of the electrons and
+            nuclei about the coordinate origin: Buckingham's traceless tensor
+            (1/2) sum q (3 r_i r_j - r^2 delta_ij). Programs with another form convert
+            to it.
         polarizability: 3 x 3 static dipole polarizability (e^2 bohr^2 / Hartree).
         bond_orders: n_atoms x n_atoms bond orders, in the form `bond_orders_kind`
             names.
@@ -241,13 +263,19 @@ class SinglePointData(FileData, CalcInfoData):
 
     atomic_charges: SerializableVector | None = None
     atomic_charges_kind: str | None = None
+    atomic_spin_populations: SerializableVector | None = None
+    atomic_spin_populations_kind: str | None = None
+    atomic_dipoles: SerializableMatrix | None = None
+    atomic_quadrupoles: SerializableTensor3D | None = None
+    shell_populations: SerializableVector | None = None
+    shell_atoms: list[int] | None = None
+    shell_angular_momenta: list[int] | None = None
     point_charge_gradient: SerializableMatrix | None = None
 
     energy_components: dict[str, float] = {}
     scf_iterations: int | None = None
     scf_s_squared: float | None = None
     scf_quadrupole_moment: SerializableMatrix | None = None
-    quadrupole_kind: str | None = None
     polarizability: SerializableMatrix | None = None
     bond_orders: SerializableMatrix | None = None
     bond_orders_kind: str | None = None
@@ -313,15 +341,78 @@ class SinglePointData(FileData, CalcInfoData):
             return np.asarray(v).reshape(-1, 3)
         return None
 
-    @field_validator("atomic_charges")
+    @field_validator("atomic_charges", "atomic_spin_populations", "shell_populations")
     @classmethod
-    def _validate_atomic_charges_shape(
-        cls, v: SerializableNDArray | None
-    ) -> np.ndarray | None:
-        """Validate atomic charges are one value per atom."""
+    def _validate_vector_shape(cls, v: SerializableNDArray | None) -> np.ndarray | None:
+        """Validate per-atom and per-shell values are vectors."""
         if v is not None:
             return np.asarray(v, dtype=float).reshape(-1)
         return None
+
+    @field_validator("atomic_dipoles")
+    @classmethod
+    def _validate_atomic_dipoles_shape(
+        cls, v: SerializableNDArray | None
+    ) -> np.ndarray | None:
+        """Validate atomic dipoles are n_atoms x 3."""
+        if v is not None:
+            return np.asarray(v, dtype=float).reshape(-1, 3)
+        return None
+
+    @field_validator("atomic_quadrupoles")
+    @classmethod
+    def _validate_atomic_quadrupoles_shape(
+        cls, v: SerializableNDArray | None
+    ) -> np.ndarray | None:
+        """Validate atomic quadrupoles are n_atoms x 3 x 3."""
+        if v is not None:
+            return np.asarray(v, dtype=float).reshape(-1, 3, 3)
+        return None
+
+    @model_validator(mode="after")
+    def _check_populations(self) -> Self:
+        """Kinds come with their values; shells are described like the basis set's."""
+        if (self.atomic_spin_populations is None) != (
+            self.atomic_spin_populations_kind is None
+        ):
+            raise ValueError(
+                "atomic_spin_populations and atomic_spin_populations_kind come "
+                "together: both or neither"
+            )
+        shell_fields = (
+            self.shell_populations,
+            self.shell_atoms,
+            self.shell_angular_momenta,
+        )
+        if all(f is None for f in shell_fields):
+            return self
+        if any(f is None for f in shell_fields):
+            raise ValueError(
+                "shell_populations, shell_atoms and shell_angular_momenta come "
+                "together: all or none"
+            )
+        assert self.shell_populations is not None  # for mypy: checked above
+        assert self.shell_atoms is not None and self.shell_angular_momenta is not None
+        n = self.shell_populations.shape[0]
+        if len(self.shell_atoms) != n or len(self.shell_angular_momenta) != n:
+            raise ValueError(
+                "shell_atoms and shell_angular_momenta need one value per shell of "
+                f"shell_populations ({n})"
+            )
+        if min(self.shell_atoms, default=0) < 0:
+            raise ValueError("shell_atoms must be atom indices >= 0")
+        if min(self.shell_angular_momenta, default=0) < 0:
+            raise ValueError("shell_angular_momenta must be >= 0")
+        basis = self.wavefunction.orbitals.basis if self.wavefunction else None
+        if basis is not None and (
+            self.shell_atoms != [s.center for s in basis.shells]
+            or self.shell_angular_momenta != [s.angular_momentum for s in basis.shells]
+        ):
+            raise ValueError(
+                "shell_populations are indexed like wavefunction.orbitals.basis.shells: "
+                "shell_atoms and shell_angular_momenta must match its shells"
+            )
+        return self
 
     @field_validator("point_charge_gradient")
     @classmethod
