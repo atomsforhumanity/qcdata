@@ -672,11 +672,15 @@ class OptimizationData(_FrameSeries, FileData, CalcInfoData):
     """Computed data for an optimization (may be for a minimum or transition state).
 
     Attributes:
-        frames: One `Frame` per optimizer step: its structure and what was computed
-            there. Files saved with the former name, `trajectory`, still load.
-        energies: `@property` The energy of each step.
-        structures: `@property` The structure of each step.
-        final_structure: `@property` The final, optimized structure.
+        frames: One `Frame` per structure evaluated, in order, the starting structure
+            first: its structure and what was computed there. An optimization of n
+            steps has n + 1 frames. Files saved with the former name, `trajectory`,
+            still load.
+        energies: `@property` The energy of each frame.
+        structures: `@property` The structure of each frame.
+        final_structure: `@property` The last frame's structure: the optimized one
+            when the optimization succeeded, else the last one evaluated.
+        final_energy: `@property` The last frame's energy.
     """
 
     frames: list[Frame] = []
@@ -692,12 +696,12 @@ class OptimizationData(_FrameSeries, FileData, CalcInfoData):
 
     @property
     def final_structure(self) -> Structure | None:
-        """The last evaluated structure, or None when there are no steps."""
+        """The last frame's structure (the optimized one after a success), or None."""
         return self.frames[-1].structure if self.frames else None
 
     @property
     def final_energy(self) -> float | None:
-        """The final step's energy, None for no steps, or `np.nan` if unavailable."""
+        """The last frame's energy, None without frames, `np.nan` if not computed."""
         return self.energies[-1] if self.frames else None
 
     def __repr_args__(self) -> list[tuple[str, str]]:

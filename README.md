@@ -139,6 +139,12 @@ new_input_dict["keywords"]["maxiter"] = 300
 new_prog_input = ProgramInput.model_validate(new_input_dict)
 ```
 
+To make an input at a new geometry, move its structure with `with_geometry` (a validated copy at new positions, in bohr) and bind the input's specification to it. `given` results, which belong to the old geometry, are left out.
+
+```python
+moved = ProgramInput.from_spec(prog_input, prog_input.structure.with_geometry(positions))
+```
+
 ### Saved package version
 
 Every model exposes a read-only `qcdata_version`, written at the top level of every JSON, YAML, and TOML document (nested objects carry none, and empty `extras` are left out). It identifies the installed qcdata package that last wrote the representation, not a formal schema version or the calculation producer's version. Researchers can inspect it before choosing which qcdata version to install.

@@ -386,6 +386,33 @@ class Structure(QCDataBaseModel):
 
         return structures
 
+    def with_geometry(self, geometry: Any) -> Self:
+        """Return a validated copy at new positions.
+
+        The copy has the same atoms, charge, multiplicity, connectivity, identifiers
+        and extras. It is the way to make an input at a new geometry:
+
+        ```python
+        moved = ProgramInput.from_spec(inp, inp.structure.with_geometry(positions))
+        ```
+
+        `ProgramInput.from_spec` keeps the specification (program, model, keywords,
+        subprograms, files) and leaves out ``given``, whose results belong to the old
+        geometry; pass ``structures=inp.structures`` to keep the other roles.
+
+        Args:
+            geometry: The new positions in bohr, n_atoms x 3 (or flat).
+
+        Returns:
+            The structure at the new positions.
+
+        Raises:
+            ValidationError: The positions do not fit the atoms.
+        """
+        values = {name: getattr(self, name) for name in type(self).model_fields}
+        values["geometry"] = geometry
+        return type(self).model_validate(values)
+
     def distance(self, i: int, j: int, units: LengthUnit = LengthUnit.BOHR) -> float:
         """Calculate the distance between two atoms.
 

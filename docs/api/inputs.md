@@ -89,3 +89,15 @@ input_data = ProgramInput.from_spec(
 This validates a new input while preserving all specification fields and recursive
 children. The original specification is unchanged. Additional structures are optional
 and are supplied explicitly when binding.
+
+## An input at a new geometry
+
+```python
+moved = ProgramInput.from_spec(inp, inp.structure.with_geometry(positions))
+```
+
+`Structure.with_geometry` validates the new positions (bohr) against the atoms and keeps
+the charge, multiplicity, connectivity and identifiers; `from_spec` keeps the program,
+model, keywords, subprograms and files. `given` is left out, because its results belong to
+the old geometry; pass `structures=inp.structures` to keep other roles. Avoid
+`model_copy(update=...)`, which skips validation.
