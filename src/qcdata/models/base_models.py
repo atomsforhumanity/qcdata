@@ -526,6 +526,10 @@ class ExecutionInfo(QCDataBaseModel):
         peak_memory_gib: Peak host memory the calculation used (GiB), as measured.
         peak_device_memory_gib: Peak GPU memory the calculation used (GiB), as
             measured; schedulers compare it with the plan's estimate.
+        store_run: Where an output read from a store came from, as ``"<key>/<run>"``
+            (its calculation key and run id); None for an output that ran. The store
+            sets it on the outputs it returns and never stores it, so a cache hit is
+            told from a fresh run by this field alone.
         extras: Additional execution information.
     """
 
@@ -541,6 +545,7 @@ class ExecutionInfo(QCDataBaseModel):
     threads: int | None = None
     peak_memory_gib: float | None = None
     peak_device_memory_gib: float | None = None
+    store_run: str | None = None
 
 
 class ErrorKind(StrEnum):

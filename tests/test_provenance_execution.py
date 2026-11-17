@@ -183,3 +183,23 @@ def test_execution_defaults_to_empty(file_input):
     )
     assert isinstance(output.execution, ExecutionInfo)
     assert output.execution.wall_time is None
+
+
+def test_store_run_marks_an_output_read_from_a_store(file_input, tmp_path):
+    ran = ProgramOutput(
+        input_data=file_input,
+        results=FileData(provenance=Provenance(program="terachem")),
+        success=True,
+    )
+    assert ran.execution.store_run is None
+    ran.save(tmp_path / "ran.json")
+    assert (
+        "store_run" not in json.loads((tmp_path / "ran.json").read_text())["execution"]
+    )
+    hit = ran.model_copy(
+        update={"execution": ExecutionInfo(store_run="k1:3f9a/20261117T120000-1")}
+    )
+    assert hit != ran
+    hit.save(tmp_path / "hit.json")
+    reopened = ProgramOutput.open(tmp_path / "hit.json")
+    assert reopened.execution.store_run == "k1:3f9a/20261117T120000-1"

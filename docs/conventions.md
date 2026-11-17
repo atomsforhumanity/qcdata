@@ -331,7 +331,9 @@ exception becomes a cause of kind `internal`, as qccompute treats a program's bu
 
 `execution.timings` holds seconds per phase (`total` for the whole call; a program with
 subprograms adds `subprograms`, the time inside them). `results.provenance` names the
-`program`, `program_version` and `program_commit`.
+`program`, `program_version` and `program_commit`. An output a store returned has
+`execution.store_run`, `"<key>/<run>"`: the store sets it when it reads the run and
+never stores it, so it is None on every output that ran.
 
 ## Saved files
 
