@@ -144,20 +144,44 @@ Fields whose meaning depends on a scheme name it beside them:
 | field | kind field | values |
 |---|---|---|
 | `atomic_charges` | `atomic_charges_kind` | `mulliken`, `lowdin`, `eeq`, `eeqbc`, `cm5`, `hirshfeld` |
+| `atomic_spin_populations` | `atomic_spin_populations_kind` | those of `atomic_charges_kind` |
 | `bond_orders` | `bond_orders_kind` | `mayer` (Σ(PS)μν(PS)νμ; what xtb prints as "Wiberg"), `wiberg` (orthogonalized basis) |
-| `scf_quadrupole_moment` | `quadrupole_kind` | `traceless` (Buckingham: ½Σq(3rᵢrⱼ − r²δᵢⱼ)), `second_moment` (Σq rᵢrⱼ) |
+
+Fields with one definition have no kind:
+
+- `scf_quadrupole_moment` is Buckingham's traceless tensor, ½Σq(3rᵢrⱼ − r²δᵢⱼ) about the
+  coordinate origin, electrons and nuclei. tblite's molecular quadrupole, which the
+  g-xTB 2.0.1 program prints, counts the off-diagonal charge and dipole parts twice and is
+  not a tensor.
+- `atomic_dipoles` and `atomic_quadrupoles` are electronic only, about each atom's
+  nucleus: μ_A = −Σ_{μ∈A}(P D)_μμ, with the integrals about the atom of the column AO;
+  quadrupoles in Buckingham's traceless form, 3/2 M − 1/2 tr(M) I, 3 × 3 per atom.
+- `shell_populations` are electron populations Σ_{μ∈shell}(PS)_μμ, indexed like
+  `basis.shells`, with `shell_atoms` and `shell_angular_momenta` beside them; not charges.
 
 ### Imaginary modes
 
 Frequencies are negative for imaginary modes and stored without a cutoff;
 `VibrationalAnalysis.n_imaginary(cutoff)` applies one (xtb and axtb use 20 cm⁻¹).
 
-### Atomic orbitals
+### Orbitals and AO matrices
 
-Orbitals are stored as the program produced them, with their `AOConvention`;
-`Orbitals.with_convention` converts. The default is PySCF's (libcint's) order: spherical
-functions m = −l..l except p as (x, y, z); Cartesian components lexicographic (xx, xy,
-xz, yy, yz, zz); every spherical function and the x^l component unit-normalized.
+`Orbitals` is the one home of orbital levels. Energies and occupations come with every
+wavefunction; coefficients and their basis set only on request. Occupations are per spin,
+each between 0 and 1, with both `occupations_a` and `occupations_b` always given;
+`electronic_temperature` is 0 for aufbau occupations, and smeared ones carry a Fermi level
+per spin. `BasisSet.core_electrons` counts, per atom, the electrons the orbitals do not
+represent (ECP cores, or the core a valence-only method leaves out), so the occupations
+sum to Σ(Z − core_electrons) − charge.
+
+Orbitals and AO matrices are stored as the program produced them, with their
+`AOConvention`; `Wavefunction.with_convention` (or `Orbitals.with_convention`, for the
+orbitals alone) converts. The default is PySCF's (libcint's) order: spherical functions
+m = −l..l except p as (x, y, z); Cartesian components lexicographic (xx, xy, xz, yy, yz,
+zz); every spherical function and the x^l component unit-normalized. A change of Cartesian
+normalization scales coefficients by s per AO, densities by s_μ s_ν and operators
+(`overlap`, `hamiltonian_a/_b`, `core_hamiltonian`) by 1/(s_μ s_ν); `BasisSet.transform`
+takes the array's `kind` and never guesses it.
 
 ### Given results
 

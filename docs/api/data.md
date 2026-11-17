@@ -64,7 +64,7 @@ members:
 
 ::: qcdata.ConformerSearchData
 
-::: qcdata.Wavefunction
+`Wavefunction` is documented with the [orbitals](./orbitals.md).
 
 ## Selecting a scientific data type
 
