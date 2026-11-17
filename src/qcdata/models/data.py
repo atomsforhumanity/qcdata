@@ -17,7 +17,13 @@ from qcdata.helper_types import (
 
 from .base_models import CalcType, Files, OutputBase, Provenance, QCDataBaseModel
 from .inputs import ProgramInput
-from .orbitals import AOConvention, BasisSet, OrbitalKind, Orbitals
+from .orbitals import (
+    _ELECTRON_COUNT_TOLERANCE,
+    AOConvention,
+    BasisSet,
+    OrbitalKind,
+    Orbitals,
+)
 from .structure import Structure
 from .utils import to_multi_xyz
 from .vibrations import Thermochemistry, VibrationalAnalysis
@@ -471,11 +477,6 @@ class SinglePointData(FileData, CalcInfoData):
             n = int(np.sqrt(v.size))
             return v.reshape((n, n))
         return None
-
-
-#: How far the orbitals' occupations may sum from the structure's electron count:
-#: Fermi smearing solves for the Fermi level to about 1e-8 electrons.
-_ELECTRON_COUNT_TOLERANCE = 1e-6
 
 
 def _check_fits_structure(

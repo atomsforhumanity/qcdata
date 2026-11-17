@@ -275,7 +275,8 @@ Frequencies are negative for imaginary modes and stored without a cutoff;
 wavefunction; coefficients only on request. Occupations are per spin,
 each between 0 and 1, with both `occupations_a` and `occupations_b` always given;
 `electronic_temperature` is 0 for aufbau occupations, and smeared ones carry a Fermi level
-per spin. `Orbitals.core_electrons` counts, per atom, the electrons the orbitals do not
+per spin, except for a spin that holds no electrons (a smeared H atom's beta), which has
+none. `Orbitals.core_electrons` counts, per atom, the electrons the orbitals do not
 represent (ECP cores, or the core a valence-only method leaves out; None for an
 all-electron calculation), so the occupations sum to Σ(Z − core_electrons) − charge. An
 ECP carries the core it replaces (`Ecp.core_electrons`), and the two agree on every ECP

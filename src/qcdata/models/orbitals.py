@@ -38,6 +38,11 @@ from qcdata.helper_types import SerializableMatrix, SerializableVector
 
 from .base_models import QCDataBaseModel
 
+#: How far a sum of occupations may be from an electron count (an empty spin's zero,
+#: the structure's electrons): Fermi smearing solves for the Fermi level to about
+#: 1e-8 electrons.
+_ELECTRON_COUNT_TOLERANCE = 1e-6
+
 __all__ = [
     "AOConvention",
     "BasisSet",
@@ -436,6 +441,8 @@ class Orbitals(QCDataBaseModel):
         electronic_temperature: The temperature (K) of the Fermi smearing that set the
             occupations; 0 for aufbau occupations.
         fermi_level_a: The alpha Fermi level (Eh) of smeared occupations; None at 0 K.
+            A spin that holds no electrons (an H atom's beta) has no Fermi level and
+            may leave it None.
         fermi_level_b: The beta Fermi level (Eh); None at 0 K. Each spin is filled at its
             own fixed electron count, so an open shell has two levels; a closed shell's
             are equal.
@@ -519,11 +526,17 @@ class Orbitals(QCDataBaseModel):
                     "Fermi levels belong to smeared occupations "
                     "(electronic_temperature > 0); at 0 K they are None"
                 )
-        elif None in levels:
-            raise ValueError(
-                "smeared occupations (electronic_temperature > 0) need fermi_level_a "
-                "and fermi_level_b"
-            )
+            return
+        for spin, level, occ in (
+            ("a", self.fermi_level_a, self.occupations_a),
+            ("b", self.fermi_level_b, self.occupations_b),
+        ):
+            if level is None and occ.sum() > _ELECTRON_COUNT_TOLERANCE:
+                raise ValueError(
+                    f"smeared occupations (electronic_temperature > 0) need "
+                    f"fermi_level_{spin}: its spin holds {occ.sum():.10g} electrons "
+                    "(only a spin with none may leave it None)"
+                )
 
     def _check_coefficients(self, nmo: int, unrestricted: bool) -> None:
         ca, cb = self.coefficients_a, self.coefficients_b

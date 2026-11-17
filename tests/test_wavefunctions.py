@@ -540,10 +540,30 @@ def test_electronic_temperature_and_fermi_levels():
     assert smeared.fermi_level_b == -0.25
     with pytest.raises(ValidationError, match="at 0 K they are None"):
         levels(fermi_level_a=-0.2, fermi_level_b=-0.2)
-    with pytest.raises(ValidationError, match="need fermi_level_a and fermi_level_b"):
+    with pytest.raises(ValidationError, match="need fermi_level_b: its spin holds 5"):
         levels(electronic_temperature=300.0, fermi_level_a=-0.2)
+    with pytest.raises(ValidationError, match="need fermi_level_a"):
+        levels(electronic_temperature=300.0, fermi_level_b=-0.2)
     with pytest.raises(ValidationError, match=">= 0 K"):
         levels(electronic_temperature=-1.0)
+
+
+def test_an_empty_spin_has_no_fermi_level():
+    """A smeared H atom: one alpha electron, no beta ones, so no beta Fermi level."""
+    h = Orbitals(
+        spin="restricted",
+        energies_a=[-0.4, 0.2],
+        occupations_a=[1.0 - 1e-9, 1e-9],
+        occupations_b=[0.0, 0.0],
+        electronic_temperature=300.0,
+        fermi_level_a=-0.1,
+    )
+    assert h.fermi_level_b is None
+    assert Orbitals.model_validate_json(h.model_dump_json()) == h
+    with pytest.raises(ValidationError, match="need fermi_level_a"):
+        h.model_validate(h.model_dump() | {"fermi_level_a": None})
+    # a level for an empty spin is still accepted
+    assert h.model_validate(h.model_dump() | {"fermi_level_b": 0.0}).fermi_level_b == 0
 
 
 def test_coefficients_have_one_column_per_orbital():

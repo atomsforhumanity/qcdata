@@ -25,7 +25,7 @@ inside a session). Given orbitals (`ProgramInput.given`) may at most seed a gues
 | `energies_a/_b` | Eh; `_b` only for unrestricted orbitals |
 | `occupations_a/_b` | both always, each between 0 and 1 |
 | `electronic_temperature` | K; 0 for aufbau occupations |
-| `fermi_level_a/_b` | Eh; None at 0 K, both given above it. Open shells are filled per spin at fixed n_α and n_β, so there are two |
+| `fermi_level_a/_b` | Eh; None at 0 K, both given above it except for a spin that holds no electrons, which has none. Open shells are filled per spin at fixed n_α and n_β, so there are two |
 | `core_electrons` | one per atom: the electrons the orbitals do not represent, ECP cores or the core a valence-only method leaves out (bookkeeping only; Zn's core is 28 in GFN2 and g-xTB). None: all-electron |
 | `coefficients_a/_b` | optional, nao × nmo, in the AOs of `Wavefunction.basis`; only on request (output `orbitals`) |
 
