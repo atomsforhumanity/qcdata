@@ -6,4 +6,6 @@ Every `ProgramOutput` has `execution: ExecutionInfo`, defaulting to an empty `Ex
 
 `wall_time` is measured in seconds and `host_mem_gib` in GiB. `host_cpu` and `host_mem_gib` describe host capacity, not the resources allocated to the job. Each frame or scan point records its own execution information, including its working directory.
 
+`identities` says which code made the results (each program's numerics identity, set by the runner), and `store_run` where an output read from a store came from.
+
 ::: qcdata.ExecutionInfo

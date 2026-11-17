@@ -128,8 +128,9 @@ normalizes only itself; stored values keep `-0.0` and their number types.
 The key names the calculation, never the code that produced its numbers. Which code
 did is each program's numerics identity (its version, or a numerics epoch, an
 executable's version, a model's checksum), which the runner and the store record with
-every run, for the input's program and each subprogram; a store keeps several runs per
-key and reuses one only when its identities match the programs that would run now. So a
+every run, for the input's program and each subprogram, and which every output carries
+in `execution.identities`. A store keeps several runs per key and reuses one only when
+its identities match the programs that would run now. So a
 key never changes when code changes, anything holding keys stays valid across releases,
 and computing a key never needs a program installed. A program that changes what a
 default computes (linus's `jk` defaulting to `df`) changes its numerics identity, not
@@ -349,9 +350,14 @@ exception becomes a cause of kind `internal`, as qccompute treats a program's bu
 
 `execution.timings` holds seconds per phase (`total` for the whole call; a program with
 subprograms adds `subprograms`, the time inside them). `results.provenance` names the
-`program`, `program_version` and `program_commit`. An output a store returned has
-`execution.store_run`, `"<key>/<run>"`: the store sets it when it reads the run and
-never stores it, so it is None on every output that ran.
+`program`, `program_version` and `program_commit`. `execution.identities` says which code
+made the results: `{program: numerics}` for the input's program and each subprogram it
+names, as the runner saw them when it ran (a program named with several specs joins its
+sorted, distinct identities with `;`). The runner sets it on every output it returns and
+the store keeps it with the run, so an output read back from a store names its code
+without a second lookup; a carried result keeps the identities that made it. An output a
+store returned has `execution.store_run`, `"<key>/<run>"`: the store sets it when it
+reads the run and never stores it, so it is None on every output that ran.
 
 ## Saved files
 

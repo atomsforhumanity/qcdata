@@ -203,3 +203,23 @@ def test_store_run_marks_an_output_read_from_a_store(file_input, tmp_path):
     hit.save(tmp_path / "hit.json")
     reopened = ProgramOutput.open(tmp_path / "hit.json")
     assert reopened.execution.store_run == "k1:3f9a/20261117T120000-1"
+
+
+def test_identities_say_which_code_made_an_output(file_input, tmp_path):
+    ran = ProgramOutput(
+        input_data=file_input,
+        results=FileData(provenance=Provenance(program="xtb")),
+        success=True,
+    )
+    assert ran.execution.identities == {}
+    identities = {
+        "xtb": "6.7.1 sha256:1b4e" + "0" * 60,
+        "axtb": "axtb-gfn2:3;axtb-gxtb:1",
+    }
+    made = ran.model_copy(update={"execution": ExecutionInfo(identities=identities)})
+    made.save(tmp_path / "made.json")
+    saved = json.loads((tmp_path / "made.json").read_text())["execution"]
+    assert saved["identities"] == identities
+    assert ProgramOutput.open(tmp_path / "made.json").execution.identities == identities
+    with pytest.raises(ValidationError):
+        ExecutionInfo(identities={"xtb": 6.71})

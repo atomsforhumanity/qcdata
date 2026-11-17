@@ -526,6 +526,14 @@ class ExecutionInfo(QCDataBaseModel):
         peak_memory_gib: Peak host memory the calculation used (GiB), as measured.
         peak_device_memory_gib: Peak GPU memory the calculation used (GiB), as
             measured; schedulers compare it with the plan's estimate.
+        identities: Which code produced the results: ``{program: numerics}``, each
+            program's numerics identity for the input's program and every
+            subprogram it names, as the runner saw them when it ran. A program named
+            with several specs has its sorted, distinct identities joined with
+            ``;``. The runner sets it on every output it returns, and a store keeps it
+            with the run, so an output read back says which code made it. A result
+            carried forward to new code keeps the identities that made it. Empty for
+            an output no runner made.
         store_run: Where an output read from a store came from, as ``"<key>/<run>"``
             (its calculation key and run id); None for an output that ran. The store
             sets it on the outputs it returns and never stores it, so a cache hit is
@@ -545,6 +553,7 @@ class ExecutionInfo(QCDataBaseModel):
     threads: int | None = None
     peak_memory_gib: float | None = None
     peak_device_memory_gib: float | None = None
+    identities: dict[str, str] = {}
     store_run: str | None = None
 
 
