@@ -9,6 +9,7 @@ without importing an execution package. A step's result is a `Frame`.
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Annotated, Any
 
 import numpy as np
@@ -22,7 +23,14 @@ from .inputs import CalcType
 if TYPE_CHECKING:
     from .outputs import ProgramOutput
 
-__all__ = ["Accuracy", "Lineage", "Request", "ProgramError", "lineage_key"]
+__all__ = [
+    "Accuracy",
+    "Lineage",
+    "Request",
+    "ProgramError",
+    "ProgramErrors",
+    "lineage_key",
+]
 
 
 def lineage_key(lineage: Any) -> str:
@@ -240,3 +248,72 @@ class ProgramError(Exception):
             The exception.
         """
         return cls(ErrorInfo(kind=ErrorKind(kind), message=message, code=code))
+
+
+class ProgramErrors(ExceptionGroup):  # type: ignore[type-arg]
+    """Some of several calculations failed: raised after every one of them ran.
+
+    A runner raises it for a list of inputs, and a session's ``compute_many`` for a list
+    of requests. Each sub-exception is one failure's `ProgramError`. ``results`` holds
+    every result in request order, the successful ones included and the failed ones in
+    place, so no result is lost: `ProgramOutput`s for a list of inputs, `Frame`s for a
+    session. Handle failures with ``except*``, or catch the group and read ``results``.
+
+    Attributes:
+        results: One result per request, in order; failures in place.
+    """
+
+    results: list[Any]
+
+    def __new__(
+        cls, message: str, exceptions: Sequence[Exception], results: Sequence[Any] = ()
+    ) -> ProgramErrors:
+        """Build the group and attach every result."""
+        self = super().__new__(cls, message, exceptions)
+        self.results = list(results)
+        return self
+
+    def __init__(
+        self, message: str, exceptions: Sequence[Exception], results: Sequence[Any] = ()
+    ) -> None:
+        """Initialize the group; ``__new__`` attaches the results."""
+        super().__init__(message, exceptions)
+
+    def derive(self, excs: Sequence[Exception]) -> ProgramErrors:  # type: ignore[override]
+        """Keep ``results`` on the groups that ``except*`` and ``split`` create."""
+        return ProgramErrors(self.message, excs, self.results)
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        """Pickle with the results, so the group crosses to and from worker processes."""
+        return ProgramErrors, (self.message, list(self.exceptions), self.results)
+
+    @classmethod
+    def check(cls, results: Sequence[Any]) -> list[Any]:
+        """The results, or this group if any of them failed.
+
+        A session's ``compute_many`` ends with ``return ProgramErrors.check(frames)``.
+
+        Args:
+            results: One result per request, in order: `Frame`s or `ProgramOutput`s.
+
+        Returns:
+            The results, when every one succeeded.
+
+        Raises:
+            ProgramErrors: Some failed. Each failure's `ProgramError` carries its frame
+                or its output.
+        """
+        from .outputs import ProgramOutput
+
+        failed = []
+        for r in results:
+            if r.success:
+                continue
+            error = r.error or ErrorInfo(kind=ErrorKind.internal, message="failed")
+            if isinstance(r, ProgramOutput):
+                failed.append(ProgramError(error, output=r))
+            else:
+                failed.append(ProgramError(error, frame=r))
+        if failed:
+            raise cls(f"{len(failed)} of {len(results)} failed", failed, results)
+        return list(results)

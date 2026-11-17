@@ -51,6 +51,7 @@ __all__ = [  # noqa: F405
     "Lineage",
     "Request",
     "ProgramError",
+    "ProgramErrors",
     "lineage_key",
     # Vibrations and thermochemistry
     "VibrationalAnalysis",

@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+### Added
+
+- `ProgramErrors`, the group raised when some of several calculations failed (a runner's list, a session's `compute_many`). It holds each failure's `ProgramError` and every result in request order (`results`), and pickles. Programs' sessions raise it with only qcdata imported (`return ProgramErrors.check(frames)`).
+
+### Changed
+
+- **Breaking:** `calculation_key(inp)` takes the input only; program identities are recorded per stored run instead. Every key from 0.24.0a1 changes.
+
 ## [0.24.0a1] - 2026-11-17
 
 The first alpha of the redesigned qc* stack. qcdata is data only: inputs, outputs, the

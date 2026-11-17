@@ -13,6 +13,7 @@ from qcdata import (
     ErrorKind,
     Frame,
     ProgramError,
+    ProgramErrors,
     Provenance,
     Request,
     SinglePointData,
@@ -195,3 +196,52 @@ def test_failed_outputs_take_the_shape_of_their_calctype():
         opt.model_copy(update={"calctype": "energy"}), error, logs="x"
     )
     assert isinstance(sp.results, SinglePointData) and sp.logs == "x"
+
+
+def test_program_errors_group_keeps_every_result_in_order():
+    structure = Structure(symbols=["He"], geometry=[[0.0, 0.0, 0.0]])
+    error = ErrorInfo(kind=ErrorKind.convergence, message="SCF", code="max_iter")
+
+    def frame(energy: float | None) -> Frame:
+        results = SinglePointData(provenance=Provenance(program="toy"), energy=energy)
+        if energy is not None:
+            return Frame(structure=structure, results=results, success=True)
+        return Frame(
+            structure=structure,
+            results=results,
+            success=False,
+            error=error,
+            traceback="t",
+        )
+
+    good = [frame(-2.8), frame(-2.9)]
+    assert ProgramErrors.check(good) == good
+
+    frames = [frame(-2.8), frame(None), frame(-2.9)]
+    with pytest.raises(ProgramErrors) as info:
+        ProgramErrors.check(frames)
+    group = info.value
+    assert group.results == frames and len(group.exceptions) == 1
+    assert group.exceptions[0].frame is frames[1] and group.exceptions[0].error == error
+
+    # except* and split keep the results; the group pickles with them.
+    try:
+        raise group
+    except* ProgramError as caught:
+        assert isinstance(caught, ProgramErrors) and caught.results == frames
+    back = pickle.loads(pickle.dumps(group))
+    assert back.results == frames and back.exceptions[0].frame == frames[1]
+
+
+def test_program_errors_group_carries_failed_outputs():
+    from qcdata import ProgramInput, ProgramOutput
+
+    he = Structure(symbols=["He"], geometry=[[0.0, 0.0, 0.0]])
+    inp = ProgramInput(
+        program="toy", calctype="energy", structure=he, model={"method": "lj"}
+    )
+    error = ErrorInfo(kind=ErrorKind.input, message="bad", code="unknown_key")
+    failed = ProgramOutput.failure(inp, error)
+    with pytest.raises(ProgramErrors) as info:
+        ProgramErrors.check([failed])
+    assert info.value.exceptions[0].output is failed and info.value.results == [failed]
