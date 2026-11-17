@@ -29,7 +29,6 @@ WATER = {
     "symbols": ["O", "H", "H"],
     "geometry": [[0.0, 0.0, -0.1294], [0.0, 1.4941, 1.0274], [0.0, -1.4941, 1.0274]],
 }
-CONTEXT = {"axtb": "0.1.1"}
 
 
 def _load(case: dict[str, Any]) -> FileInput | ProgramInput:
@@ -50,17 +49,11 @@ def _input(**changes: Any) -> ProgramInput:
     return ProgramInput.model_validate(values)
 
 
-def _key(inp: FileInput | ProgramInput, context: dict[str, str] = CONTEXT) -> str:
-    return calculation_key(inp, context)
-
-
 @pytest.mark.parametrize("case", GOLDEN, ids=[c["name"] for c in GOLDEN])
-def test_golden_key(case):
+def test_goldencalculation_key(case):
     inp = _load(case)
-    canonical = json.dumps(
-        {"context": case["context"], "input": _canonical_model(inp)}, sort_keys=True
-    )
-    assert calculation_key(inp, case["context"]) == case["key"], (
+    canonical = json.dumps(_canonical_model(inp), sort_keys=True)
+    assert calculation_key(inp) == case["key"], (
         f"The key of {case['name']} changed; its canonical form is now {canonical}"
     )
 
@@ -79,15 +72,11 @@ def test_golden_key_survives_json_and_save(case, tmp_path):
     inp = _load(case)
     cls = type(inp)
     assert (
-        _key(cls.model_validate_json(inp.model_dump_json()), case["context"])
-        == (case["key"])
+        calculation_key(cls.model_validate_json(inp.model_dump_json())) == case["key"]
     )
     for suffix in (".json", ".yaml"):
         inp.save(tmp_path / f"input{suffix}")
-        assert (
-            _key(cls.open(tmp_path / f"input{suffix}"), case["context"])
-            == (case["key"])
-        )
+        assert calculation_key(cls.open(tmp_path / f"input{suffix}")) == case["key"]
 
 
 def test_key_survives_arrays_saved_apart(tmp_path):
@@ -105,29 +94,30 @@ def test_key_survives_arrays_saved_apart(tmp_path):
     )
     paths = inp.save(tmp_path / "input.json")
     assert [p.name for p in paths] == ["input.json", "input.given.hessian.npy"]
-    assert _key(ProgramInput.open(tmp_path / "input.json")) == _key(inp)
+    assert calculation_key(
+        ProgramInput.open(tmp_path / "input.json")
+    ) == calculation_key(inp)
 
 
 def test_canonical_text_is_documented_form():
     """The key is sha256 of exactly this text: compact JSON, keys sorted, ASCII."""
     energy = next(c for c in GOLDEN if c["name"] == "energy")
     text = (
-        '{"context":{"axtb":"0.1.1"},"input":{"calctype":"energy",'
-        '"model":{"method":"gfn2"},"program":"axtb","structure":{"geometry":'
-        "[[0,0,-1294000000],[0,14941000000,10274000000],"
-        '[0,-14941000000,10274000000]],"symbols":["O","H","H"]}}}'
+        '{"calctype":"energy","model":{"method":"gfn2"},"program":"axtb",'
+        '"structure":{"geometry":[[0,0,-1294000000],[0,14941000000,10274000000],'
+        '[0,-14941000000,10274000000]],"symbols":["O","H","H"]}}'
     )
     assert energy["key"] == "k1:" + hashlib.sha256(text.encode()).hexdigest()
 
     keywords = next(c for c in GOLDEN if c["name"] == "gradient_keywords")
     text = (
-        '{"context":{"axtb":"0.1.1"},"input":{"calctype":"gradient","keywords":'
+        '{"calctype":"gradient","keywords":'
         '{"accuracy_scale":0.5,"electronic_temperature":300,"output":'
         '{"bond_orders":true,"orbitals":false},"scf":{"e_tol":1e-08,"guess":"sad",'
         '"level_shift":0,"max_iter":100},"solvent":{"model":null,"name":"water"}},'
         '"model":{"method":"gfn2"},"program":"axtb","structure":{"geometry":'
         "[[0,0,-1294000000],[0,14941000000,10274000000],"
-        '[0,-14941000000,10274000000]],"symbols":["O","H","H"]}}}'
+        '[0,-14941000000,10274000000]],"symbols":["O","H","H"]}}'
     )
     assert keywords["key"] == "k1:" + hashlib.sha256(text.encode()).hexdigest()
 
@@ -138,9 +128,9 @@ def test_canonical_text_is_documented_form():
     ).hexdigest()
     unicode_file = hashlib.sha256("Ångström\n".encode()).hexdigest()
     text = (
-        '{"context":{"orca":"6.0.1"},"input":{"cmdline_args":["input.inp"],'
+        '{"cmdline_args":["input.inp"],'
         f'"files":{{"guess.gbw":"{binary}","input.inp":"{text_file}",'
-        f'"notes/\\u00c5.txt":"{unicode_file}"}},"program":"orca"}}}}'
+        f'"notes/\\u00c5.txt":"{unicode_file}"}},"program":"orca"}}'
     )
     assert files["key"] == "k1:" + hashlib.sha256(text.encode()).hexdigest()
 
@@ -148,8 +138,7 @@ def test_canonical_text_is_documented_form():
     hessian = np.array(given["input"]["given"]["hessian"], dtype="<f8") + 0.0
     digest = hashlib.sha256(hessian.tobytes(order="C")).hexdigest()
     text = (
-        '{"context":{"axtb":"0.1.1","findiff":"0.1.0","qcopt":"0.3.0"},"input":{'
-        '"calctype":"transition_state","given":{"energy":-5.0704,"hessian":'
+        '{"calctype":"transition_state","given":{"energy":-5.0704,"hessian":'
         f'{{"array":[9,9],"dtype":"float64","sha256":"{digest}"}},'
         '"provenance":{"program":"axtb","program_version":"0.1.1"}},'
         '"program":"qcopt","structure":{"geometry":[[0,0,-1294000000],'
@@ -157,13 +146,13 @@ def test_canonical_text_is_documented_form():
         '"symbols":["O","H","H"]},"subprograms":[{"calctype":"gradient",'
         '"model":{"method":"gxtb"},"program":"axtb"},{"calctype":"hessian",'
         '"keywords":{"step":0.005},"program":"findiff","subprograms":[{'
-        '"calctype":"gradient","model":{"method":"gxtb"},"program":"axtb"}]}]}}'
+        '"calctype":"gradient","model":{"method":"gxtb"},"program":"axtb"}]}]}'
     )
     assert given["key"] == "k1:" + hashlib.sha256(text.encode()).hexdigest()
 
 
 def test_key_format():
-    key = _key(_input())
+    key = calculation_key(_input())
     assert key.startswith("k1:")
     assert len(key) == 3 + 64
     int(key[3:], 16)
@@ -190,15 +179,17 @@ def test_key_format():
     ],
 )
 def test_same_keywords(a, b):
-    assert _key(_input(keywords=a)) == _key(_input(keywords=b))
+    assert calculation_key(_input(keywords=a)) == calculation_key(_input(keywords=b))
 
 
 def test_excluded_fields_and_defaults():
-    plain = _key(_input())
-    assert _key(_input(extras={"x": 1})) == plain
-    assert _key(_input(model={"method": "gfn2", "extras": {"x": 1}})) == plain
+    plain = calculation_key(_input())
+    assert calculation_key(_input(extras={"x": 1})) == plain
     assert (
-        _key(
+        calculation_key(_input(model={"method": "gfn2", "extras": {"x": 1}})) == plain
+    )
+    assert (
+        calculation_key(
             _input(
                 structure={
                     **WATER,
@@ -209,9 +200,15 @@ def test_excluded_fields_and_defaults():
         )
         == plain
     )
-    assert _key(_input(structure={**WATER, "charge": 0, "multiplicity": 1})) == plain
-    assert _key(_input(subprograms=[], files={}, cmdline_args=[], given=None)) == plain
-    assert _key(_input(model={"method": "gfn2", "basis": None})) == plain
+    assert (
+        calculation_key(_input(structure={**WATER, "charge": 0, "multiplicity": 1}))
+        == plain
+    )
+    assert (
+        calculation_key(_input(subprograms=[], files={}, cmdline_args=[], given=None))
+        == plain
+    )
+    assert calculation_key(_input(model={"method": "gfn2", "basis": None})) == plain
 
 
 def test_subprogram_resources_and_extras_left_out():
@@ -223,39 +220,36 @@ def test_subprogram_resources_and_extras_left_out():
             "keywords": keywords,
         }
 
-    base = _key(_input(program="qcopt", calctype="optimization", subprograms=[spec()]))
+    base = calculation_key(
+        _input(program="qcopt", calctype="optimization", subprograms=[spec()])
+    )
     for changed in (
         spec(threads=8),
         spec(memory_gib=3.0),
         {**spec(), "extras": {"note": "x"}},
     ):
         inp = _input(program="qcopt", calctype="optimization", subprograms=[changed])
-        assert _key(inp) == base
+        assert calculation_key(inp) == base
 
 
 def test_coordinates_round_to_1e10_bohr():
-    plain = _key(_input())
+    plain = calculation_key(_input())
     moved = np.array(WATER["geometry"]) + 4e-11
-    assert _key(_input(structure={**WATER, "geometry": moved})) == plain
+    assert calculation_key(_input(structure={**WATER, "geometry": moved})) == plain
     moved = np.array(WATER["geometry"]) + 2e-10
-    assert _key(_input(structure={**WATER, "geometry": moved})) != plain
+    assert calculation_key(_input(structure={**WATER, "geometry": moved})) != plain
 
 
 def test_text_and_bytes_files_with_the_same_bytes():
     text = FileInput(program="orca", files={"a.inp": "Å\n"})
     raw = FileInput(program="orca", files={"a.inp": "Å\n".encode()})
-    assert _key(text) == _key(raw)
-
-
-def test_context_order_does_not_matter():
-    inp = _input()
-    assert _key(inp, {"a": "1", "b": "2"}) == _key(inp, {"b": "2", "a": "1"})
+    assert calculation_key(text) == calculation_key(raw)
 
 
 def test_keying_changes_nothing():
     inp = _input(keywords={"shift": -0.0, "threads": 4})
     before = inp.model_dump()
-    _key(inp)
+    calculation_key(inp)
     assert inp.model_dump() == before
     assert np.signbit(inp.keywords["shift"])
 
@@ -284,11 +278,11 @@ def test_keying_changes_nothing():
     ],
 )
 def test_different_keywords(a, b):
-    assert _key(_input(keywords=a)) != _key(_input(keywords=b))
+    assert calculation_key(_input(keywords=a)) != calculation_key(_input(keywords=b))
 
 
 def test_every_part_of_the_input_counts():
-    plain = _key(_input())
+    plain = calculation_key(_input())
     swapped = {
         "symbols": ["H", "O", "H"],
         "geometry": np.array(WATER["geometry"])[[1, 0, 2]],
@@ -309,7 +303,7 @@ def test_every_part_of_the_input_counts():
         _input(cmdline_args=["-v"]),
         _input(keywords={"threads": 4, "x": 1}),
     ]
-    keys = [_key(inp) for inp in changed]
+    keys = [calculation_key(inp) for inp in changed]
     assert plain not in keys
     assert len(set(keys)) == len(keys)
 
@@ -320,11 +314,11 @@ def test_given_arrays_count_to_the_last_bit():
     nudged = hessian.copy()
     nudged[4, 4] = np.nextafter(1.0, 2.0)
     b = SinglePointData(provenance={"program": "axtb"}, hessian=nudged)
-    assert _key(_input(given=a)) != _key(_input(given=b))
+    assert calculation_key(_input(given=a)) != calculation_key(_input(given=b))
     c = SinglePointData(
         provenance={"program": "axtb", "program_version": "x"}, hessian=hessian
     )
-    assert _key(_input(given=a)) != _key(_input(given=c))
+    assert calculation_key(_input(given=a)) != calculation_key(_input(given=c))
 
 
 def _given(hessian: Any) -> ProgramInput:
@@ -335,14 +329,14 @@ def _given(hessian: Any) -> ProgramInput:
 def test_array_fields_count_by_value_not_layout():
     rng = np.random.default_rng(11)
     hessian = rng.normal(size=(9, 9))
-    plain = _key(_given(hessian))
-    assert _key(_given(np.asfortranarray(hessian))) == plain
-    assert _key(_given(hessian.astype(">f8"))) == plain
-    assert _key(_given(hessian.tolist())) == plain
+    plain = calculation_key(_given(hessian))
+    assert calculation_key(_given(np.asfortranarray(hessian))) == plain
+    assert calculation_key(_given(hessian.astype(">f8"))) == plain
+    assert calculation_key(_given(hessian.tolist())) == plain
     zeros = np.zeros((9, 9))
     signed = zeros.copy()
     signed[0, 0] = -0.0
-    assert _key(_given(signed)) == _key(_given(zeros))
+    assert calculation_key(_given(signed)) == calculation_key(_given(zeros))
 
 
 def test_array_fields_enter_by_shape_dtype_and_digest():
@@ -374,22 +368,24 @@ def test_array_fields_enter_by_shape_dtype_and_digest():
 
 
 def test_free_form_arrays_stay_json_numbers():
-    as_array = _key(_input(keywords={"w": np.array([[0.5, 1.0]])}))
-    assert as_array == _key(_input(keywords={"w": [[0.5, 1]]}))
+    as_array = calculation_key(_input(keywords={"w": np.array([[0.5, 1.0]])}))
+    assert as_array == calculation_key(_input(keywords={"w": [[0.5, 1]]}))
 
 
 def test_non_finite_given_arrays_are_refused():
     hessian = np.eye(9)
     hessian[2, 2] = np.nan
     with pytest.raises(ValueError, match="finite"):
-        _key(_given(hessian))
+        calculation_key(_given(hessian))
 
 
 def test_files_count_by_name_and_content():
-    plain = _key(FileInput(program="orca", files={"a.inp": "x"}))
-    assert _key(FileInput(program="orca", files={"b.inp": "x"})) != plain
-    assert _key(FileInput(program="orca", files={"a.inp": "x\n"})) != plain
-    assert _key(FileInput(program="orca", files={"a.inp": b"x\x00"})) != plain
+    plain = calculation_key(FileInput(program="orca", files={"a.inp": "x"}))
+    assert calculation_key(FileInput(program="orca", files={"b.inp": "x"})) != plain
+    assert calculation_key(FileInput(program="orca", files={"a.inp": "x\n"})) != plain
+    assert (
+        calculation_key(FileInput(program="orca", files={"a.inp": b"x\x00"})) != plain
+    )
 
 
 def test_subprograms_count_in_order_and_depth():
@@ -401,26 +397,19 @@ def test_subprograms_count_in_order_and_depth():
     b = _input(
         program="qcopt", calctype="transition_state", subprograms=[hessian, gradient]
     )
-    assert _key(a) != _key(b)
+    assert calculation_key(a) != calculation_key(b)
     deeper = {**hessian, "subprograms": [gradient]}
     c = _input(
         program="qcopt", calctype="transition_state", subprograms=[gradient, deeper]
     )
-    assert _key(c) != _key(a)
+    assert calculation_key(c) != calculation_key(a)
     nested_change = {**hessian, "subprograms": [{**gradient, "keywords": {"x": 1}}]}
     d = _input(
         program="qcopt",
         calctype="transition_state",
         subprograms=[gradient, nested_change],
     )
-    assert _key(d) != _key(c)
-
-
-def test_context_counts():
-    inp = _input()
-    assert _key(inp, {}) != _key(inp, {"axtb": "0.1.1"})
-    assert _key(inp, {"axtb": "0.1.1"}) != _key(inp, {"axtb": "0.1.2"})
-    assert _key(inp, {"axtb": "0.1.1"}) != _key(inp, {"linus": "0.1.1"})
+    assert calculation_key(d) != calculation_key(c)
 
 
 # Refusals.
@@ -429,15 +418,9 @@ def test_context_counts():
 def test_refuses_what_is_not_a_calculation():
     spec = ProgramSpec(program="axtb", calctype="gradient", model={"method": "gfn2"})
     with pytest.raises(TypeError, match="from_spec"):
-        calculation_key(spec, {})  # type: ignore[arg-type]
+        calculation_key(spec)
     with pytest.raises(TypeError):
-        calculation_key(Structure(**WATER), {})  # type: ignore[arg-type]
-
-
-@pytest.mark.parametrize("context", [{"axtb": 6}, {1: "6"}, {"axtb": None}])
-def test_refuses_a_context_that_is_not_strings(context):
-    with pytest.raises(TypeError, match="strings to strings"):
-        calculation_key(_input(), context)
+        calculation_key(Structure(**WATER))  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -454,11 +437,11 @@ def test_refuses_a_context_that_is_not_strings(context):
 )
 def test_refuses_values_json_cannot_hold(keywords, error):
     with pytest.raises(error):
-        _key(_input(keywords=keywords))
+        calculation_key(_input(keywords=keywords))
 
 
 def test_refuses_non_finite_coordinates():
     geometry = np.array(WATER["geometry"])
     geometry[0, 0] = np.nan
     with pytest.raises(ValueError, match="finite coordinates"):
-        _key(_input(structure={**WATER, "geometry": geometry}))
+        calculation_key(_input(structure={**WATER, "geometry": geometry}))

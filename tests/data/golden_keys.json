@@ -2,7 +2,6 @@
   {
     "name": "energy",
     "covers": "a plain input: fields at their default left out, coordinates as integers in 1e-10 bohr",
-    "context": {"axtb": "0.1.1"},
     "input": {
       "program": "axtb",
       "calctype": "energy",
@@ -12,12 +11,11 @@
         "geometry": [[0.0, 0.0, -0.1294], [0.0, 1.4941, 1.0274], [0.0, -1.4941, 1.0274]]
       }
     },
-    "key": "k1:013624a1b6a9980e47787a11e1a29f9a6b77134c0639a054c7e51c1b50bc751c"
+    "key": "k1:f996ce3cdb2cf12a2c8cb18179e8fa59684d2ac2963a4a36b61dfdb4b2dd0d6a"
   },
   {
     "name": "energy_excluded_and_defaults",
     "covers": "the energy input with what the key leaves out: threads and memory_gib, structure identifiers, extras at every level, fields written at their default, a saved version stamp; same key as energy",
-    "context": {"axtb": "0.1.1"},
     "input": {
       "program": "axtb",
       "calctype": "energy",
@@ -40,12 +38,11 @@
       "extras": {"campaign": "golden"},
       "qcdata_version": "0.23.1"
     },
-    "key": "k1:013624a1b6a9980e47787a11e1a29f9a6b77134c0639a054c7e51c1b50bc751c"
+    "key": "k1:f996ce3cdb2cf12a2c8cb18179e8fa59684d2ac2963a4a36b61dfdb4b2dd0d6a"
   },
   {
     "name": "energy_rounded_coordinates",
     "covers": "the energy input with coordinates that differ by less than 5e-11 bohr and a -0.0; same key as energy",
-    "context": {"axtb": "0.1.1"},
     "input": {
       "program": "axtb",
       "calctype": "energy",
@@ -59,27 +56,11 @@
         ]
       }
     },
-    "key": "k1:013624a1b6a9980e47787a11e1a29f9a6b77134c0639a054c7e51c1b50bc751c"
-  },
-  {
-    "name": "energy_empty_context",
-    "covers": "the energy input with an empty context: the context counts",
-    "context": {},
-    "input": {
-      "program": "axtb",
-      "calctype": "energy",
-      "model": {"method": "gfn2"},
-      "structure": {
-        "symbols": ["O", "H", "H"],
-        "geometry": [[0.0, 0.0, -0.1294], [0.0, 1.4941, 1.0274], [0.0, -1.4941, 1.0274]]
-      }
-    },
-    "key": "k1:8a90dfdfb34efc05e2160dd87c49fea07dfccf9aedb995265da51631500470be"
+    "key": "k1:f996ce3cdb2cf12a2c8cb18179e8fa59684d2ac2963a4a36b61dfdb4b2dd0d6a"
   },
   {
     "name": "gradient_keywords",
     "covers": "keywords with floats, integers, booleans, strings, null and nested groups",
-    "context": {"axtb": "0.1.1"},
     "input": {
       "program": "axtb",
       "calctype": "gradient",
@@ -96,12 +77,11 @@
         "solvent": {"name": "water", "model": null}
       }
     },
-    "key": "k1:965e0390a3bd6189cdfff65907e1fda2967e4fc38150710bc6a0626386fa78c0"
+    "key": "k1:520acee440b3c14c43e461d19436b62990294d4cab9bcb6efb19ef54cb4bcf45"
   },
   {
     "name": "gradient_keywords_normalized",
     "covers": "the same keywords in another order, with numbers written differently (100 for 100.0, 0 for -0.0, 300.0 for 300, 1e-08 for 1e-8, 5e-1 for 0.5) and threads added; same key as gradient_keywords",
-    "context": {"axtb": "0.1.1"},
     "input": {
       "structure": {
         "geometry": [[0.0, 0.0, -0.1294], [0.0, 1.4941, 1.0274], [0.0, -1.4941, 1.0274]],
@@ -119,12 +99,11 @@
       "calctype": "gradient",
       "program": "axtb"
     },
-    "key": "k1:965e0390a3bd6189cdfff65907e1fda2967e4fc38150710bc6a0626386fa78c0"
+    "key": "k1:520acee440b3c14c43e461d19436b62990294d4cab9bcb6efb19ef54cb4bcf45"
   },
   {
     "name": "hessian_open_shell",
     "covers": "charge, multiplicity, connectivity and a basis set: values that differ from their defaults",
-    "context": {"linus": "6"},
     "input": {
       "program": "linus",
       "calctype": "hessian",
@@ -138,12 +117,11 @@
       },
       "keywords": {"freq": {"temperature": 298.15}}
     },
-    "key": "k1:de66be05f6b2afb6202c4ff5f6ca927017bb0f8f060dea3297095abad21a6ebf"
+    "key": "k1:a54bf72df5f83012b760b6a0f8df1620866f35166ac2ed5c432d1c5f7a838a69"
   },
   {
     "name": "optimization_subprogram",
     "covers": "a subprogram, whose threads and memory_gib are left out as at the top level",
-    "context": {"qcopt": "0.3.0", "axtb": "0.1.1"},
     "input": {
       "program": "qcopt",
       "calctype": "optimization",
@@ -161,12 +139,11 @@
         }
       ]
     },
-    "key": "k1:47b41df3cc2e403c8d2d1f3f1d6675144499241a7bbcc282cf92edc912cc83f9"
+    "key": "k1:982b936e70360b28189611aea308886d651c26bafdbf062a000002148229ec4c"
   },
   {
     "name": "transition_state_nested_given",
     "covers": "subprograms two levels deep, and given results: a Hessian by its bytes (with -0.0 read as 0.0), provenance, extras left out",
-    "context": {"qcopt": "0.3.0", "findiff": "0.1.0", "axtb": "0.1.1"},
     "input": {
       "program": "qcopt",
       "calctype": "transition_state",
@@ -207,12 +184,11 @@
         "extras": {"from": "an earlier search"}
       }
     },
-    "key": "k1:638e87664ea23db4c7b5b41100578fdb06990baff6a2c15df10c5da93b1bbf65"
+    "key": "k1:6253b0972ea3c3ca8925a08987021e2a762e2b5801b4232ab8bf4e60a7d623bb"
   },
   {
     "name": "file_input",
     "covers": "a FileInput: text and binary files by sha256, a non-ASCII file name and text, command-line arguments",
-    "context": {"orca": "6.0.1"},
     "input": {
       "program": "orca",
       "cmdline_args": ["input.inp"],
@@ -222,12 +198,11 @@
         "notes/Å.txt": "Ångström\n"
       }
     },
-    "key": "k1:40567febe03639fed72e7ae30961c018d21a2607eec0a08becb5797c521c8278"
+    "key": "k1:5a0225aa6d4b3b2e716173c2c9150329c912e2280f88e17f2796a1710a23f411"
   },
   {
     "name": "energy_native_files",
     "covers": "a ProgramInput with native files and command-line arguments",
-    "context": {"psi4": "1.11"},
     "input": {
       "program": "psi4",
       "calctype": "energy",
@@ -239,12 +214,11 @@
       "files": {"grid.dat": "0.0 0.0 1.0\n"},
       "cmdline_args": ["--verbose"]
     },
-    "key": "k1:75777afb79066d36f8ddd35cc68ff3bdb46bd50dabfb4bbfd37dc58130583bc1"
+    "key": "k1:7dd6cd234570ca0c8dc23d21ff90c6a8ed627886b9ded1e8532be25f3ccedea3"
   },
   {
     "name": "path_optimization_chain",
     "covers": "a chain in structures with no structure: a list of structures, in order",
-    "context": {"qcopt": "0.3.0", "axtb": "0.1.1"},
     "input": {
       "program": "qcopt",
       "calctype": "path_optimization",
@@ -257,12 +231,11 @@
       },
       "subprograms": [{"program": "axtb", "calctype": "gradient", "model": {"method": "gfn2"}}]
     },
-    "key": "k1:554d8690621cdb1b232c50df47db82f4d18d5b49bb35cd7ed08d97bfcd8a011a"
+    "key": "k1:27f682d807023dcc562f37c9f4b6089d85960b42026179f64d1fae286e7bf7ed"
   },
   {
     "name": "gradient_environment",
     "covers": "a structure and a structure under a role (a QM/MM environment)",
-    "context": {"linus": "6"},
     "input": {
       "program": "linus",
       "calctype": "gradient",
@@ -278,6 +251,6 @@
         }
       }
     },
-    "key": "k1:1540e5513a5198024f2e428c2a43c9fc0ce88a08a36464f202a802a41208bfde"
+    "key": "k1:5ce1a426e560b0dfc9a0a91caa926c3019744de88e16ddf0a38e556428ab44cd"
   }
 ]
