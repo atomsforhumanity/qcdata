@@ -347,7 +347,7 @@ Shared error codes of other kinds, which runners and schedulers act on:
 | `program` | a subprogram failed; `cause` holds its error |
 | `timeout` | out of time (set by the runner) |
 | `environment` | the program could not run: not installed, no licence, process died (set by the runner) |
-| `internal` | a bug in the program; on the codec path, any failure the codec does not classify (a reported failure, an unexplained exit, unreadable output) |
+| `internal` | a failure nobody anticipated: a bug (an exception other than `ProgramError`, a broken invariant, a crash) or, on the codec path, a failure no rule classifies (a reported failure, an unexplained exit, unreadable output). A failure a program or codec anticipates takes the kind that fits it |
 
 `code` refines a kind with a program-defined name callers can branch on (qcopt:
 `max_iter`, `energy_rose`, `not_first_order_saddle`, `irc_incomplete`).

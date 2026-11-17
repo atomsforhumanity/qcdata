@@ -574,7 +574,10 @@ class ErrorKind(StrEnum):
         timeout: The calculation ran out of time (set by the runner).
         environment: The program could not be run at all: not installed, no licence,
             the process died (set by the runner).
-        internal: A bug in the program: a broken invariant or a crash.
+        internal: A failure nobody anticipated: a bug (an exception other than
+            `ProgramError`, a broken invariant, a crash), or a failure no rule
+            classifies (an unexplained exit, unreadable output). A failure a program
+            anticipates takes the kind that fits it.
     """
 
     input = "input"
