@@ -707,7 +707,7 @@ class Resolved(QCDataBaseModel):
             reproduces the run. Memory- and backend-dependent choices that can change
             numbers (DF storage, precision per card class) appear here resolved.
         reasons: Why each automatic choice was made, keyed by dotted settings path
-            (``"grid.xc": "calctype hessian: linus:3"``).
+            (``"grid.xc": "calctype hessian: a finer grid"``).
         deferred: In a plan only: dotted paths of settings left ``"auto"`` because the
             run decides them (``"jk.df_storage"`` from the free memory when the SCF
             starts). A finished output's resolved settings have every ``"auto"``

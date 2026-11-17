@@ -2419,7 +2419,7 @@
     "execution": {
         "scratch_dir": "/tmp/tmpkxl_c852",
         "wall_time": 923.096206,
-        "hostname": "eleutheria",
+        "hostname": "workstation",
         "host_cpu": 16,
         "devices": [],
         "timings": {}

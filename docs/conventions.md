@@ -1,6 +1,6 @@
 # Conventions
 
-The names, units and rules that every AFH program (linus, axtb, qcopt, ...) and every qc*
+The names, units and rules that every AFH program (axtb, qcopt, ...) and every qc*
 codec share, so that inputs look alike and outputs can be read the same way whichever
 program produced them. This page is the single place for them; a program's own documentation
 covers only what is specific to it. How programs are run (the program and session
@@ -35,9 +35,9 @@ Python keyword arguments spell it. The rules:
    group's name (`solvent.name`, not `solvent.solvent`).
 2. One canonical spelling across the CLI, JSON, Python and qcdata. Synonyms that encode
    another program's vocabulary (`rijcosx`, `rhf`) may be accepted on input but are never
-   echoed back. A group may take a scalar that stands for its main key (linus: `jk: "df"`
-   is `{"kind": "df"}`); the schema shows both forms and `resolved.settings` reports the
-   expanded one. The [calculation key](#calculation-key) takes the input as given, so the
+   echoed back. A group may take a scalar that stands for its main key (a DFT program's
+   `jk: "df"` is `{"kind": "df"}`); the schema shows both forms and `resolved.settings`
+   reports the expanded one. The [calculation key](#calculation-key) takes the input as given, so the
    two forms are separate cache entries: callers that store results use one.
 3. `"auto"` means the program decides; `null` or absent means the default. Every output
    reports what each `auto` became in `resolved.settings`, and why in `resolved.reasons`.
@@ -172,8 +172,8 @@ in `execution.identities`. A store keeps several runs per key and reuses one onl
 its identities match the programs that would run now. So a
 key never changes when code changes, anything holding keys stays valid across releases,
 and computing a key never needs a program installed. A program that changes what a
-default computes (linus's `jk` defaulting to `df`) changes its numerics identity, not
-the key.
+default computes (a DFT program's `jk` defaulting to `df`) changes its numerics
+identity, not the key.
 
 Golden keys in qcdata's tests pin the canonical form. Changing any rule, the default of
 any field an input holds (an omitted field would then mean something else), or the type of
@@ -226,7 +226,7 @@ program that reports them:
 
 | key | type | meaning |
 |---|---|---|
-| `warm_start` | bool or null | on a session frame: the calculation started from its lineage's history (previous orbitals, charges, probe state), not from the input alone, so it can reach a different solution than a fresh calculation; null when the method keeps no lineage state (GFN-FF). Programs add their own detail beside it (linus: where the SCF guess came from, and the lineage it was seeded from) |
+| `warm_start` | bool or null | on a session frame: the calculation started from its lineage's history (previous orbitals, charges, probe state), not from the input alone, so it can reach a different solution than a fresh calculation; null when the method keeps no lineage state (GFN-FF). Programs add their own detail beside it (a DFT program: where the SCF guess came from, and the lineage it was seeded from) |
 | `accuracy` | object | on a calculation with an [accuracy target](#accuracy-targets) (the keyword's or a request's): `target` (the targets as resolved: `energy`, `gradient`, `hessian`), `thresholds` (the program's own convergence thresholds used, under its own names; empty for a program with none) and, where the program has one, `estimate` (an error estimate per field; `0.0` for each target of a program with no convergence settings) |
 
 ### Kinds
@@ -405,7 +405,7 @@ store, the outputs of a list, a worker's reply).
 A program reports any failure of a subprogram as kind `program`, whether the
 subprogram's plan refused its settings or its run failed. `program` names the
 subprogram, `cause` holds the subprogram's own `ErrorInfo`, and the message starts with
-the subprogram and calctype (`linus (gradient): ...`). Callers follow `cause` to the first
+the subprogram and calctype (`xtb (gradient): ...`). Callers follow `cause` to the first
 error that is not of kind `program` to learn what went wrong. A subprogram that fails for
 one task of a round (a session that will not open, a failed request) fails that task
 only. A Python callable standing in for a subprogram (qcopt's in-process evaluator) is

@@ -80,11 +80,11 @@ class Accuracy(QCDataBaseModel):
 
     Each field is the numerical error from convergence the caller can tolerate in that
     quantity; a field left out sets no target for it. It is a target, not a guarantee:
-    the program picks the thresholds it expects to meet it (linus: SCF orbital gradient
-    and response residual; axtb: energy and charge change) and records the target, the
-    thresholds and any error estimate it has under the shared record key ``accuracy``.
-    Explicit convergence settings are floors: a target may tighten them, never loosen
-    them. Approximations (basis, grids, precision) are not covered.
+    the program picks the thresholds it expects to meet it (a DFT program: SCF orbital
+    gradient and response residual; axtb: energy and charge change) and records the
+    target, the thresholds and any error estimate it has under the shared record key
+    ``accuracy``. Explicit convergence settings are floors: a target may tighten them,
+    never loosen them. Approximations (basis, grids, precision) are not covered.
 
     A target is given two ways. The shared keyword ``accuracy`` (an object of these
     fields, read with `from_keywords`) is the input's own target: of ``compute``, and of

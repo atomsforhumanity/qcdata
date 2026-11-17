@@ -68,7 +68,7 @@ class SphericalOrder(StrEnum):
     """Order of the 2l+1 real solid harmonics of a pure shell.
 
     Attributes:
-        pyscf: m = -l..l, except p shells, which are (x, y, z) (libcint, PySCF, linus).
+        pyscf: m = -l..l, except p shells, which are (x, y, z) (libcint, PySCF).
         increasing_m: m = -l..l for every l, so p is (y, z, x) (libint's "standard", CCA,
             order).
         molden: m = 0, +1, -1, +2, -2, ..., with p as (x, y, z) (Molden, Gaussian, ORCA's
@@ -87,7 +87,7 @@ class CartesianOrder(StrEnum):
 
     Attributes:
         lexicographic: xx, xy, xz, yy, yz, zz (lx descending, then ly descending; libint,
-            libcint, PySCF, linus, CCA, TREXIO).
+            libcint, PySCF, CCA, TREXIO).
         molden: xx, yy, zz, xy, xz, yz; xxx, yyy, zzz, xyy, xxy, xxz, xzz, yzz, yyz, xyz; and
             Molden's g order (up to l = 4).
     """
@@ -101,7 +101,7 @@ class CartesianNormalization(StrEnum):
 
     Attributes:
         axis: every component carries the normalization of x^l: x^l, y^l, z^l have unit
-            norm, xy has norm 1/sqrt(3) (libint, linus).
+            norm, xy has norm 1/sqrt(3) (libint).
         unit: every component has unit norm (Molden).
         pyscf: as `axis` times sqrt(4 pi / (2l + 1)) for l >= 2 (PySCF's ``cart=True``).
     """
@@ -116,7 +116,7 @@ class AOConvention(QCDataBaseModel):
 
     Shells are always in the order of `BasisSet.shells`; this says which functions a shell
     contributes and in what order. The default is PySCF's ordering with x^l-normalized
-    Cartesian components (libcint, linus). Real solid harmonics are the usual unit-normalized ones without
+    Cartesian components (libcint). Real solid harmonics are the usual unit-normalized ones without
     a Condon-Shortley phase (as PySCF, libint and Molden).
 
     Attributes:
@@ -131,7 +131,7 @@ class AOConvention(QCDataBaseModel):
 
 
 #: The default convention: PySCF's order with x^l-normalized Cartesian components
-#: (libcint, PySCF with ``cart=False``, linus).
+#: (libcint, PySCF with ``cart=False``).
 DEFAULT_AO_CONVENTION = AOConvention()
 #: PySCF's AO convention for spherical and Cartesian molecules.
 PYSCF_CONVENTION = AOConvention(cartesian_normalization=CartesianNormalization.pyscf)
