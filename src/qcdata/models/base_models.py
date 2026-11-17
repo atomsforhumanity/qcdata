@@ -15,7 +15,6 @@ from pydantic import (
     Field,
     FieldSerializationInfo,
     SerializerFunctionWrapHandler,
-    computed_field,
     field_serializer,
     field_validator,
     model_serializer,
@@ -61,23 +60,72 @@ class LengthUnit(StrEnum):
         return f"'{self.name}'"  # pragma: no cover
 
 
+def _declare_version(schema: dict[str, Any]) -> None:
+    """Declare qcdata_version in a model's JSON Schema; loading accepts it anywhere."""
+    schema.setdefault("properties", {})["qcdata_version"] = {
+        "type": "string",
+        "title": "Qcdata Version",
+        "description": "The qcdata version that wrote the document; written on "
+        "top-level documents only and ignored on loading.",
+    }
+
+
 class QCDataBaseModel(BaseModel, ABC):
     """Base model for all QCData objects.
 
+    A dumped object is a document: the top-level one carries ``qcdata_version``, the
+    installed qcdata version writing it (not a schema version), and nested objects do
+    not. ``extras`` is left out wherever it is empty.
+
     Attributes:
-        qcdata_version: Installed qcdata version writing this representation.
-            Automatically refreshed on serialization; not a schema version.
         extras: Additional information to bundle with the object. Use for schema
             development and scratch space.
+        qcdata_version: `@property` The installed qcdata version, which serialization
+            writes into the top-level document.
     """
 
-    extras: FreeDict = {}
+    extras: FreeDict = Field(default_factory=dict, exclude_if=lambda extras: not extras)
 
-    @computed_field(repr=False)  # type: ignore[prop-decorator]
     @property
     def qcdata_version(self) -> str:
         """The package version serializing the object, not its original creator."""
         return _version.__version__
+
+    def model_dump(self, **kwargs: Any) -> dict[str, Any]:
+        """Dump the model to a dict, with ``qcdata_version`` at its top level.
+
+        Args:
+            **kwargs: Keyword arguments forwarded to `BaseModel.model_dump`.
+
+        Returns:
+            The model as a dict; nested objects carry no version stamp.
+        """
+        data = super().model_dump(**kwargs)
+        if _stamped(kwargs):
+            data["qcdata_version"] = _version.__version__
+        return data
+
+    def model_dump_json(self, **kwargs: Any) -> str:
+        """Dump the model to JSON text, with ``qcdata_version`` at its top level.
+
+        Args:
+            **kwargs: Keyword arguments forwarded to `BaseModel.model_dump_json`.
+
+        Returns:
+            The model as JSON; nested objects carry no version stamp.
+        """
+        text = super().model_dump_json(**kwargs)
+        if not _stamped(kwargs):
+            return text
+        indent = kwargs.get("indent")
+        body = text.rstrip()[:-1].rstrip()  # the object without its closing brace
+        entry = '"qcdata_version":' + json.dumps(_version.__version__)
+        if indent is not None:
+            entry = f'\n{" " * indent}"qcdata_version": ' + json.dumps(
+                _version.__version__
+            )
+            entry += "\n"
+        return body + ("" if body.endswith("{") else ",") + entry + "}"
 
     @model_validator(mode="before")
     @classmethod
@@ -99,6 +147,7 @@ class QCDataBaseModel(BaseModel, ABC):
         # treated as read-only by callers; this is not deep immutability.
         # https://docs.pydantic.dev/2.3/api/config/#pydantic.config.ConfigDict.frozen
         "frozen": True,
+        "json_schema_extra": _declare_version,
     }
 
     @classmethod
@@ -292,6 +341,14 @@ def _equal(a: Any, b: Any) -> bool:
     if isinstance(a, list | tuple) and isinstance(b, list | tuple):
         return len(a) == len(b) and all(_equal(x, y) for x, y in zip(a, b, strict=True))
     return bool(a == b)
+
+
+def _stamped(dump_options: dict[str, Any]) -> bool:
+    """Whether a dump's include and exclude let the version stamp through."""
+    include, exclude = dump_options.get("include"), dump_options.get("exclude")
+    if include is not None and "qcdata_version" not in include:
+        return False
+    return exclude is None or "qcdata_version" not in exclude
 
 
 class Files(QCDataBaseModel):
@@ -620,10 +677,12 @@ class OutputBase(QCDataBaseModel):
             raise ValueError("A successful calculation has no error.")
         return self
 
+    # No return annotation, on purpose: pydantic then describes the dump by the
+    # fields' own schema; `-> Any` would publish an empty serialization schema.
     @model_serializer(mode="wrap")
-    def _serialize_in_reading_order(
+    def _serialize_in_reading_order(  # type: ignore[no-untyped-def]
         self, handler: SerializerFunctionWrapHandler
-    ) -> Any:
+    ):
         """Write success, then the subclass's fields, then logs and execution."""
         data = handler(self)
         if not isinstance(data, dict):

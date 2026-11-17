@@ -55,16 +55,34 @@ def test_serialization_to_disk_toml(prog_output, tmp_path):
     assert prog_output == reopened
 
 
+def _documents(node, path=()):
+    """Every dict in a dumped document with its path, free-form extras skipped."""
+    if isinstance(node, dict):
+        yield path, node
+        for key, value in node.items():
+            if key != "extras":
+                yield from _documents(value, (*path, key))
+    elif isinstance(node, list):
+        for i, value in enumerate(node):
+            yield from _documents(value, (*path, i))
+
+
 @pytest.mark.parametrize("extension", ["json", "yaml", "toml"])
-def test_version_restamped_on_save(extension, opt_output, tmp_path):
+def test_version_stamps_the_top_level_document_only(extension, opt_output, tmp_path):
     loads = {"json": json.loads, "yaml": yaml.safe_load, "toml": toml.loads}[extension]
     dumps = {"json": json.dumps, "yaml": yaml.safe_dump, "toml": toml.dumps}[extension]
     path = tmp_path / f"output.{extension}"
-    # Default compact serialization must not drop the computed version.
     opt_output.save(path)
     payload = loads(path.read_text())
-    models = [
-        payload,
+    assert payload["qcdata_version"] == __version__
+    nested = [d for p, d in _documents(payload) if p]
+    assert len(nested) > 8
+    for document in nested:
+        assert "qcdata_version" not in document
+        assert document.get("extras", {"not": "empty"}) != {}
+
+    # Files written before alpha 2 stamp every object; loading discards the stamps.
+    for model in [
         payload["input_data"],
         payload["input_data"]["structure"],
         payload["results"],
@@ -72,24 +90,32 @@ def test_version_restamped_on_save(extension, opt_output, tmp_path):
         payload["execution"],
         payload["results"]["frames"][0],
         payload["results"]["frames"][0]["results"],
-    ]
-    for model in models:
-        assert model["qcdata_version"] == __version__
+    ]:
         model["qcdata_version"] = "0.0.0"
-    payload["extras"]["qcdata_version"] = "user metadata"
+    payload["qcdata_version"] = "0.0.0"
+    payload["extras"] = {"qcdata_version": "user metadata"}
     original = copy.deepcopy(payload)
     opened = ProgramOutput.model_validate(payload)
     assert payload == original
     assert opened.qcdata_version == __version__
-    assert opened.results.provenance.qcdata_version == __version__
     assert opened.extras["qcdata_version"] == "user metadata"
     path.write_text(dumps(payload))
     opened = ProgramOutput.open(path)
     opened.save(path)
     saved = loads(path.read_text())
     assert saved["qcdata_version"] == __version__
-    assert saved["results"]["frames"][0]["results"]["qcdata_version"] == __version__
+    assert saved["extras"] == {"qcdata_version": "user metadata"}
+    assert all("qcdata_version" not in d for p, d in _documents(saved) if p)
     assert "qcdata_version=" not in repr(opened)
+
+
+def test_dumps_honor_include_and_exclude_for_the_version(water):
+    assert "qcdata_version" in water.model_dump()
+    assert "qcdata_version" in json.loads(water.model_dump_json())
+    assert "qcdata_version" not in water.model_dump(exclude={"qcdata_version"})
+    assert set(water.model_dump(include={"symbols"})) == {"symbols"}
+    nested = ProgramInput(program="x", calctype="energy", structure=water)
+    assert "qcdata_version" not in nested.model_dump()["structure"]
 
 
 def test_serialized_scientific_arrays_match_schema(water):

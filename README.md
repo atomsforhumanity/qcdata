@@ -141,11 +141,11 @@ new_prog_input = ProgramInput.model_validate(new_input_dict)
 
 ### Saved package version
 
-Every model exposes a read-only `qcdata_version`, automatically included in JSON, YAML, and TOML, including nested objects. It identifies the installed qcdata package that last wrote the representation, not a formal schema version or the calculation producer's version. Researchers can inspect it before choosing which qcdata version to install.
+Every model exposes a read-only `qcdata_version`, written at the top level of every JSON, YAML, and TOML document (nested objects carry none, and empty `extras` are left out). It identifies the installed qcdata package that last wrote the representation, not a formal schema version or the calculation producer's version. Researchers can inspect it before choosing which qcdata version to install.
 
 Opening a file accepts its saved stamp; saving it again writes the currently installed version. Files without a stamp remain readable. XYZ exports include `qcdata_version=...` in each structure's comment line. QCSchema exports omit this qcdata-specific metadata.
 
-By default, `save()` and `json_dumps()` use `exclude_unset=True` for compact files: fields omitted during construction are excluded, while explicitly supplied values are retained even if they equal their defaults. The computed `qcdata_version` stamp is still included. Pass `exclude_unset=False` to include unset/default-valued fields. `save()` also omits `None` values by default. A full `model_dump()` followed by reconstruction marks the dumped fields as explicitly set, so this workflow may produce larger files.
+By default, `save()` is lossless (`exclude_unset=False`), while `json_dumps()` uses `exclude_unset=True` for compact output: fields omitted during construction are excluded, while explicitly supplied values are retained even if they equal their defaults. The `qcdata_version` stamp is still included. `save()` also omits `None` values by default. A full `model_dump()` followed by reconstruction marks the dumped fields as explicitly set, so this workflow may produce larger files.
 
 ### ProgramOutput
 
