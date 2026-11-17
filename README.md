@@ -37,7 +37,7 @@ uv pip install --prerelease=allow "qcdata==0.24.0a2" "qccompute[qccodec]==0.23.0
 
 `qcdata` is built around a simple mental model: `Input` objects define quantum chemistry calculations, a `ProgramOutput` object captures each execution, and `Data` objects hold the structured output values.
 
-All `qcdata` objects can be serialized and saved to disk by calling `.save("filename.json")` and loaded from disk by calling `.open("filename.json")`. `qcdata` supports `json`, `yaml`, and `toml` file formats. Binary data will be automatically base64 encoded and decoded when saving and loading. Arrays larger than 1 MiB (a big Hessian, orbital coefficients) are written to `.npy` files beside the saved file and read back by `.open()`; `.save()` returns every file it wrote.
+All `qcdata` objects can be serialized and saved to disk by calling `.save("filename.json")` and loaded from disk by calling `.open("filename.json")`. `qcdata` supports `json`, `yaml`, and `toml` file formats. Binary data will be automatically base64 encoded and decoded when saving and loading. Arrays larger than 1 MiB (a big Hessian, orbital coefficients) are written to `.npy` files beside the saved file, and texts in `files` larger than 1 MiB to files of their own; `.open()` reads them back and `.save()` returns every file it wrote.
 
 ### Input Objects
 

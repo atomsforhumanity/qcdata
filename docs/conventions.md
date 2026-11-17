@@ -430,3 +430,16 @@ shape and dtype, so models always hold arrays and no field is a file reference. 
 returns every file it wrote, the model's file first. Smaller arrays and free-form values
 (`extras`, `record`) stay in the document, where JSON and YAML keep every float exactly;
 TOML loses the sign of `-0.0`.
+
+A text in `files` whose UTF-8 size exceeds 1 MiB (a Molden or cube file, a long log) goes
+beside the saved file the same way: its UTF-8 bytes, named by the stem and its path in
+the document with no suffix added, and a pointer of its path and the file's sha256 in its
+place:
+
+```json
+"files": {"orbitals.molden": {"path": "output.results.files.orbitals%2Emolden",
+                              "sha256": "..."}}
+```
+
+`open` reads it back and checks the digest. Binary files stay in the document, base64
+encoded.

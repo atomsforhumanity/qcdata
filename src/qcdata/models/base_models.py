@@ -15,6 +15,7 @@ from pydantic import (
     Field,
     FieldSerializationInfo,
     SerializerFunctionWrapHandler,
+    ValidationInfo,
     field_serializer,
     field_validator,
     model_serializer,
@@ -223,10 +224,13 @@ class QCDataBaseModel(BaseModel, ABC):
         file beside the saved file, named by the file's stem and the array's path in
         the document (`output.results.hessian.npy` for `output.json`). The document
         holds a pointer in its place: `{"path", "shape", "dtype", "sha256"}`, the
-        digest being the `.npy` file's. `open` reads the arrays back, so a model never
-        holds a file reference. Array files are written first and the model's file
-        last. Smaller arrays stay in the document, where every float round-trips
-        exactly through JSON and YAML.
+        digest being the `.npy` file's. A text in `files` over 1 MiB (UTF-8) goes to
+        a file of its own the same way, named by the stem and its path with no suffix
+        added (`output.results.files.orbitals%2Emolden`), with `{"path", "sha256"}` in
+        its place. `open` reads them back, so a model never holds a file reference.
+        These files are written first and the model's file last. Smaller arrays and
+        texts stay in the document, where every float round-trips exactly through
+        JSON and YAML.
 
         Note:
             By default the object will be saved as a `json` file. If the file extension
@@ -253,7 +257,7 @@ class QCDataBaseModel(BaseModel, ABC):
             **kwargs: Additional keyword arguments to pass to the serialization method.
 
         Returns:
-            Every file written: the model's file first, then one `.npy` file per array
+            Every file written: the model's file first, then one file per array or text
             saved apart, in document order.
 
         Example:
@@ -276,7 +280,7 @@ class QCDataBaseModel(BaseModel, ABC):
         filepath = Path(filepath)
         filepath.parent.mkdir(exist_ok=True, parents=True)
 
-        sink = array_files.ArraySink()
+        sink = array_files.ArraySink(text_files=True)
         model_dict = self.model_dump(
             mode="json",
             exclude_none=exclude_none,
@@ -354,13 +358,29 @@ def _stamped(dump_options: dict[str, Any]) -> bool:
 class Files(QCDataBaseModel):
     """File model for handling string and binary data.
 
-    Binary data is encoded as base64 strings during serialization.
+    Binary data is encoded as base64 strings during serialization. `save` writes a text
+    over 1 MiB (UTF-8) to its own file beside the saved file, as it does large arrays.
 
     Attributes:
         files: A dict mapping filename to str or bytes data.
     """
 
     files: dict[str, str | bytes] = {}
+
+    @field_validator("files", mode="before")
+    @classmethod
+    def _read_saved_texts(cls, value: Any, info: ValidationInfo) -> Any:
+        """Read the texts a save put in files of their own back from beside it."""
+        if not isinstance(value, dict) or not any(
+            isinstance(v, dict) for v in value.values()
+        ):
+            return value
+        context = info.context if isinstance(info.context, dict) else {}
+        directory = context.get(array_files.DIRECTORY)
+        return {
+            k: array_files.read_text(v, directory) if isinstance(v, dict) else v
+            for k, v in value.items()
+        }
 
     @field_validator("files")
     def _convert_base64_to_bytes(
@@ -374,17 +394,21 @@ class Files(QCDataBaseModel):
 
     @field_serializer("files")
     def _serialize_files(
-        self, files: dict[str, str | bytes], _info: FieldSerializationInfo
-    ) -> dict[str, str]:
-        """Serialize files to a dict of filename to base64 encoded string."""
-        return {
-            filename: (
-                f"base64:{b64encode(data).decode('utf-8')}"
-                if isinstance(data, bytes)
-                else data
-            )
-            for filename, data in files.items()
-        }
+        self, files: dict[str, str | bytes], info: FieldSerializationInfo
+    ) -> dict[str, Any]:
+        """Serialize files to a dict of filename to text or base64 encoded string.
+
+        A save's sink takes texts over 1 MiB for files of their own.
+        """
+        context = info.context if isinstance(info.context, dict) else {}
+        sink = context.get(array_files.SINK)
+
+        def encode(data: str | bytes) -> Any:
+            if isinstance(data, bytes):
+                return f"base64:{b64encode(data).decode('utf-8')}"
+            return data if sink is None else sink.add_text(data)
+
+        return {filename: encode(data) for filename, data in files.items()}
 
     def add_file(self, filepath: Path | str, relative_dir: Path | None = None) -> None:
         """Add a file to the object.

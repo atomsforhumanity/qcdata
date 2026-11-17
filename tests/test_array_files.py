@@ -9,6 +9,7 @@ import pytest
 from pydantic import ValidationError
 
 from qcdata import (
+    FileInput,
     Frame,
     OptimizationData,
     ProgramInput,
@@ -16,6 +17,7 @@ from qcdata import (
     Provenance,
     SinglePointData,
     Structure,
+    calculation_key,
 )
 
 LIMIT = (1 << 20) // 8  # float64 elements in 1 MiB
@@ -224,3 +226,95 @@ def test_the_module_serves_writers_other_than_save(tmp_path):
     assert set(document["atomic_charges"]) == POINTER_KEYS
     back = SinglePointData.model_validate(document, context={DIRECTORY: tmp_path})
     assert _same_bits(back.atomic_charges, data.atomic_charges)
+
+
+# ------------------------------------------------------------- large text files
+
+MIB = 1 << 20
+
+
+def test_texts_over_one_mib_go_to_files(tmp_path):
+    small = "x" * MIB
+    large = "Å" * (MIB // 2 + 1)  # 524,289 characters, 1,048,578 bytes as UTF-8
+    binary = b"\x00" * (MIB + 1)
+    data = SinglePointData(
+        provenance=PROVENANCE,
+        files={"small.txt": small, "orbitals.molden": large, "guess.bin": binary},
+    )
+    paths = data.save(tmp_path / "d.json")
+    text_file = tmp_path / "d.files.orbitals%2Emolden"
+    assert paths == [tmp_path / "d.json", text_file]
+    saved = json.loads((tmp_path / "d.json").read_text())
+    assert saved["files"]["small.txt"] == small
+    assert saved["files"]["guess.bin"].startswith("base64:")  # binary stays inline
+    assert saved["files"]["orbitals.molden"] == {
+        "path": "d.files.orbitals%2Emolden",
+        "sha256": hashlib.sha256(text_file.read_bytes()).hexdigest(),
+    }
+    assert text_file.read_bytes() == large.encode()
+    back = SinglePointData.open(tmp_path / "d.json")
+    assert back == data and back.files["orbitals.molden"] == large
+
+
+def test_text_files_beside_nested_documents_and_inputs(tmp_path):
+    large = "line\n" * (MIB // 5 + 1)
+    inp = FileInput(program="orca", files={"sub/orca.inp": large})
+    assert inp.save(tmp_path / "inp.json") == [
+        tmp_path / "inp.json",
+        tmp_path / "inp.files.sub%2Forca%2Einp",
+    ]
+    assert calculation_key(FileInput.open(tmp_path / "inp.json")) == calculation_key(
+        inp
+    )
+    out = ProgramOutput(
+        input_data=ProgramInput(
+            program="axtb",
+            calctype="energy",
+            structure=Structure(symbols=["He"], geometry=[[0.0, 0.0, 0.0]]),
+        ),
+        success=True,
+        results=SinglePointData(
+            provenance=PROVENANCE, energy=-2.9, files={"out.log": large}
+        ),
+    )
+    paths = out.save(tmp_path / "out.yaml")
+    assert paths[1:] == [tmp_path / "out.results.files.out%2Elog"]
+    assert ProgramOutput.open(tmp_path / "out.yaml") == out
+
+
+def test_opening_checks_each_text_file(tmp_path):
+    data = SinglePointData(provenance=PROVENANCE, files={"a.txt": "y" * (MIB + 1)})
+    data.save(tmp_path / "d.json")
+    text_file = tmp_path / "d.files.a%2Etxt"
+    text_file.write_text("y" * MIB + "z")
+    with pytest.raises(ValidationError, match="does not match the sha256"):
+        SinglePointData.open(tmp_path / "d.json")
+    text_file.unlink()
+    with pytest.raises(ValidationError, match="Cannot read the text file"):
+        SinglePointData.open(tmp_path / "d.json")
+    saved = (tmp_path / "d.json").read_text()
+    with pytest.raises(ValidationError, match="open the file it was saved with"):
+        SinglePointData.model_validate_json(saved)
+    doc = json.loads(saved)
+    doc["files"]["a.txt"] = {"path": "../a.txt", "sha256": ""}
+    with pytest.raises(ValidationError, match="names beside the saved file"):
+        SinglePointData.model_validate(doc, context={"qcdata.array_directory": "."})
+    doc["files"]["a.txt"] = {"path": "a.txt"}
+    with pytest.raises(ValidationError, match="takes its content"):
+        SinglePointData.model_validate(doc)
+
+
+def test_only_a_sink_made_for_texts_takes_them(tmp_path):
+    """A writer with its own wire keeps texts inline unless it asks for them."""
+    from qcdata.array_files import TEXT_POINTER_KEYS, ArraySink
+
+    data = SinglePointData(provenance=PROVENANCE, files={"a.txt": "y" * (MIB + 1)})
+    assert data.model_dump(mode="json")["files"]["a.txt"] == data.files["a.txt"]
+    sink = ArraySink()
+    document = data.model_dump(mode="json", context={"qcdata.array_sink": sink})
+    assert document["files"]["a.txt"] == data.files["a.txt"] and not sink.texts
+    sink = ArraySink(text_files=True)
+    document = data.model_dump(mode="json", context={"qcdata.array_sink": sink})
+    document, written = sink.place(document, tmp_path, "msg")
+    assert written == [tmp_path / "msg.files.a%2Etxt"]
+    assert set(document["files"]["a.txt"]) == TEXT_POINTER_KEYS
