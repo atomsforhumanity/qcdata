@@ -8,12 +8,13 @@ without importing an execution package. A step's result is a `Frame`.
 
 from __future__ import annotations
 
+import difflib
 import json
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Annotated, Any
 
 import numpy as np
-from pydantic import AfterValidator, field_validator
+from pydantic import AfterValidator, ValidationError, field_validator
 
 from ..helper_types import SerializableMatrix
 from .base_models import ErrorInfo, ErrorKind, QCDataBaseModel
@@ -71,16 +72,27 @@ def _json_lineage(value: Any) -> Any:
 Lineage = Annotated[Any, AfterValidator(_json_lineage)]
 
 
+_TARGETS = ("energy", "gradient", "hessian")
+
+
 class Accuracy(QCDataBaseModel):
-    """How tightly one request converges: targets, absolute and in atomic units.
+    """How tightly a calculation converges: targets, absolute and in atomic units.
 
     Each field is the numerical error from convergence the caller can tolerate in that
-    quantity. It is a target, not a guarantee: the program picks the thresholds it
-    expects to meet it (linus: SCF orbital gradient and response residual; axtb: energy
-    and charge change) and records the target, the thresholds and any error estimate it
-    has under the shared record key ``accuracy``. The session's explicit convergence
-    settings are floors: a request may tighten them, never loosen them. Approximations
-    (basis, grids, precision) are pinned by the session and are not covered.
+    quantity; a field left out sets no target for it. It is a target, not a guarantee:
+    the program picks the thresholds it expects to meet it (linus: SCF orbital gradient
+    and response residual; axtb: energy and charge change) and records the target, the
+    thresholds and any error estimate it has under the shared record key ``accuracy``.
+    Explicit convergence settings are floors: a target may tighten them, never loosen
+    them. Approximations (basis, grids, precision) are not covered.
+
+    A target is given two ways. The shared keyword ``accuracy`` (an object of these
+    fields, read with `from_keywords`) is the input's own target: of ``compute``, and of
+    every session request that gives none. A request's `Request.accuracy` replaces it
+    for that request. The keyword is part of the input, so of its calculation key: a
+    tighter target is another calculation. A program with no convergence settings (a
+    force field, an ML potential) refuses the keyword as ``no_effect`` but accepts a
+    request's target, recording it as met with no thresholds.
 
     Attributes:
         energy: Target error of the energy (Eh).
@@ -110,7 +122,8 @@ class Accuracy(QCDataBaseModel):
             calctype: The request's calculation type.
 
         Returns:
-            The accuracy, or None for the session's own settings.
+            The accuracy, or None when the request gives none: the input's own target
+            (`from_keywords`) then applies, else the session's settings.
         """
         if value is None or isinstance(value, Accuracy):
             return value
@@ -118,6 +131,74 @@ class Accuracy(QCDataBaseModel):
             CalcType(calctype).value, "energy"
         )
         return cls.model_validate({name: float(value)})
+
+    @classmethod
+    def from_keywords(cls, keywords: Mapping[str, Any]) -> Accuracy | None:
+        """Read the shared keyword ``accuracy``: the input's own target, if it sets one.
+
+        The keyword is a JSON object of `Accuracy`'s targets
+        (``{"energy": 1e-8, "gradient": 1e-6}``), never a bare number: an input's
+        target applies to every calctype a session runs, so a number would have no
+        single quantity to aim at. Keywords hold JSON values, so an `Accuracy` object
+        is refused too: dumped, it would spell its unset targets as nulls, and the
+        calculation key would change after a round trip.
+
+        Args:
+            keywords: The input's keywords (`ProgramSpec.keywords`).
+
+        Returns:
+            The target, or None when the keywords set none (absent or null).
+
+        Raises:
+            ProgramError: Kind ``input``: the value is not an object of positive,
+                finite targets; code ``unknown_key`` for a key other than ``energy``,
+                ``gradient`` and ``hessian``, and ``no_effect`` when it sets none.
+        """
+        value = keywords.get("accuracy")
+        if value is None:
+            return None
+        if not isinstance(value, Mapping):
+            raise ProgramError.of(
+                "input",
+                "The keyword accuracy is a JSON object of targets (energy in Eh, "
+                "gradient in Eh/bohr, hessian in Eh/bohr^2), such as "
+                f'{{"gradient": 1e-06}}, not {type(value).__name__} {value!r}.',
+            )
+        unknown = sorted(set(value) - set(_TARGETS))
+        if unknown:
+            hints = [
+                f"accuracy.{k}"
+                + "".join(
+                    f" (did you mean accuracy.{m}?)"
+                    for m in difflib.get_close_matches(k, _TARGETS, n=1)
+                )
+                for k in unknown
+            ]
+            raise ProgramError.of(
+                "input",
+                f"Unknown keyword {', '.join(hints)}; accuracy takes "
+                f"{', '.join(_TARGETS)}.",
+                code="unknown_key",
+            )
+        try:
+            accuracy = cls.model_validate(value)
+        except ValidationError as e:
+            errors = "; ".join(
+                f"accuracy.{'.'.join(map(str, err['loc']))}: "
+                + err["msg"].removeprefix("Value error, ").rstrip(".")
+                for err in e.errors()
+            )
+            raise ProgramError.of(
+                "input", f"The keyword accuracy is not valid: {errors}."
+            ) from None
+        if accuracy.energy is accuracy.gradient is accuracy.hessian is None:
+            raise ProgramError.of(
+                "input",
+                "The keyword accuracy sets no target; give energy, gradient or "
+                "hessian, or leave it out.",
+                code="no_effect",
+            )
+        return accuracy
 
 
 class Request(QCDataBaseModel):
@@ -128,7 +209,9 @@ class Request(QCDataBaseModel):
             input. None: the input's own geometry.
         calctype: ``energy``, ``gradient`` or ``hessian``; None: the input's calctype.
         accuracy: Target accuracy of this request (a bare number targets the
-            calctype's highest derivative). None: the session's settings.
+            calctype's highest derivative); it replaces the input's ``accuracy``
+            keyword for this request. None: the keyword's target, else the session's
+            settings.
         lineage: The chain of steps this one continues. A session keeps warm-start and
             extrapolation history per lineage (keyed by `lineage_key`), so NEB images,
             IRC branches and parallel tasks each start from their own last success.

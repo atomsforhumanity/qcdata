@@ -70,6 +70,39 @@ def test_accuracy_targets():
             Accuracy(energy=bad)
 
 
+def test_the_accuracy_keyword_is_the_inputs_own_target():
+    """An object of targets, read alike by every program; a request's replaces it."""
+    assert Accuracy.from_keywords({}) is None
+    assert Accuracy.from_keywords({"accuracy": None}) is None
+    target = Accuracy.from_keywords(
+        {"accuracy": {"energy": 1e-8, "gradient": 1e-6}, "scf": {"max_iter": 50}}
+    )
+    assert target == Accuracy(energy=1e-8, gradient=1e-6)
+    request = Accuracy.of(Request(accuracy=1e-5).accuracy, "gradient")
+    assert (request or target) == Accuracy(gradient=1e-5)  # replaced, not merged
+    assert (Accuracy.of(None, "gradient") or target) == target
+
+
+@pytest.mark.parametrize(
+    "value, code, match",
+    [
+        (1e-6, None, "JSON object of targets"),  # no calctype to aim a number at
+        ({"energy": 0.0}, None, "accuracy.energy: An accuracy target is a positive"),
+        ({"energy": "tight"}, None, "accuracy.energy: Input should be a valid number"),
+        ({"grad": 1e-6}, "unknown_key", "did you mean accuracy.gradient"),
+        ({"extras": {}}, "unknown_key", "accuracy takes energy, gradient, hessian"),
+        ({}, "no_effect", "sets no target"),
+        ({"energy": None}, "no_effect", "sets no target"),
+        (Accuracy(energy=1e-8), None, "not Accuracy"),  # keywords hold JSON values
+    ],
+)
+def test_the_accuracy_keyword_refuses_what_is_not_a_target(value, code, match):
+    with pytest.raises(ProgramError, match=match) as exc:
+        Accuracy.from_keywords({"accuracy": value})
+    assert exc.value.error.kind is ErrorKind.input
+    assert exc.value.error.code == code
+
+
 def test_program_errors_carry_the_failed_frame_and_pickle():
     structure = Structure(symbols=["He"], geometry=[[0.0, 0.0, 0.0]])
     partial = SinglePointData(provenance=Provenance(program="toy"), energy=-2.8)

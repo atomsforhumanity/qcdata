@@ -275,6 +275,8 @@ def test_keying_changes_nothing():
         ({"weights": [[0.5, 1.0]]}, {"weights": [0.5, 1.0]}),
         ({"device_memory_gib": 4.0}, {}),
         ({"backend": "gpu"}, {"backend": "cpu"}),
+        ({"accuracy": {"gradient": 1e-6}}, {"accuracy": {"gradient": 1e-7}}),
+        ({"accuracy": {"gradient": 1e-6}}, {}),
     ],
 )
 def test_different_keywords(a, b):

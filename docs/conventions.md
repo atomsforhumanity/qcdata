@@ -68,7 +68,7 @@ Settings that mean the same in several programs are spelled the same:
 | `memory_gib` | memory the calculation may use (GiB) |
 | `backend` | `cpu`, `gpu` or `auto` |
 | `device_memory_gib` | GPU memory the calculation may use (GiB) |
-| `accuracy` | reserved: a cross-program absolute accuracy target (Eh, Eh/bohr) |
+| `accuracy` | the input's [accuracy target](#accuracy-targets): `energy` (Eh), `gradient` (Eh/bohr), `hessian` (Eh/bohr²) |
 | `scf.max_iter`, `scf.e_tol`, `scf.g_tol`, `scf.guess` | SCF iteration limit, energy and orbital-gradient tolerances, starting guess |
 | `solvent.name`, `solvent.model`, `solvent.eps` | implicit solvent: name, continuum model, permittivity |
 | `freq.temperature`, `freq.pressure`, `freq.scale`, `freq.imaginary_cutoff` | thermochemistry conditions, frequency scale factor, imaginary-mode cutoff (cm⁻¹) |
@@ -82,6 +82,28 @@ rejects it with kind `unsupported` rather than ignoring it.
 Resource keys (`threads`, `memory_gib`, `backend`, `device_memory_gib`) carry
 `x-concern: "resource"`. The [calculation key](#calculation-key) leaves out `threads` and
 `memory_gib` only.
+
+### Accuracy targets
+
+`accuracy` is a JSON object of absolute targets, each optional: `energy` (Eh), `gradient`
+(Eh/bohr, the largest component) and `hessian` (Eh/bohr², the largest element), as in
+`qcdata.Accuracy`. It is never a bare number: it applies to every calctype a session
+runs, so a number would have no single quantity to aim at.
+
+- It is the input's own target: of `compute`, and of every session request that gives
+  none. A request's `accuracy` replaces it for that request.
+- The program turns it into its own convergence thresholds and records the target, the
+  thresholds and any error estimate under the record key `accuracy`. Explicit
+  convergence settings are floors: a target may tighten them, never loosen them.
+- It is part of the input, so of the [calculation key](#calculation-key): a tighter
+  target is another calculation.
+- A program with no convergence settings (a force field, an ML potential) refuses the
+  keyword (kind `input`, code `no_effect`) but accepts a request's target, recording it
+  as met with no thresholds. A program whose convergence settings take no targets yet
+  refuses the keyword with kind `unsupported`, like any shared setting it cannot honour.
+
+`Accuracy.from_keywords(keywords)` reads it the same way in every program, and refuses a
+bare number, an unknown key (`unknown_key`) and an object with no target (`no_effect`).
 
 ## Calculation key
 
@@ -117,8 +139,8 @@ and `:`), keys sorted, non-ASCII characters escaped as `\uXXXX`, with:
 Left out: `extras` at every level, structure `identifiers`, and the keywords `threads` and
 `memory_gib` at the top level of `keywords`, in the input and in every subprogram
 (`scf.threads` would count). These two may change results at most at round-off.
-Everything else counts: `given`, `cmdline_args`, and settings such as `backend` and
-precision that can change numbers.
+Everything else counts: `given`, `cmdline_args`, and settings such as `backend`,
+precision and `accuracy` that can change numbers.
 
 Spellings are not normalized. `B3LYP` and `b3lyp`, a synonym, a group's scalar and
 expanded forms (rule 2), a default written out (`scf.max_iter: 100`), and `null` against
@@ -188,7 +210,7 @@ program that reports them:
 | key | type | meaning |
 |---|---|---|
 | `warm_start` | bool or null | on a session frame: the calculation started from its lineage's history (previous orbitals, charges, probe state), not from the input alone, so it can reach a different solution than a fresh calculation; null when the method keeps no lineage state (GFN-FF). Programs add their own detail beside it (linus: where the SCF guess came from, and the lineage it was seeded from) |
-| `accuracy` | object | on a request with an `Accuracy`: `target` (the targets as resolved: `energy`, `gradient`, `hessian`), `thresholds` (the program's own convergence thresholds used, under its own names) and, where the program has one, `estimate` (an error estimate per field) |
+| `accuracy` | object | on a calculation with an [accuracy target](#accuracy-targets) (the keyword's or a request's): `target` (the targets as resolved: `energy`, `gradient`, `hessian`), `thresholds` (the program's own convergence thresholds used, under its own names; empty for a program with none) and, where the program has one, `estimate` (an error estimate per field) |
 
 ### Kinds
 
