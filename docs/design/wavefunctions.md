@@ -149,7 +149,7 @@ What H contains:
 | `solvent_potential` | H already contains the solvent operator and `record` names the model; for tight binding, removing it gives no gas-phase answer |
 | stored densities | only for densities that are not C n Cᵀ of the returned orbitals (relaxed, response, or a mixed density returned without orbitals), with a kind (`scf`, `relaxed`, `unrelaxed`) |
 | two-electron integrals, DF and Cholesky tensors | tight binding has none; a 3-index DF tensor is about 200 GB at 2000 functions. For CC or QMC: MO-basis Cholesky vectors of an active space, exported to TREXIO, on demand |
-| tight-binding kernels and H0, DFT grids and response intermediates, GFN2's Slater exponents | model- or engine-specific, or not the functions the program computes with |
+| tight-binding kernels and H0, DFT grids and response intermediates, GFN2's Slater exponents | specific to one model or one program, or not the functions the program computes with |
 
 ## Large arrays
 

@@ -6,37 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.24.0a1] - 2026-11-17
+
+The first alpha of the redesigned qc* stack. qcdata is data only: inputs, outputs, the
+shared parts of a calculation call, the calculation key, and the save format. Breaking
+changes come without compatibility shims.
+
 ### Added
 
-- `qcdata.INITIAL_CHAIN` (`"initial_chain"`), the `ProgramInput.structures` role holding a path optimization's chain, so codecs need not repeat the string.
-- The typed slots of the AFH program interface (designed in qccompute's program interface; names in `docs/conventions.md`), so that applications read the same fields whichever program produced a result, instead of program-specific `extras`:
-  - On every output (`ProgramOutput` and `Frame`): `warnings` (`ProgramWarning`: `code`, `message`, `path`), `record` (what happened during the run, shaped by the program's record schema) and, on failures, `error` (`ErrorInfo`: `kind` from the shared `ErrorKind` vocabulary, `message`, a program-defined `code`, the failing child `program`, and its `cause`). A successful output with an `error` is rejected.
-  - On `ProgramOutput`: `resolved` (`Resolved`: the settings with every `"auto"` replaced, which reproduce the run, and the `reasons`).
-  - `ExecutionInfo.timings` (seconds per phase) and `Provenance.program_commit`.
-  - **Breaking (pre-v1):** `SinglePointData.freqs_wavenumber`, `normal_modes_cartesian` and `gibbs_free_energy` are removed; frequencies and normal modes live in `vibrational_analysis`, free energies in `thermochemistry`. Files saved before 0.24 load when those fields are empty.
-  - On `SinglePointData`: `energy_components` (a partition of `energy`), `scf_iterations`, `scf_quadrupole_moment` with `quadrupole_kind`, `polarizability`, `atomic_charges_kind`, `bond_orders` with `bond_orders_kind`, `vibrational_analysis` (`VibrationalAnalysis`: masses, projection, all modes with external flags, reduced masses, force constants, IR intensities, dipole derivatives, rotor, moments, rotational constants, point group, symmetry number) and `thermochemistry` (a list of `Thermochemistry`, one per temperature and standard state, with per-term `ThermoTerm`s and the entropy and enthalpy models). `freqs_wavenumber`, `normal_modes_cartesian` and `gibbs_free_energy` are filled from them when not given.
-  - `Wavefunction.orbitals`: `Orbitals` (per-spin coefficients, energies, occupations) in a `BasisSet` of `Shell`s with a named `AOConvention` (`SphericalOrder`, `CartesianOrder`, `CartesianNormalization`; `Orbitals.with_convention` converts between PySCF, CCA, Molden and TREXIO orders). Contributed from linus.
-- One step of a session as data (`qcdata.Request`, `Accuracy`, `ProgramError`, `Lineage`, `lineage_key`), shared by programs and drivers without an execution package. A `Request` gives positions (bohr; None: the input's own), a calctype (None: the input's), an `Accuracy` target, a `lineage` (any JSON value, keyed by its canonical JSON text; None is the default lineage), optional `outputs`, `seed` (lineages to start from when its own has no history) and `commit` (False stores nothing, for finite-difference fan-outs). `Accuracy` holds absolute targets (Eh, Eh/bohr, Eh/bohr²) for the convergence error a caller can tolerate. `ProgramError` is the exception form of `ErrorInfo`, with the failed `Frame` when there is one; it pickles. The session protocol itself is qccompute's.
-- `ProgramOutput.failure(input, error)`: a failed output whose empty results have the right type for the calctype (`OptimizationData` for an optimization), so programs need not build them by hand.
-- Free-form fields (`extras`, `record`, `keywords`, `Resolved.settings`) may hold numpy arrays and scalars; JSON output writes them as lists and numbers (they used to fail to serialize). Values without numpy take the usual fast path.
-- `Resolved.deferred`: in a plan, the settings left `"auto"` because the run decides them (DF storage from the free memory when the SCF starts); a finished output resolves them.
-- `ProgramInput.given`: results already known at the input's structure (a `SinglePointData`, checked against its atoms), which a program may start from instead of computing them: an IRC from the transition state's Hessian, an optimizer's initial Hessian, an SCF guess from a wavefunction. A program that cannot use a given field refuses the input (`not_applicable`). It is part of the input, so part of a stored calculation's key.
-- `ExecutionInfo.threads`, `peak_memory_gib` and `peak_device_memory_gib`; `SinglePointData.scf_s_squared` (⟨S²⟩ of the SCF reference).
-
-### Fixed
-
-- `ConformerSearchData.save("x.xyz")` and `PathOptimizationData.save("x.xyz")` wrote JSON into the `.xyz` file; they now write the structures, as 0.23.0 promised. Every result holding frames (`OptimizationData`, `PathData`, `PathOptimizationData`, `ConformerSearchData`) now shares one implementation of `structures`, `energies`, `to_xyz()`, and `save`.
+- `qcdata.calculation_key(inp, context)`: the `k1` key that says when two inputs are the same calculation. It hashes a canonical form of the input as given (sorted keys, normalized numbers, defaults left out, coordinates rounded to 1e-10 bohr, files and array fields by their sha256, subprograms recursively), leaving out only `extras`, structure identifiers and the `threads` and `memory_gib` keywords, plus a context of strings (program versions or numerics epochs). Golden keys in the tests keep it stable.
+- `save()` writes array fields over 1 MiB as `.npy` files beside the saved file, with a pointer (path, shape, dtype, sha256), and returns every file it wrote; `open()` reads them back and checks them. Models always hold arrays.
+- The shared parts of a calculation call: `Request`, `Accuracy` (cross-program targets in Eh, Eh/bohr and Eh/bohr²), `ProgramError`, `Lineage` and `lineage_key`. `ProgramError` is what a program's `compute` and its session calls raise for a failed calculation; it carries the error, the partial results, the failed frame or a whole failed output (`output=`), and pickles.
+- `ProgramInput.given`: results already known at the input's structure, which a program may start from. It is part of the calculation key.
+- On every output and frame: `warnings` (`ProgramWarning`), `record`, and on failure `error` (`ErrorInfo`, `ErrorKind`). On `ProgramOutput`: `resolved` (`Resolved`, with `deferred`). `ProgramOutput.failure(input, error)`. `ExecutionInfo.timings` (with `subprograms`), `threads`, `peak_memory_gib` and `peak_device_memory_gib`; `Provenance.program_commit`.
+- On `SinglePointData`: `energy_components`, `scf_iterations`, `scf_s_squared`, `scf_quadrupole_moment` (Buckingham's traceless tensor), `polarizability`, `atomic_charges_kind`, `bond_orders` with `bond_orders_kind`, `vibrational_analysis`, `thermochemistry`, `shell_populations` with `shell_atoms` and `shell_angular_momenta`, `atomic_spin_populations` with its kind, `atomic_dipoles` and `atomic_quadrupoles`.
+- Wavefunctions (design: `docs/design/wavefunctions.md`):
+  - `Orbitals` is the one home of orbital levels: energies, `occupations_a` and `occupations_b` (each 0..1), `kind` (`OrbitalKind`), `electronic_temperature`, `fermi_level_a/_b` and `core_electrons`. Basis and coefficients are optional, together.
+  - `BasisSet` of `Shell`s with an explicit `AOConvention`, and ECPs (`Ecp`, `EcpTerm`).
+  - `Wavefunction` AO matrices `overlap`, `hamiltonian_a/_b` and `core_hamiltonian`; `Wavefunction.with_convention` converts the orbitals and every matrix with its variance.
+- `qcdata.INITIAL_CHAIN`, the `structures` role holding a path optimization's chain.
+- Free-form fields (`extras`, `record`, `keywords`, `Resolved.settings`) may hold numpy arrays and scalars.
 
 ### Changed
 
-- Moved documentation from `qcdata.docs.atomsforhumanity.org` to `qcdata.docs.afh.org`.
-- **Breaking:** `ConformerSearchData.energies`, `conformer_energies`, `rotamer_energies`, and their `*_relative` forms have one value per frame, `nan` where no energy is known, like every other result's `energies`. They were empty when no frame had an energy.
+- **Breaking:** `Wavefunction.scf_eigenvalues_a/_b` and `scf_occupations_a/_b` are removed; the levels live in `Wavefunction.orbitals`, which is required.
+- **Breaking:** `SinglePointData.freqs_wavenumber`, `normal_modes_cartesian`, `gibbs_free_energy` and `quadrupole_kind` are removed. Frequencies and modes live in `vibrational_analysis`, free energies in `thermochemistry`.
+- **Breaking:** `BasisSet.transform` takes a required `kind` (`coefficients`, `operator` or `density`).
+- **Breaking:** outputs and frames check per-atom results and the electron count against their structure.
+- **Breaking:** `save()` returns the list of files written. qcdata requires pydantic 2.7 or later.
+- **Breaking:** `ConformerSearchData.energies` and its relatives have one value per frame, `nan` where no energy is known.
+- Model-valued defaults are default factories, which makes structures and frames about 2-3 µs faster to build.
+- Documentation moved to `qcdata.docs.afh.org`, and it deploys only on final version tags.
 
 ### Removed
 
-- **Breaking:** `ProgramOutput.data`, `OptimizationData.trajectory`, and `ScanData.trajectory`, deprecated since 0.19.0 and 0.23.0. Read `.results`, `.frames`, and `.points`. Files saved with the old names still load, with a `FutureWarning`.
+- **Breaking:** `ProgramOutput.data`, `OptimizationData.trajectory`, `ScanData.trajectory` and `return_result()`. Read `.results`, `.frames`, `.points`, or the field you need.
 
-- **Breaking:** `return_result()` on `SinglePointData`, `OptimizationData`, `PathData`, and `PathOptimizationData`. Nothing in the qc\* suite called it, it ignored its `calctype` argument everywhere but `SinglePointData`, and the other result types never had it. Read the field you need instead: `results.energy` (or `gradient`, `hessian`), `results.final_structure`, `results.structures`, `results.final_path`.
+### Fixed
+
+- `ConformerSearchData.save("x.xyz")` and `PathOptimizationData.save("x.xyz")` write structures, not JSON. Every result holding frames shares one implementation of `structures`, `energies`, `to_xyz()` and `save`.
 
 ## [0.23.1] - 2026-10-23
 
