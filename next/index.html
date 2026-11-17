@@ -1668,14 +1668,14 @@
 <li><a href="https://github.com/mtzgroup/chemcloud-client">ChemCloud</a> - A <a href="https://github.com/mtzgroup/chemcloud-server">web application</a> and <a href="https://github.com/mtzgroup/chemcloud-client">Python client</a> that expose a BigChem cluster securely over the internet.</li>
 </ul>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<p>These pages document the next release, which is in alpha. Install it pinned
+<p>These pages document the next release, which is in alpha. Install it with minimum versions
 (<code>--prerelease=allow</code> lets the resolver take pre-releases):</p>
-<div class="language-sh highlight"><pre><span></span><code>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--prerelease<span class="o">=</span>allow<span class="w"> </span><span class="s2">&quot;qcdata==0.24.0a6&quot;</span>
+<div class="language-sh highlight"><pre><span></span><code>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--prerelease<span class="o">=</span>allow<span class="w"> </span><span class="s2">&quot;qcdata&gt;=0.24.0a8&quot;</span>
 </code></pre></div>
 <p>With the visualizations (<code>view</code> extra), or with the packages that run programs and store
 results:</p>
-<div class="language-sh highlight"><pre><span></span><code>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--prerelease<span class="o">=</span>allow<span class="w"> </span><span class="s2">&quot;qcdata[view]==0.24.0a6&quot;</span><span class="w"> </span><span class="s2">&quot;qcinf==0.6.0a1&quot;</span>
-uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--prerelease<span class="o">=</span>allow<span class="w"> </span><span class="s2">&quot;qcdata==0.24.0a6&quot;</span><span class="w"> </span><span class="s2">&quot;qccompute[qccodec]==0.23.0a5&quot;</span><span class="w"> </span><span class="s2">&quot;qccodec==0.22.0a4&quot;</span><span class="w"> </span><span class="s2">&quot;qcstore==0.1.0a4&quot;</span>
+<div class="language-sh highlight"><pre><span></span><code>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--prerelease<span class="o">=</span>allow<span class="w"> </span><span class="s2">&quot;qcdata[view]&gt;=0.24.0a8&quot;</span><span class="w"> </span><span class="s2">&quot;qcinf&gt;=0.6.0a2&quot;</span>
+uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--prerelease<span class="o">=</span>allow<span class="w"> </span><span class="s2">&quot;qcdata&gt;=0.24.0a8&quot;</span><span class="w"> </span><span class="s2">&quot;qccompute[qccodec]&gt;=0.23.0a6&quot;</span><span class="w"> </span><span class="s2">&quot;qccodec&gt;=0.22.0a5&quot;</span><span class="w"> </span><span class="s2">&quot;qcstore&gt;=0.1.0a4&quot;</span>
 </code></pre></div>
 <p>The alpha's documentation is at <a href="https://qcdata.docs.afh.org/next/">qcdata.docs.afh.org/next</a>,
 the stable release's at <a href="https://qcdata.docs.afh.org/">qcdata.docs.afh.org</a>.</p>
