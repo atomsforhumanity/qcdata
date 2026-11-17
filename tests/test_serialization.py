@@ -151,6 +151,7 @@ def test_serialized_scientific_arrays_match_schema(water):
                 "ecp": [
                     {
                         "center": 0,
+                        "core_electrons": 2,
                         "local": [{"power": -2, "exponent": 1.0, "coefficient": 2.0}],
                         "semilocal": [],
                     }

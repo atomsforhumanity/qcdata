@@ -253,7 +253,9 @@ each between 0 and 1, with both `occupations_a` and `occupations_b` always given
 `electronic_temperature` is 0 for aufbau occupations, and smeared ones carry a Fermi level
 per spin. `Orbitals.core_electrons` counts, per atom, the electrons the orbitals do not
 represent (ECP cores, or the core a valence-only method leaves out; None for an
-all-electron calculation), so the occupations sum to Σ(Z − core_electrons) − charge.
+all-electron calculation), so the occupations sum to Σ(Z − core_electrons) − charge. An
+ECP carries the core it replaces (`Ecp.core_electrons`), and the two agree on every ECP
+atom.
 
 The coefficients and the AO matrices are indexed by the AOs of one basis set,
 `Wavefunction.basis`, present whenever any of them is and only then: an overlap alone

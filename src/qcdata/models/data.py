@@ -135,15 +135,19 @@ class Wavefunction(QCDataBaseModel):
                     f"{name} must be nao x nao = {(nao, nao)}, not {matrix.shape}"
                 )
         core = orbitals.core_electrons
-        bare = [
-            e.center
+        disagree = {
+            e.center: e.core_electrons
             for e in basis.ecp
-            if core is None or e.center >= len(core) or core[e.center] == 0
-        ]
-        if bare:
+            if (
+                (core[e.center] if core is not None and e.center < len(core) else 0)
+                != e.core_electrons
+            )
+        }
+        if disagree:
             raise ValueError(
-                f"atoms {bare} have ECPs, so orbitals.core_electrons must give the "
-                "electrons each ECP replaces"
+                "orbitals.core_electrons must agree with the ECPs on every ECP atom: "
+                f"the ECPs replace {disagree} (atom: electrons), but core_electrons is "
+                f"{core}"
             )
         if self.hamiltonian_a is None:
             if self.hamiltonian_b is not None:

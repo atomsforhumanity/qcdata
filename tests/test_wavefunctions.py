@@ -399,7 +399,7 @@ def test_basis_counts_and_labels():
 
 
 TERM = EcpTerm(power=-2, exponent=1.5, coefficient=3.0)
-ECP = Ecp(center=0, local=[TERM], semilocal=[[TERM], [TERM, TERM]])
+ECP = Ecp(center=0, core_electrons=2, local=[TERM], semilocal=[[TERM], [TERM, TERM]])
 
 
 def test_basis_ecp():
@@ -411,9 +411,16 @@ def test_basis_ecp():
     with pytest.raises(ValidationError, match="at most one Ecp"):
         BasisSet(shells=shells, ecp=[ECP, ECP])
     with pytest.raises(ValidationError, match="Ecp centers"):
-        BasisSet(shells=shells, ecp=[Ecp(center=-1, local=[TERM], semilocal=[])])
+        BasisSet(
+            shells=shells,
+            ecp=[Ecp(center=-1, core_electrons=2, local=[TERM], semilocal=[])],
+        )
     with pytest.raises(ValidationError, match="core_electrons"):
-        BasisSet(shells=shells, core_electrons=[2, 0, 0])  # on Orbitals now
+        Ecp.model_validate({"center": 0, "local": [], "semilocal": []})
+    with pytest.raises(ValidationError, match=">= 0"):
+        Ecp(center=0, core_electrons=-2, local=[TERM], semilocal=[])
+    with pytest.raises(ValidationError, match="core_electrons"):
+        BasisSet(shells=shells, core_electrons=[2, 0, 0])  # per ECP, and on Orbitals
     with pytest.raises(ValidationError, match="power"):
         EcpTerm(power=-3, exponent=1.0, coefficient=1.0)
     with pytest.raises(ValidationError, match="exponent"):
@@ -602,16 +609,23 @@ def test_core_electrons_and_ecps():
     assert levels(core_electrons=[2, 0, 0]).core_electrons == [2, 0, 0]
     with pytest.raises(ValidationError, match=">= 0"):
         levels(core_electrons=[-2, 0, 0])
-    # An ECP atom's core must be given: it is what the electron count reflects.
+    # On every ECP atom the orbitals' core is the ECP's: the electron count uses one,
+    # the potential the other.
     wf = make_wavefunction()
     with_ecp = make_basis(ecp=[ECP])
-    for core in (None, [0, 0, 0], []):
+    for core in (None, [0, 0, 0], [], [10, 0, 0]):
         orbitals = wf.orbitals.model_copy(update={"core_electrons": core})
-        with pytest.raises(ValidationError, match=r"atoms \[0\] have ECPs"):
+        with pytest.raises(ValidationError, match=r"replace \{0: 2\}"):
             Wavefunction(orbitals=orbitals, basis=with_ecp, overlap=S0)
     orbitals = wf.orbitals.model_copy(update={"core_electrons": [2, 0, 0]})
     ok = Wavefunction(orbitals=orbitals, basis=with_ecp, overlap=S0)
-    assert ok.basis.ecp[0].center == 0
+    assert ok.basis.ecp[0].core_electrons == 2
+    # Atoms without an ECP may still keep a core (a valence-only method); an ECP
+    # that replaces no electrons agrees with an all-electron count.
+    orbitals = wf.orbitals.model_copy(update={"core_electrons": [2, 2, 0]})
+    Wavefunction(orbitals=orbitals, basis=with_ecp, overlap=S0)
+    no_core = make_basis(ecp=[ECP.model_copy(update={"core_electrons": 0})])
+    Wavefunction(orbitals=wf.orbitals, basis=no_core, overlap=S0)
 
 
 def test_density_is_c_n_ct_per_spin():

@@ -233,19 +233,28 @@ class Ecp(QCDataBaseModel):
 
     The potential is U_L(r) + sum_{l<L} (U_l(r) - U_L(r)) P_l, with P_l the projector on
     angular momentum l about the atom and L = ``len(semilocal)``: the layout of Basis Set
-    Exchange, NWChem, PySCF and Psi4. Spin-orbit terms have no place here. The electrons
-    it replaces are its atom's `Orbitals.core_electrons` in a `Wavefunction` with this
-    basis set.
+    Exchange, NWChem, PySCF and Psi4. Spin-orbit terms have no place here. With the
+    number of core electrons it replaces, an ECP is a complete potential; in a
+    `Wavefunction`, the atom's `Orbitals.core_electrons` agrees with it.
 
     Attributes:
         center: Index of the atom (0-based) in the structure the basis set belongs to.
+        core_electrons: The number of core electrons the potential replaces, so the
+            nucleus enters with charge Z - core_electrons.
         local: The terms of U_L, felt by every angular momentum.
         semilocal: ``semilocal[l]``, for l = 0..L-1: the terms of U_l - U_L.
     """
 
     center: int
+    core_electrons: int
     local: list[EcpTerm]
     semilocal: list[list[EcpTerm]]
+
+    @model_validator(mode="after")
+    def _check(self) -> Ecp:
+        if self.core_electrons < 0:
+            raise ValueError("core_electrons must be >= 0")
+        return self
 
 
 class BasisSet(QCDataBaseModel):
@@ -257,8 +266,8 @@ class BasisSet(QCDataBaseModel):
     Attributes:
         name: The basis set's name (e.g. ``"def2-svp"``), if it has one.
         shells: The contracted shells; the AOs are their functions in this order.
-        ecp: The effective core potentials, at most one per atom; the electrons each
-            replaces are the wavefunction's `Orbitals.core_electrons`.
+        ecp: The effective core potentials, at most one per atom, each with the number
+            of core electrons it replaces.
         ao_convention: Order and normalization of the functions within each shell.
         nao: `@property` The number of AOs.
     """
@@ -431,9 +440,9 @@ class Orbitals(QCDataBaseModel):
             own fixed electron count, so an open shell has two levels; a closed shell's
             are equal.
         core_electrons: One per atom of the structure: the electrons the orbitals do not
-            represent, those an ECP replaces (required for every ECP atom of
-            `Wavefunction.basis`) or a valence-only method leaves out (28 for Zn in
-            GFN2-xTB and g-xTB). None: every electron is in the orbitals.
+            represent, those an ECP replaces (equal to `Ecp.core_electrons` on every ECP
+            atom of `Wavefunction.basis`) or a valence-only method leaves out (28 for Zn
+            in GFN2-xTB and g-xTB). None: every electron is in the orbitals.
         coefficients_a: nao x nmo, in the AOs of `Wavefunction.basis`; column i is
             orbital i (alpha, or both spins). Only on request.
         coefficients_b: The beta orbitals, nao x nmo: unrestricted orbitals with
