@@ -185,9 +185,10 @@ differently) is a new key version, `k2`, released deliberately.
 `energy`, `gradient`, `hessian`, and the types made of many evaluations
 (`optimization`, `transition_state`, `irc`, `path_optimization`, `conformer_search`, ...),
 usually run by a program with subprograms. A `hessian`
-result also holds the energy and gradient at the same geometry and, when the program can
-make them, the harmonic analysis (`vibrational_analysis`) and thermochemistry
-(`thermochemistry`), tuned or switched off with `freq.*`.
+result also holds the energy at the same geometry, the gradient where the program gives it
+from the same run (a program that only gives it on request documents how to ask), and,
+when the program can make them, the harmonic analysis (`vibrational_analysis`) and
+thermochemistry (`thermochemistry`), tuned or switched off with `freq.*`.
 
 `results.hessian` is the full Cartesian second derivative of the energy at the input
 geometry, never projected. Hessians are used away from stationary points (the start of a
