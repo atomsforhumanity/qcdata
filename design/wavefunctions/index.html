@@ -1,0 +1,2181 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+        <meta name="author" content="Colton Hicks">
+      
+      
+        <link rel="canonical" href="https://qcdata.docs.afh.org/design/wavefunctions/">
+      
+      
+        <link rel="prev" href="../../conventions/">
+      
+      
+        <link rel="next" href="../../api/overview/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Wavefunctions and integrals (design) - Quantum Chemistry Data (qcdata)</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../css/ansi-colours.css">
+    
+      <link rel="stylesheet" href="../../css/jupyter-cells.css">
+    
+      <link rel="stylesheet" href="../../css/pandas-dataframe.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#wavefunctions-in-qcdata" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Quantum Chemistry Data (qcdata)" class="md-header__button md-logo" aria-label="Quantum Chemistry Data (qcdata)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Quantum Chemistry Data (qcdata)
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Wavefunctions and integrals (design)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7M9 21v-1h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1m3-17a5 5 0 0 0-5 5c0 2.05 1.23 3.81 3 4.58V16h4v-2.42c1.77-.77 3-2.53 3-4.58a5 5 0 0 0-5-5"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/atomsforhumanity/qcdata" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../.." class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/overview/" class="md-tabs__link">
+          
+  
+  
+  API Documentation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../visualizations/overview/" class="md-tabs__link">
+          
+  
+  
+  ✨Visualizations✨
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="https://github.com/atomsforhumanity/qcdata/blob/next/CHANGELOG.md" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Quantum Chemistry Data (qcdata)" class="md-nav__button md-logo" aria-label="Quantum Chemistry Data (qcdata)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Quantum Chemistry Data (qcdata)
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/atomsforhumanity/qcdata" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Welcome to qcdata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../why/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why use qcdata?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wavefunctions and integrals (design)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wavefunctions and integrals (design)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="Page contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Page contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Principles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#orbitals-the-one-home-of-the-orbital-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Orbitals: the one home of the orbital levels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#basisset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BasisSet
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wavefunction-the-basis-set-and-ao-matrices-on-request" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wavefunction: the basis set and AO matrices, on request
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-hamiltonian" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Hamiltonian
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#populations-and-multipoles-singlepointdata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Populations and multipoles (SinglePointData)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deferred-until-a-consumer-is-named" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deferred until a consumer is named
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#large-arrays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Large arrays
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trexio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TREXIO
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Documentation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Documentation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/inputs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/outputs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Outputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/outcome/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Outcome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/vibrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vibrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/orbitals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orbitals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/steps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session steps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/key/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calculation key
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/array_files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Array files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_13" id="__nav_2_13_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visualizations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_13">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Visualizations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/view/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    View
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_14" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_14" id="__nav_2_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Additional Models
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Additional Models
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/calctype/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CalcType
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/provenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ExecutionInfo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/qcdatabasemodel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QCDataBaseModel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/lengthunit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LengthUnit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ✨Visualizations✨
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ✨Visualizations✨
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../visualizations/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../visualizations/structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../visualizations/results/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../visualizations/coreviews/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Views
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://github.com/atomsforhumanity/qcdata/blob/next/CHANGELOG.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="Page contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Page contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Principles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#orbitals-the-one-home-of-the-orbital-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Orbitals: the one home of the orbital levels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#basisset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BasisSet
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wavefunction-the-basis-set-and-ao-matrices-on-request" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wavefunction: the basis set and AO matrices, on request
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-hamiltonian" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Hamiltonian
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#populations-and-multipoles-singlepointdata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Populations and multipoles (SinglePointData)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deferred-until-a-consumer-is-named" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deferred until a consumer is named
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#large-arrays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Large arrays
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trexio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TREXIO
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="wavefunctions-in-qcdata">Wavefunctions in qcdata<a class="headerlink" href="#wavefunctions-in-qcdata" title="Permanent link">&para;</a></h1>
+<p>What qcdata returns about a calculation's wavefunction, and why. This is <strong>output</strong> data.
+Programs keep their internal structures and their warm-start state: the standardized
+wavefunction is not a restart format (a tight-binding program warm-starts from its
+multipole moments and densities, an SCF program from its own copy of the orbitals,
+inside a session). Given orbitals (<code>ProgramInput.given</code>) may at most seed a guess.</p>
+<h2 id="principles">Principles<a class="headerlink" href="#principles" title="Permanent link">&para;</a></h2>
+<ul>
+<li>One home for every number.</li>
+<li>Store what cannot be derived. The SCF density is C n Cᵀ of the returned orbitals
+  (<code>Orbitals.density()</code>); AO integrals that any integral library recomputes from the basis
+  wait for a consumer.</li>
+<li>A field arrives with a consumer and a definition two programs can test.</li>
+<li>Models always hold arrays; only saving decides between inline JSON and a file.</li>
+<li>TREXIO: the same physics and names where they agree; our own layout.</li>
+</ul>
+<h2 id="orbitals-the-one-home-of-the-orbital-levels">Orbitals: the one home of the orbital levels<a class="headerlink" href="#orbitals-the-one-home-of-the-orbital-levels" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>field</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spin</code></td>
+<td><code>restricted</code>: one coefficient matrix, one set of energies, one Hamiltonian, occupations per spin. <code>unrestricted</code>: everything per spin</td>
+</tr>
+<tr>
+<td><code>kind</code></td>
+<td>enum. <code>canonical</code>: eigenvectors of <code>hamiltonian</code>, energies required. <code>natural</code>: eigenvectors of a density, occupations, no energies. <code>localized</code>: no energies; <code>localization</code> names the method. Values are added when a program produces them</td>
+</tr>
+<tr>
+<td><code>energies_a/_b</code></td>
+<td>Eh; <code>_b</code> only for unrestricted orbitals</td>
+</tr>
+<tr>
+<td><code>occupations_a/_b</code></td>
+<td>both always, each between 0 and 1</td>
+</tr>
+<tr>
+<td><code>electronic_temperature</code></td>
+<td>K; 0 for aufbau occupations</td>
+</tr>
+<tr>
+<td><code>fermi_level_a/_b</code></td>
+<td>Eh; None at 0 K, both given above it except for a spin that holds no electrons, which has none. Open shells are filled per spin at fixed n_α and n_β, so there are two</td>
+</tr>
+<tr>
+<td><code>core_electrons</code></td>
+<td>one per atom: the electrons the orbitals do not represent, ECP cores or the core a valence-only method leaves out (bookkeeping only; Zn's core is 28 in GFN2 and g-xTB). None: all-electron</td>
+</tr>
+<tr>
+<td><code>coefficients_a/_b</code></td>
+<td>optional, nao × nmo, in the AOs of <code>Wavefunction.basis</code>; only on request (output <code>orbitals</code>)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Tight binding's open shells (GFN2-xTB) are restricted orbitals of one spin-averaged
+  Hamiltonian with per-spin occupations. They are not ROHF.</li>
+<li>Levels and coefficients are separate because their costs differ. Levels are free and
+  wanted on every frame of an optimization; coefficients cost time (GFN2-xTB on
+  (H₂O)₂₀₀: an energy and gradient take 3.4 s without them, 4.9 s with) and nao × nmo
+  numbers per spin (caffeine in def2-SVP: 246 energies against 60,516 coefficients).</li>
+<li><code>core_electrons</code> lives with the levels, not the basis set, so the electron count can be
+  checked on every frame, coefficients or not. All-electron producers write nothing;
+  tight-binding programs give their valence-only cores (no ECP involved), and on every
+  ECP atom it equals the ECP's own <code>core_electrons</code>.</li>
+<li>Where the structure is known (a <code>ProgramOutput</code> or a <code>Frame</code>), <code>core_electrons</code> lists
+  its atoms and the occupations add up to Σ(Z − core_electrons) − charge, to 1e-6
+  electrons. This checks electron populations, not charges: g-xTB 2.0.1's reference
+  occupations are not integers, so its charges for a neutral molecule sum to −7e-10.
+  A given wavefunction (<code>ProgramInput.given</code>) may come from another charge or
+  multiplicity, so only its atoms are checked.</li>
+<li><code>density()</code> raises a clear error when coefficients are missing, as Molden export does.</li>
+<li><code>Orbitals</code> holds no basis set. The basis set describes the AO space that the
+  coefficients and every AO matrix share, so it belongs to their common parent,
+  <code>Wavefunction.basis</code>. An overlap requested alone then ships no coefficients, which for
+  unrestricted orbitals would be twice the overlap's own size.</li>
+</ul>
+<h2 id="basisset">BasisSet<a class="headerlink" href="#basisset" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>shells</code> and <code>ao_convention</code>. Tight-binding orbitals fit this layout exactly: GFN2-xTB
+  and g-xTB orbitals are orthonormal to 4e-15–8e-15 in an independently computed overlap,
+  and their spherical coefficients map onto their Cartesian ones to 1e-16.</li>
+<li><code>ecp</code>: a list of <code>Ecp(center, core_electrons, local: list[EcpTerm],
+  semilocal: list[list[EcpTerm]])</code>, at most one per atom. <code>semilocal[l]</code>, for l = 0..L−1, is the channel U_l − U_L, as
+  Basis Set Exchange, NWChem, PySCF and Psi4 store it. <code>EcpTerm(power, exponent,
+  coefficient)</code> is coefficient · r^power · exp(−exponent r²). <code>power</code> is the power of r
+  (−2 or more): Basis Set Exchange JSON and NWChem write n for r^(n−2), so their
+  converters subtract 2. Scalar ECPs only; spin-orbit terms are refused.</li>
+<li>An ECP carries the number of core electrons it replaces, as Basis Set Exchange, NWChem,
+  PySCF and Psi4 keep it with the potential, so a basis set alone (one built for an
+  input, or one in <code>given</code>) is a complete potential and converts to another program
+  without the orbitals. <code>Orbitals.core_electrons</code> keeps, per atom, what the orbitals
+  leave out, which is more than the ECPs for a valence-only method; a <code>Wavefunction</code>
+  checks that the two agree on every ECP atom.</li>
+<li>A basis belongs to one geometry. GFN2's is the same per element at any geometry.
+  g-xTB's q-vSZP contraction depends on each atom's EEQ-BC charge and coordination number
+  at that geometry (fixed during the SCF), so the frames of a g-xTB trajectory do not
+  share a <code>BasisSet</code>. g-xTB's scaled-exponent H0 basis is internal; the wavefunction's basis
+  is the SCF basis.</li>
+</ul>
+<h2 id="wavefunction-the-basis-set-and-ao-matrices-on-request">Wavefunction: the basis set and AO matrices, on request<a class="headerlink" href="#wavefunction-the-basis-set-and-ao-matrices-on-request" title="Permanent link">&para;</a></h2>
+<p><code>basis</code> is present whenever coefficients or an AO matrix are, and only then: it is the
+AO space they share, in its <code>AOConvention</code>. Each AO matrix is requested by its output
+name, the field's (<code>overlap</code>, <code>hamiltonian</code>, <code>core_hamiltonian</code>); the conventions list
+what each implies. <code>overlap</code> and <code>core_hamiltonian</code> imply only the basis set;
+<code>hamiltonian</code> implies <code>overlap</code> and <code>orbitals</code>.</p>
+<table>
+<thead>
+<tr>
+<th>field</th>
+<th>HF and DFT</th>
+<th>tight binding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>overlap</code></td>
+<td>yes</td>
+<td>yes: the program's own S, with its screening</td>
+</tr>
+<tr>
+<td><code>hamiltonian_a/_b</code></td>
+<td>Fock or Kohn-Sham matrix</td>
+<td>tight-binding Hamiltonian</td>
+</tr>
+<tr>
+<td><code>core_hamiltonian</code></td>
+<td>yes</td>
+<td>— (tight binding's H0 is model data)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>A Wavefunction always has orbitals; GFN-FF and other force fields return none.</li>
+<li>A <code>hamiltonian</code> comes with <code>overlap</code> and the orbitals' coefficients, and H C = S C ε
+  holds with the returned S only: a screened S (a tight-binding program skips distant
+  primitive pairs) can differ from an exact one by up to 3.4e-9. Its orbitals are
+  canonical, and restricted orbitals have one Hamiltonian.</li>
+<li><code>core_hamiltonian</code> is every density-independent one-electron term of the run: T, V_ne
+  with charges Z − core_electrons, V_ecp, and external point charges and fields once a
+  program supports them. tr(P h), with P the density of the SCF's last input, is
+  <code>energy_components</code>' <code>one_electron</code> term. With P = <code>Orbitals.density()</code>, the density a
+  reader has, the two agree only to the SCF residual, as for the <code>hamiltonian</code>: compare
+  them at SCF tolerance, never at round-off.</li>
+<li>Every matrix is nao × nao of <code>basis</code>, and the coefficients have one row per AO of it;
+  an AO-indexed array without a basis set, or a basis set without one, is refused.</li>
+<li><code>Wavefunction.with_convention</code> converts the coefficients and every matrix together, each
+  with its variance: coefficients scale by s per AO index, densities by s_μ s_ν,
+  operators (S, H, h) by 1/(s_μ s_ν). A spherical reordering is a permutation either
+  way; a change of Cartesian normalization is not, so the coefficient transform does not
+  apply to matrices. <code>BasisSet.transform</code> takes the array's kind (<code>coefficients</code>,
+  <code>operator</code>, <code>density</code>) and never guesses it. Large arrays are converted as arrays, never
+  through Python lists.</li>
+</ul>
+<h2 id="the-hamiltonian">The Hamiltonian<a class="headerlink" href="#the-hamiltonian" title="Permanent link">&para;</a></h2>
+<p><code>hamiltonian</code> is the operator of <strong>one build</strong> at the last build's input x (a density, or
+tight binding's charges and multipole moments), however that input was mixed. The
+returned orbitals are its fresh generalized eigenvectors with the returned S, so
+H C = S C ε holds to rounding (max |CᵀHC − diag ε| below 1e-13 for an exact build).</p>
+<ul>
+<li>Allowed: mixing inputs (Broyden or DIIS on moments, damping of densities).</li>
+<li>Not allowed: combining several builds' operators (DIIS on F or H), damping or level
+  shifting the returned matrix, or returning H and C from different iterations.</li>
+<li>Requesting <code>hamiltonian</code> changes no other returned number.</li>
+<li>H is F[x], not F of C n Cᵀ: the returned orbitals' density is one step ahead, and the
+  two differ by the SCF residual (1.2e-6–1.6e-6 for caffeine at default thresholds).</li>
+</ul>
+<p>How SCF schemes meet the rule:</p>
+<table>
+<thead>
+<tr>
+<th>scheme</th>
+<th>what the program does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HF/DFT, F rebuilt from the last density and diagonalized</td>
+<td>the final build is always complete, never incremental. Against an incremental final build this moves energies by about 1e-11 Eh and orbital energies by up to 3e-9, and costs about 6% of the time for CPU energies with exact J/K, within the timing noise</td>
+</tr>
+<tr>
+<td>GFN2-xTB, mixers on input moments</td>
+<td>nothing: H is one build</td>
+</tr>
+<tr>
+<td>g-xTB 1.1, ending with one unmixed iteration</td>
+<td>nothing</td>
+</tr>
+<tr>
+<td>DIIS on the Fock matrix (g-xTB 2.0.1)</td>
+<td>one unmixed iteration after convergence: one more iteration, 3–4% more time, and closer to convergence in all 14 cases measured (taxol's energy error against tight thresholds: 1.2e-7 → 2.6e-8 Eh); results move by up to 1e-7 Eh and 4e-5 Eh/bohr</td>
+</tr>
+<tr>
+<td>a mode that must reproduce another program's numbers exactly, and so keeps its DIIS rule</td>
+<td>refuses a <code>hamiltonian</code> request (<code>not_applicable</code>)</td>
+</tr>
+<tr>
+<td>a composite (a solvation model on a base method)</td>
+<td>returns its base part's wavefunction; <code>record</code> names it; H and P do not reproduce the composite energy</td>
+</tr>
+<tr>
+<td>a force field</td>
+<td><code>wavefunction</code> is None</td>
+</tr>
+</tbody>
+</table>
+<p>What H contains:</p>
+<ul>
+<li><strong>DFT:</strong> everything in the SCF operator: V_xc on the run's final grid, plus VV10's
+  nonlocal potential; range-separated exchange; J/K as built (density-fitted when the
+  program fits, COSX K on its final grid); the PCM operator. Nothing for D3/D4 or SMD's
+  CDS term, which do not depend on the density.</li>
+<li><strong>Tight binding:</strong> GFN2: H0 plus the potentials of the last input moments (shell,
+  multipole, third order). g-xTB: the unmixed Fock matrix at the last input.</li>
+</ul>
+<h2 id="populations-and-multipoles-singlepointdata">Populations and multipoles (<code>SinglePointData</code>)<a class="headerlink" href="#populations-and-multipoles-singlepointdata" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>shell_populations</code>: electron populations Σ_{μ∈shell}(PS)_μμ, indexed like
+  <code>Wavefunction.basis.shells</code>, with <code>shell_atoms</code> and <code>shell_angular_momenta</code> so they stand without a
+  basis (and must match its shells when there is one). Not charges, which depend on
+  method-specific reference occupations.</li>
+<li><code>atomic_spin_populations</code>: n_α − n_β per atom, with <code>atomic_spin_populations_kind</code>
+  naming the partition from the values of <code>atomic_charges_kind</code>.</li>
+<li><code>atomic_dipoles</code>, <code>atomic_quadrupoles</code>: the electronic part only, about each atom
+  (μ_A = −Σ_{μ∈A}(P D)_μμ, integrals about the column AO's atom); quadrupoles Buckingham
+  traceless (3/2 M − 1/2 tr M), 3 × 3 per atom.</li>
+<li><code>quadrupole_moment</code> is the Buckingham traceless tensor, with no kind beside it.
+  tblite's molecular quadrupole, which the g-xTB 2.0.1 program prints, counts the
+  off-diagonal charge and dipole parts twice and is not a tensor.</li>
+</ul>
+<h2 id="deferred-until-a-consumer-is-named">Deferred until a consumer is named<a class="headerlink" href="#deferred-until-a-consumer-is-named" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>data</th>
+<th>why it waits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kinetic</code>, <code>potential_n_e</code>, <code>ecp_potential</code>, <code>dipole_integrals</code></td>
+<td>programs could fill them, but any integral library recomputes them from the basis and ECP in milliseconds, and each is a definition two programs must test</td>
+</tr>
+<tr>
+<td><code>solvent_potential</code></td>
+<td>H already contains the solvent operator and <code>record</code> names the model; for tight binding, removing it gives no gas-phase answer</td>
+</tr>
+<tr>
+<td>stored densities</td>
+<td>only for densities that are not C n Cᵀ of the returned orbitals (relaxed, response, or a mixed density returned without orbitals), with a kind (<code>scf</code>, <code>relaxed</code>, <code>unrelaxed</code>)</td>
+</tr>
+<tr>
+<td>two-electron integrals, DF and Cholesky tensors</td>
+<td>tight binding has none; a 3-index DF tensor is about 200 GB at 2000 functions. For CC or QMC: MO-basis Cholesky vectors of an active space, exported to TREXIO, on demand</td>
+</tr>
+<tr>
+<td>tight-binding kernels and H0, DFT grids and response intermediates, GFN2's Slater exponents</td>
+<td>specific to one model or one program, or not the functions the program computes with</td>
+</tr>
+</tbody>
+</table>
+<h2 id="large-arrays">Large arrays<a class="headerlink" href="#large-arrays" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Models always hold arrays. No field is ever a file reference: that would make equality,
+  hashing, pickling to workers and moving a result between hosts depend on files beside
+  it. Lazy loading is the reader's business.</li>
+<li>Saving decides by float64 size: an array of more than 1 MiB (131,072 numbers; square
+  matrices from nao ≥ 363) goes to a file beside the JSON, so the same result always saves
+  the same way. Caffeine in def2-SVP stays inline; def2-TZVP does not.</li>
+<li>Each such array is its own <code>.npy</code> file beside the saved file, named by the file's stem
+  and the field path (<code>output.results.wavefunction.orbitals.coefficients_a.npy</code>):
+  little-endian float64, C order, uncompressed (compression saves about 4% on
+  coefficients). The JSON holds a pointer in its place with the file's path, the shape,
+  the dtype and the file's sha256.</li>
+<li>Inline floats round-trip exactly.</li>
+<li>JSON costs 21.8–23.2 bytes per float64, against 8 in binary. A 2000-function matrix is
+  32 MB binary and 87–93 MB as JSON (1.2 s in <code>json.dumps</code>).</li>
+</ul>
+<h2 id="trexio">TREXIO<a class="headerlink" href="#trexio" title="Permanent link">&para;</a></h2>
+<p>The same physics and names; our own layout. A converter in qcinf, built on the <code>trexio</code>
+package (an optional extra), writes real TREXIO files, tested by a round trip: orbitals →
+TREXIO → PySCF energy at the same density.</p>
+<table>
+<thead>
+<tr>
+<th>TREXIO</th>
+<th>qcdata</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nucleus.*</code></td>
+<td><code>Structure</code></td>
+</tr>
+<tr>
+<td><code>basis.*</code> (flat per-primitive arrays; <code>shell_factor</code> × <code>prim_factor</code> × <code>coefficient</code>)</td>
+<td><code>Wavefunction.basis.shells</code> (per-atom <code>Shell</code>, one normalization convention)</td>
+</tr>
+<tr>
+<td><code>ecp.*</code></td>
+<td><code>BasisSet.ecp</code> (local and semilocal channels; power of r; <code>z_core</code> as <code>Ecp.core_electrons</code>), <code>Orbitals.core_electrons</code></td>
+</tr>
+<tr>
+<td><code>ao.cartesian</code>, <code>ao.normalization</code></td>
+<td><code>Shell.pure</code>, <code>AOConvention</code> (<code>spherical_order="trexio"</code> selectable, never the default)</td>
+</tr>
+<tr>
+<td><code>ao_1e_int.overlap</code>, <code>core_hamiltonian</code></td>
+<td><code>Wavefunction.overlap</code>, <code>core_hamiltonian</code></td>
+</tr>
+<tr>
+<td><code>ao_1e_int.kinetic</code>, <code>potential_n_e</code>, <code>ecp</code>, dipole</td>
+<td>deferred</td>
+</tr>
+<tr>
+<td><code>mo.coefficient</code> [mo, ao], <code>mo.spin</code></td>
+<td><code>Orbitals.coefficients_a/_b</code> [ao, mo]</td>
+</tr>
+<tr>
+<td><code>mo.energy</code>, <code>mo.occupation</code>, <code>mo.type</code>, <code>mo.electronic_temperature</code></td>
+<td><code>energies_*</code>, <code>occupations_*</code> (per spin, 0..1, where TREXIO keeps one occupation per orbital: the converter checks whether a restricted file's are totals, 0..2), <code>kind</code>, <code>electronic_temperature</code></td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>fermi_level_a/_b</code></td>
+</tr>
+<tr>
+<td><code>rdm.1e_up/_dn</code> (MO basis)</td>
+<td><code>Orbitals.density()</code> (AO basis, computed)</td>
+</tr>
+<tr>
+<td>— (no Fock matrix)</td>
+<td><code>hamiltonian_a/_b</code></td>
+</tr>
+<tr>
+<td><code>ao_2e_int</code>, <code>mo_2e_int</code>, <code>determinant</code>, <code>amplitude</code>, <code>jastrow</code>, <code>qmc</code></td>
+<td>not in qcdata</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.tabs.link", "content.code.annotate", "content.code.copy", "announce.dismiss", "navigation.tabs", "navigation.instant", "navigation.instant.prefetch", "navigation.instant.preview", "navigation.instant.progress", "navigation.path", "navigation.sections", "navigation.top", "navigation.tracking", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

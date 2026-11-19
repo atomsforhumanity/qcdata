@@ -2,82 +2,114 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://qcdata.docs.afh.org/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
+    </url>
+    <url>
+         <loc>https://qcdata.docs.afh.org/conventions/</loc>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/why/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
+    </url>
+    <url>
+         <loc>https://qcdata.docs.afh.org/api/array_files/</loc>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/api/calctype/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/api/data/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/api/execution/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/api/files/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/api/inputs/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
+    </url>
+    <url>
+         <loc>https://qcdata.docs.afh.org/api/key/</loc>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/api/lengthunit/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/api/model/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
+    </url>
+    <url>
+         <loc>https://qcdata.docs.afh.org/api/orbitals/</loc>
+         <lastmod>2026-11-19</lastmod>
+    </url>
+    <url>
+         <loc>https://qcdata.docs.afh.org/api/outcome/</loc>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/api/outputs/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/api/overview/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/api/provenance/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/api/qcdatabasemodel/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
+    </url>
+    <url>
+         <loc>https://qcdata.docs.afh.org/api/steps/</loc>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/api/structure/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/api/utils/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
+    </url>
+    <url>
+         <loc>https://qcdata.docs.afh.org/api/vibrations/</loc>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/api/view/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
+    </url>
+    <url>
+         <loc>https://qcdata.docs.afh.org/design/wavefunctions/</loc>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/visualizations/coreviews/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/visualizations/overview/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/visualizations/results/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
     </url>
     <url>
          <loc>https://qcdata.docs.afh.org/visualizations/structure/</loc>
-         <lastmod>2026-10-26</lastmod>
+         <lastmod>2026-11-19</lastmod>
     </url>
 </urlset>

@@ -1,0 +1,2869 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+        <meta name="author" content="Colton Hicks">
+      
+      
+        <link rel="canonical" href="https://qcdata.docs.afh.org/conventions/">
+      
+      
+        <link rel="prev" href="../why/">
+      
+      
+        <link rel="next" href="../design/wavefunctions/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Conventions - Quantum Chemistry Data (qcdata)</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../css/ansi-colours.css">
+    
+      <link rel="stylesheet" href="../css/jupyter-cells.css">
+    
+      <link rel="stylesheet" href="../css/pandas-dataframe.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#conventions" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Quantum Chemistry Data (qcdata)" class="md-header__button md-logo" aria-label="Quantum Chemistry Data (qcdata)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Quantum Chemistry Data (qcdata)
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Conventions
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7M9 21v-1h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1m3-17a5 5 0 0 0-5 5c0 2.05 1.23 3.81 3 4.58V16h4v-2.42c1.77-.77 3-2.53 3-4.58a5 5 0 0 0-5-5"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/atomsforhumanity/qcdata" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href=".." class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api/overview/" class="md-tabs__link">
+          
+  
+  
+  API Documentation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../visualizations/overview/" class="md-tabs__link">
+          
+  
+  
+  ✨Visualizations✨
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="https://github.com/atomsforhumanity/qcdata/blob/next/CHANGELOG.md" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Quantum Chemistry Data (qcdata)" class="md-nav__button md-logo" aria-label="Quantum Chemistry Data (qcdata)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Quantum Chemistry Data (qcdata)
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/atomsforhumanity/qcdata" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Welcome to qcdata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../why/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why use qcdata?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conventions
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="Page contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Page contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#units" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Units
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#settings-programinputkeywords" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings (ProgramInput.keywords)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Settings (ProgramInput.keywords)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shared-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared names
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-targets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accuracy targets
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#calculation-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calculation key
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#calculation-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calculation types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outputs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Outputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#standard-fields-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standard fields first
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#energy_components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        energy_components
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#shared-record-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared record keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kinds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kinds
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#imaginary-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Imaginary modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#orbitals-and-ao-matrices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Orbitals and AO matrices
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wavefunction-outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wavefunction outputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#given-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Given results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#warnings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Warnings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timings-and-provenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timings and provenance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#progress-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Progress events
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stopping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stopping
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#saved-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Saved files
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/wavefunctions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wavefunctions and integrals (design)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Documentation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Documentation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/inputs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/outputs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Outputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/outcome/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Outcome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/vibrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vibrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/orbitals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orbitals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/steps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session steps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/key/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calculation key
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/array_files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Array files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_13" id="__nav_2_13_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visualizations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_13">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Visualizations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/view/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    View
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_14" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_14" id="__nav_2_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Additional Models
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Additional Models
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/calctype/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CalcType
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/provenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ExecutionInfo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/qcdatabasemodel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QCDataBaseModel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/lengthunit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LengthUnit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ✨Visualizations✨
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ✨Visualizations✨
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../visualizations/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../visualizations/structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../visualizations/results/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../visualizations/coreviews/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Views
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://github.com/atomsforhumanity/qcdata/blob/next/CHANGELOG.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="Page contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Page contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#units" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Units
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#settings-programinputkeywords" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings (ProgramInput.keywords)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Settings (ProgramInput.keywords)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shared-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared names
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accuracy-targets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accuracy targets
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#calculation-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calculation key
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#calculation-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calculation types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outputs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Outputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#standard-fields-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standard fields first
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#energy_components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        energy_components
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#shared-record-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared record keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kinds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kinds
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#imaginary-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Imaginary modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#orbitals-and-ao-matrices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Orbitals and AO matrices
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wavefunction-outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wavefunction outputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#given-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Given results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#warnings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Warnings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timings-and-provenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timings and provenance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#progress-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Progress events
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stopping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stopping
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#saved-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Saved files
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="conventions">Conventions<a class="headerlink" href="#conventions" title="Permanent link">&para;</a></h1>
+<p>The names, units and rules that every AFH program (axtb, qcopt, ...) and every qc*
+codec share, so that inputs look alike and outputs can be read the same way whichever
+program produced them. This page is the single place for them; a program's own documentation
+covers only what is specific to it. How programs are run (the program and session
+protocol, plans, workers) is qccompute's: see its program interface design.</p>
+<h2 id="units">Units<a class="headerlink" href="#units" title="Permanent link">&para;</a></h2>
+<p>Atomic units at every interface: energies in hartree (Eh), positions in bohr, gradients in
+Eh/bohr, Hessians in Eh/bohr², dipole moments in e·bohr, quadrupole moments in e·bohr²,
+polarizabilities in e²·bohr²/Eh. A field or key whose name says otherwise (<code>memory_gib</code>) is
+in that unit. Chemistry's fixed conventions are kept where every program prints them:</p>
+<table>
+<thead>
+<tr>
+<th>quantity</th>
+<th>unit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>frequencies, rotational constants</td>
+<td>cm⁻¹ (imaginary frequencies negative)</td>
+</tr>
+<tr>
+<td>masses</td>
+<td>u</td>
+</tr>
+<tr>
+<td>force constants</td>
+<td>mdyn/Å</td>
+</tr>
+<tr>
+<td>IR intensities</td>
+<td>km/mol</td>
+</tr>
+<tr>
+<td>temperatures, pressures, concentrations</td>
+<td>K, Pa, mol/L</td>
+</tr>
+<tr>
+<td>entropies, heat capacities</td>
+<td>Eh/K</td>
+</tr>
+<tr>
+<td>times</td>
+<td>wall-clock seconds</td>
+</tr>
+<tr>
+<td>memory</td>
+<td>GiB (2³⁰ bytes)</td>
+</tr>
+</tbody>
+</table>
+<p>XYZ files are read and written in Å.</p>
+<h2 id="settings-programinputkeywords">Settings (<code>ProgramInput.keywords</code>)<a class="headerlink" href="#settings-programinputkeywords" title="Permanent link">&para;</a></h2>
+<p><code>keywords</code> is the program's own settings tree, exactly as its JSON request file and its
+Python keyword arguments spell it. The rules:</p>
+<ol>
+<li>Every setting is <code>group.key</code> or a top-level scalar, never deeper. A key never repeats its
+   group's name (<code>solvent.name</code>, not <code>solvent.solvent</code>).</li>
+<li>One canonical spelling across the CLI, JSON, Python and qcdata. Synonyms that encode
+   another program's vocabulary (<code>rijcosx</code>, <code>rhf</code>) may be accepted on input but are never
+   echoed back. A group may take a scalar that stands for its main key (a DFT program's
+   <code>jk: "df"</code> is <code>{"kind": "df"}</code>); the schema shows both forms and <code>resolved.settings</code>
+   reports the expanded one. The <a href="#calculation-key">calculation key</a> takes the input as given, so the
+   two forms are separate cache entries: callers that store results use one.</li>
+<li><code>"auto"</code> means the program decides; <code>null</code> or absent means the default. Every output
+   reports what each <code>auto</code> became in <code>resolved.settings</code>, and why in <code>resolved.reasons</code>.</li>
+<li>Tolerances end in <code>_tol</code>, iteration limits are <code>max_iter</code>, units appear in names only
+   exactly (<code>memory_gib</code>). Booleans only for two-state choices.</li>
+<li><strong>Every setting given must affect the calculation.</strong>
+   Unknown keys, settings that do not apply to the calculation type, and settings made
+   irrelevant by other values are errors of kind <code>input</code> (codes <code>unknown_key</code>,
+   <code>not_applicable</code>, <code>no_effect</code>), with a did-you-mean suggestion where one exists.
+   <em>Contingent</em> settings, which apply only if something happens during the run (an SOSCF
+   or escalation threshold, a stability probe's gap, a level shift), are allowed; the
+   run's <code>record</code> says whether each one fired. A session checks its keywords against the
+   calculation types it was opened for (<code>open_session(..., calctypes=...)</code>), and a
+   request of another type fails with <code>not_applicable</code>.</li>
+<li>Each program publishes the JSON Schema of its settings (<code>settings_schema(calctype)</code>),
+   with <code>x-unit</code>, <code>x-tier</code> (common, expert), <code>x-concern</code> (model, approximation,
+   convergence, algorithm, resource, output) and <code>x-applies-to</code> on every key.</li>
+<li><code>model.method</code> and <code>model.basis</code> carry the method and basis; <code>structure</code> carries
+   positions, atoms, charge and multiplicity. The settings tree does not repeat them.</li>
+<li><code>keywords</code> hold plain JSON. A pydantic model given in them, at any depth (an
+   <code>Accuracy</code>), is stored as its JSON form with nulls left out, so an input saves,
+   reloads and keys the same.</li>
+</ol>
+<h3 id="shared-names">Shared names<a class="headerlink" href="#shared-names" title="Permanent link">&para;</a></h3>
+<p>Settings that mean the same in several programs are spelled the same:</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>threads</code></td>
+<td>CPU threads the calculation may use</td>
+</tr>
+<tr>
+<td><code>memory_gib</code></td>
+<td>memory the calculation may use (GiB)</td>
+</tr>
+<tr>
+<td><code>backend</code></td>
+<td><code>cpu</code>, <code>gpu</code> or <code>auto</code></td>
+</tr>
+<tr>
+<td><code>device_memory_gib</code></td>
+<td>GPU memory the calculation may use (GiB)</td>
+</tr>
+<tr>
+<td><code>accuracy</code></td>
+<td>the input's <a href="#accuracy-targets">accuracy target</a>: <code>energy</code> (Eh), <code>gradient</code> (Eh/bohr), <code>hessian</code> (Eh/bohr²)</td>
+</tr>
+<tr>
+<td><code>scf.max_iter</code>, <code>scf.e_tol</code>, <code>scf.g_tol</code>, <code>scf.guess</code></td>
+<td>SCF iteration limit, energy and orbital-gradient tolerances, starting guess</td>
+</tr>
+<tr>
+<td><code>solvent.name</code>, <code>solvent.model</code>, <code>solvent.eps</code></td>
+<td>implicit solvent: name, continuum model, permittivity</td>
+</tr>
+<tr>
+<td><code>freq.temperature</code>, <code>freq.pressure</code>, <code>freq.scale</code>, <code>freq.imaginary_cutoff</code></td>
+<td>thermochemistry conditions, frequency scale factor, imaginary-mode cutoff (cm⁻¹)</td>
+</tr>
+<tr>
+<td><code>output.orbitals</code>, <code>output.overlap</code>, <code>output.hamiltonian</code>, <code>output.core_hamiltonian</code>, <code>output.molden</code>, <code>output.bond_orders</code></td>
+<td>optional outputs: the <a href="#wavefunction-outputs">wavefunction outputs</a> by name; <code>output.molden</code> is <code>off</code>, <code>spherical</code> or <code>cartesian</code> and returns <code>files["orbitals.molden"]</code></td>
+</tr>
+<tr>
+<td><code>convergence.max_iter</code>, <code>convergence.g_tol</code>, <code>convergence.e_tol</code>, <code>convergence.d_tol</code></td>
+<td>geometry optimizer convergence</td>
+</tr>
+</tbody>
+</table>
+<p>A program that cannot honour a shared setting (axtb's SCF thresholds follow xtb's accuracy
+factor; its ALPB/GBSA models are parametrized per solvent name, so no <code>solvent.eps</code>)
+rejects it with kind <code>unsupported</code> rather than ignoring it.</p>
+<p>Resource keys (<code>threads</code>, <code>memory_gib</code>, <code>backend</code>, <code>device_memory_gib</code>) carry
+<code>x-concern: "resource"</code>. The <a href="#calculation-key">calculation key</a> leaves out <code>threads</code>,
+<code>memory_gib</code> and <code>device_memory_gib</code>, which change results at most at round-off; <code>backend</code>
+(which device runs the calculation) counts.</p>
+<h3 id="accuracy-targets">Accuracy targets<a class="headerlink" href="#accuracy-targets" title="Permanent link">&para;</a></h3>
+<p><code>accuracy</code> is a JSON object of absolute targets, each optional: <code>energy</code> (Eh), <code>gradient</code>
+(Eh/bohr, the largest component) and <code>hessian</code> (Eh/bohr², the largest element), as in
+<code>qcdata.Accuracy</code>. It is never a bare number: it applies to every calctype a session
+runs, so a number would have no single quantity to aim at.</p>
+<ul>
+<li>It is the input's own target: of <code>compute</code>, and of every session request that gives
+  none. A request's <code>accuracy</code> replaces it for that request.</li>
+<li>The program turns it into its own convergence thresholds and records the target, the
+  thresholds and any error estimate under the record key <code>accuracy</code>. Explicit
+  convergence settings are floors: a target may tighten them, never loosen them.</li>
+<li>It is part of the input, so of the <a href="#calculation-key">calculation key</a>: a tighter
+  target is another calculation.</li>
+<li>A program with no convergence settings (a force field, an ML potential, a
+  <code>FunctionProgram</code>) accepts a target, as the keyword or a session request's alike, and
+  records it as met: no thresholds, and a convergence error of exactly zero for each
+  target. So a session can pass a request's target on as the keyword.</li>
+<li>A program whose convergence settings take no targets yet refuses a target with kind
+  <code>unsupported</code>, like any shared setting it cannot honour.</li>
+</ul>
+<p>The record of a target met with no thresholds, for <code>{"gradient": 1e-6}</code>:</p>
+<div class="language-json highlight"><pre><span></span><code><span class="nt">&quot;record&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;accuracy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;gradient&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1e-06</span><span class="p">},</span><span class="w"> </span><span class="nt">&quot;thresholds&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">                        </span><span class="nt">&quot;estimate&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;gradient&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">}}}</span>
+</code></pre></div>
+<p><code>target</code> holds the targets given, <code>thresholds</code> is empty, and <code>estimate</code> gives <code>0.0</code> for
+each target, so a reader checks any program the same way: each <code>estimate</code> at or below its
+<code>target</code>.</p>
+<p><code>Accuracy.from_keywords(keywords)</code> reads it the same way in every program, and refuses a
+bare number, an unknown key (<code>unknown_key</code>) and an object with no target (<code>no_effect</code>).</p>
+<h2 id="calculation-key">Calculation key<a class="headerlink" href="#calculation-key" title="Permanent link">&para;</a></h2>
+<p>A store files each result under <code>qcdata.calculation_key(inp)</code>: <code>k1:</code> followed by the
+sha256 hex digest of a canonical JSON text of the input as given, and nothing else. Two
+inputs share a key only when they request the same calculation written the same way.
+Every rule errs toward a miss, because a wrong hit returns another calculation's numbers.</p>
+<p>The canonical text is the input's canonical form, written as compact JSON (separators <code>,</code>
+and <code>:</code>), keys sorted, non-ASCII characters escaped as <code>\uXXXX</code>, with:</p>
+<ul>
+<li><strong>numbers normalized</strong>: a float with an integral value is written as an integer (<code>100.0</code>
+  as <code>100</code>, <code>-0.0</code> as <code>0</code>), any other float in Python's shortest round-trip form
+  (<code>1e-08</code>), integers exactly. <code>true</code> and <code>1</code> stay distinct. Non-finite numbers are
+  refused;</li>
+<li><strong>fields at their default left out</strong> (<code>charge: 0</code>, <code>keywords: {}</code>, <code>basis: null</code>), so
+  adding a field to qcdata never changes an old key. Inside <code>keywords</code> nothing is a
+  default: values stay as given, <code>null</code>s and empty groups included;</li>
+<li><strong>coordinates</strong> of <code>structure</code> and of every structure in <code>structures</code>: bohr times 10¹⁰,
+  rounded to integers (half to even), atom order kept. Symbols, charge, multiplicity and
+  connectivity count as given;</li>
+<li><strong>every other array field</strong> (a <code>given</code> Hessian, orbital coefficients) as
+  <code>{"array": shape, "dtype": "float64", "sha256": digest}</code>, the digest of its C-order
+  little-endian float64 bytes with <code>-0.0</code> as <code>0.0</code>. The digest tells values apart exactly
+  as their JSON numbers would, at a small fraction of the cost. Integer arrays enter the
+  same way in their own dtype. Non-finite values are refused;</li>
+<li><strong>files</strong> (of the input, of each subprogram and of <code>given</code>) by the sha256 hex digest of
+  their bytes, text as UTF-8;</li>
+<li><strong>subprograms</strong> canonicalized the same way, in order;</li>
+<li>tuples as lists; numpy arrays and scalars inside free-form values (<code>keywords</code>) as
+  JSON numbers, as they are once saved.</li>
+</ul>
+<p>Left out: <code>extras</code> at every level, structure <code>identifiers</code>, and the resource keywords
+<code>threads</code>, <code>memory_gib</code> and <code>device_memory_gib</code> at the top level of <code>keywords</code>, in the
+input and in every subprogram (<code>scf.threads</code> would count). These three may change results
+at most at round-off. Everything else counts: <code>given</code>, <code>cmdline_args</code>, and settings such
+as <code>backend</code> (pinning the device), precision and <code>accuracy</code> that can change numbers.</p>
+<p>Spellings are not normalized. <code>B3LYP</code> and <code>b3lyp</code>, a synonym, a group's scalar and
+expanded forms (rule 2), a default written out (<code>scf.max_iter: 100</code>), and <code>null</code> against
+an absent key all give different keys: a cache miss, never a wrong hit. The key
+normalizes only itself; stored values keep <code>-0.0</code> and their number types.</p>
+<p>The key names the calculation, never the code that produced its numbers. Which code
+did is each program's numerics identity (its version, or a numerics epoch, an
+executable's version, a model's checksum), which the runner and the store record with
+every run, for the input's program and each subprogram, and which every output carries
+in <code>execution.identities</code>. A store keeps several runs per key and reuses one only when
+its identities match the programs that would run now. So a
+key never changes when code changes, anything holding keys stays valid across releases,
+and computing a key never needs a program installed. A program that changes what a
+default computes (a DFT program's <code>jk</code> defaulting to <code>df</code>) changes its numerics
+identity, not the key.</p>
+<p>Golden keys in qcdata's tests pin the canonical form. Changing any rule, the default of
+any field an input holds (an omitted field would then mean something else), or the type of
+a field between a list of numbers and an array (<code>list[float]</code> and a digest enter
+differently) is a new key version, <code>k2</code>, released deliberately.</p>
+<h2 id="calculation-types">Calculation types<a class="headerlink" href="#calculation-types" title="Permanent link">&para;</a></h2>
+<p><code>energy</code>, <code>gradient</code>, <code>hessian</code>, and the types made of many evaluations
+(<code>optimization</code>, <code>transition_state</code>, <code>irc</code>, <code>path_optimization</code>, <code>conformer_search</code>, ...),
+usually run by a program with subprograms. A <code>hessian</code>
+result also holds the energy at the same geometry, the gradient where the program gives it
+from the same run (a program that only gives it on request documents how to ask), and,
+when the program can make them, the harmonic analysis (<code>vibrational_analysis</code>) and
+thermochemistry (<code>thermochemistry</code>), tuned or switched off with <code>freq.*</code>.</p>
+<p><code>results.hessian</code> is the full Cartesian second derivative of the energy at the input
+geometry, never projected. Hessians are used away from stationary points (the start of a
+transition-state search, an IRC's updates), where the gradient gives rotations a part in
+the Hessian that projecting them out would lose. Only translational invariance holds
+exactly, and that is physics, not projection. Projection belongs to the harmonic analysis,
+which records what it projected (<code>VibrationalAnalysis.projection</code>). A program whose
+underlying code projects the Hessian undoes the projection (from the gradient and the
+rigid-body modes, or by reading an unprojected matrix the code also writes), or refuses
+with kind <code>unsupported</code> where it cannot: at a geometry whose gradient is not zero, the
+projection changed the matrix.</p>
+<h2 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">&para;</a></h2>
+<h3 id="standard-fields-first">Standard fields first<a class="headerlink" href="#standard-fields-first" title="Permanent link">&para;</a></h3>
+<p>A quantity two programs report goes into a typed field, never into <code>extras</code>. <code>extras</code> is
+for what has no standard home yet.</p>
+<h3 id="energy_components"><code>energy_components</code><a class="headerlink" href="#energy_components" title="Permanent link">&para;</a></h3>
+<p>A partition of <code>energy</code>: the values add up to it. Standard keys:</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>term</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nuclear_repulsion</code></td>
+<td>nuclear repulsion</td>
+</tr>
+<tr>
+<td><code>one_electron</code></td>
+<td>kinetic and nuclear attraction (plus ECPs)</td>
+</tr>
+<tr>
+<td><code>coulomb</code></td>
+<td>electron-electron Coulomb</td>
+</tr>
+<tr>
+<td><code>exchange</code></td>
+<td>exact exchange</td>
+</tr>
+<tr>
+<td><code>xc</code></td>
+<td>exchange-correlation functional (semilocal)</td>
+</tr>
+<tr>
+<td><code>vv10</code></td>
+<td>VV10 nonlocal correlation</td>
+</tr>
+<tr>
+<td><code>dispersion</code></td>
+<td>empirical dispersion (D3, D4)</td>
+</tr>
+<tr>
+<td><code>solvation_electrostatic</code></td>
+<td>continuum solvation, electrostatic</td>
+</tr>
+<tr>
+<td><code>solvation_cds</code></td>
+<td>SMD cavity-dispersion-solvent structure</td>
+</tr>
+<tr>
+<td><code>electronic</code></td>
+<td>tight-binding electronic energy</td>
+</tr>
+<tr>
+<td><code>repulsion</code></td>
+<td>tight-binding or force-field repulsion</td>
+</tr>
+<tr>
+<td><code>electrostatic</code>, <code>hydrogen_bond</code>, <code>halogen_bond</code></td>
+<td>further tight-binding and force-field terms</td>
+</tr>
+</tbody>
+</table>
+<p>What a component contains is the program's: GFN2-xTB's <code>electronic</code> is not g-xTB's. A
+program with a hierarchy of overlapping terms reports the partition here and the hierarchy
+in <code>record</code>.</p>
+<h3 id="shared-record-keys">Shared record keys<a class="headerlink" href="#shared-record-keys" title="Permanent link">&para;</a></h3>
+<p><code>record</code> is shaped by each program's record schema. A few keys mean the same in every
+program that reports them:</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>type</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>warm_start</code></td>
+<td>bool or null</td>
+<td>on a session frame: the calculation started from its lineage's history (previous orbitals, charges, probe state), not from the input alone, so it can reach a different solution than a fresh calculation; null when the method keeps no lineage state (GFN-FF). Programs add their own detail beside it (a DFT program: where the SCF guess came from, and the lineage it was seeded from)</td>
+</tr>
+<tr>
+<td><code>accuracy</code></td>
+<td>object</td>
+<td>on a calculation with an <a href="#accuracy-targets">accuracy target</a> (the keyword's or a request's): <code>target</code> (the targets as resolved: <code>energy</code>, <code>gradient</code>, <code>hessian</code>), <code>thresholds</code> (the program's own convergence thresholds used, under its own names; empty for a program with none) and, where the program has one, <code>estimate</code> (an error estimate per field; <code>0.0</code> for each target of a program with no convergence settings)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="kinds">Kinds<a class="headerlink" href="#kinds" title="Permanent link">&para;</a></h3>
+<p>Fields whose meaning depends on a scheme name it beside them:</p>
+<table>
+<thead>
+<tr>
+<th>field</th>
+<th>kind field</th>
+<th>values</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>atomic_charges</code></td>
+<td><code>atomic_charges_kind</code></td>
+<td><code>mulliken</code>, <code>lowdin</code>, <code>eeq</code>, <code>eeqbc</code>, <code>cm5</code>, <code>hirshfeld</code></td>
+</tr>
+<tr>
+<td><code>atomic_spin_populations</code></td>
+<td><code>atomic_spin_populations_kind</code></td>
+<td>those of <code>atomic_charges_kind</code></td>
+</tr>
+<tr>
+<td><code>bond_orders</code></td>
+<td><code>bond_orders_kind</code></td>
+<td><code>mayer</code> (Σ(PS)μν(PS)νμ; what xtb prints as "Wiberg"), <code>wiberg</code> (orthogonalized basis)</td>
+</tr>
+</tbody>
+</table>
+<p>Fields with one definition have no kind:</p>
+<ul>
+<li><code>dipole_moment</code> and <code>quadrupole_moment</code> are the moments of the method's charge
+  distribution, electrons and nuclei, whatever the method: an SCF density, a force
+  field's or tight-binding model's charges (GFN-FF's EEQ charges), an ML potential's
+  prediction. The quadrupole is Buckingham's traceless tensor, ½Σq(3rᵢrⱼ − r²δᵢⱼ) about
+  the coordinate origin. tblite's molecular quadrupole, which the g-xTB 2.0.1 program
+  prints, counts the off-diagonal charge and dipole parts twice and is not a tensor.</li>
+<li><code>atomic_dipoles</code> and <code>atomic_quadrupoles</code> are electronic only, about each atom's
+  nucleus: μ_A = −Σ_{μ∈A}(P D)_μμ, with the integrals about the atom of the column AO;
+  quadrupoles in Buckingham's traceless form, 3/2 M − 1/2 tr(M) I, 3 × 3 per atom.</li>
+<li><code>shell_populations</code> are electron populations Σ_{μ∈shell}(PS)_μμ, indexed like
+  <code>basis.shells</code>, with <code>shell_atoms</code> and <code>shell_angular_momenta</code> beside them; not charges.</li>
+</ul>
+<h3 id="imaginary-modes">Imaginary modes<a class="headerlink" href="#imaginary-modes" title="Permanent link">&para;</a></h3>
+<p>Frequencies are negative for imaginary modes and stored without a cutoff;
+<code>VibrationalAnalysis.n_imaginary(cutoff)</code> applies one (xtb and axtb use 20 cm⁻¹).</p>
+<h3 id="orbitals-and-ao-matrices">Orbitals and AO matrices<a class="headerlink" href="#orbitals-and-ao-matrices" title="Permanent link">&para;</a></h3>
+<p><code>Orbitals</code> is the one home of orbital levels. Energies and occupations come with every
+wavefunction; coefficients only on request. Occupations are per spin,
+each between 0 and 1, with both <code>occupations_a</code> and <code>occupations_b</code> always given;
+<code>electronic_temperature</code> is 0 for aufbau occupations, and smeared ones carry a Fermi level
+per spin, except for a spin that holds no electrons (a smeared H atom's beta), which has
+none. <code>Orbitals.core_electrons</code> counts, per atom, the electrons the orbitals do not
+represent (ECP cores, or the core a valence-only method leaves out; None for an
+all-electron calculation), so the occupations sum to Σ(Z − core_electrons) − charge. An
+ECP carries the core it replaces (<code>Ecp.core_electrons</code>), and the two agree on every ECP
+atom.</p>
+<p>The coefficients and the AO matrices are indexed by the AOs of one basis set,
+<code>Wavefunction.basis</code>, present whenever any of them is and only then: an overlap alone
+ships the basis set and no coefficients. They are stored as the program produced them,
+with the basis set's <code>AOConvention</code>; <code>Wavefunction.with_convention</code> converts them all
+together. The default is PySCF's (libcint's) order: spherical functions
+m = −l..l except p as (x, y, z); Cartesian components lexicographic (xx, xy, xz, yy, yz,
+zz); every spherical function and the x^l component unit-normalized. A change of Cartesian
+normalization scales coefficients by s per AO, densities by s_μ s_ν and operators
+(<code>overlap</code>, <code>hamiltonian_a/_b</code>, <code>core_hamiltonian</code>) by 1/(s_μ s_ν); <code>BasisSet.transform</code>
+takes the array's <code>kind</code> and never guesses it.</p>
+<h3 id="wavefunction-outputs">Wavefunction outputs<a class="headerlink" href="#wavefunction-outputs" title="Permanent link">&para;</a></h3>
+<p>The optional parts of <code>SinglePointData.wavefunction</code> are requested by name, in a session
+request's <code>outputs</code> or as the keyword <code>output.&lt;name&gt;</code>:</p>
+<table>
+<thead>
+<tr>
+<th>output</th>
+<th>adds</th>
+<th>implies</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>orbitals</code></td>
+<td><code>Orbitals.coefficients_a/_b</code></td>
+<td>the basis set</td>
+</tr>
+<tr>
+<td><code>overlap</code></td>
+<td><code>Wavefunction.overlap</code></td>
+<td>the basis set</td>
+</tr>
+<tr>
+<td><code>hamiltonian</code></td>
+<td><code>Wavefunction.hamiltonian_a/_b</code></td>
+<td><code>overlap</code>, <code>orbitals</code></td>
+</tr>
+<tr>
+<td><code>core_hamiltonian</code></td>
+<td><code>Wavefunction.core_hamiltonian</code></td>
+<td>the basis set</td>
+</tr>
+</tbody>
+</table>
+<p>The basis set (<code>Wavefunction.basis</code>) is not an output of its own: it comes with any of
+the four, since it describes the AO space they share. A program fills in what an output
+implies instead of refusing it, since requesting an output changes no other number. It refuses an output it cannot give with kind
+<code>unsupported</code>, code <code>not_applicable</code>, and a message naming the reason: a mode whose last
+diagonalization is not of one build refuses <code>hamiltonian</code>; a force field has none of the
+four. There is no <code>density</code> output: the SCF density is <code>Orbitals.density()</code>.</p>
+<h3 id="given-results">Given results<a class="headerlink" href="#given-results" title="Permanent link">&para;</a></h3>
+<p><code>ProgramInput.given</code> holds results already known at the input's structure (a
+<code>SinglePointData</code>). It is a record of what is known, not a setting, so the strict rule for
+settings (rule 5) applies to it differently:</p>
+<ul>
+<li>A program uses the fields it can and records each one it used in <code>resolved</code>
+  (<code>hessian.initial: "given"</code>, <code>scf.guess: "given"</code>). Fields it does not use, descriptive
+  ones included (<code>calcinfo_*</code>, <code>scf_iterations</code>, <code>energy_components</code>), are left alone, so
+  <code>given=frame.results</code> works as it stands.</li>
+<li>Given values are starting points, never results: a program does not report a given
+  value as its own (qcopt computes the energy and gradient at a given TS and takes only
+  the Hessian). <code>provenance</code> names the producing program and version only, so reusing a
+  value as a result could silently mix methods (GFN2 and g-xTB are both "axtb").</li>
+<li>It refuses the input (kind <code>input</code>, code <code>not_applicable</code>) when it can use none of the
+  fields, or when a field it would use does not fit: other atoms (qcdata checks shapes),
+  another basis for a wavefunction. A starting guess needs no match of program or
+  method: a GFN2 Hessian is a sound initial Hessian for a DFT transition-state search.</li>
+<li>Checking the model is the caller's, which knows the producing input
+  (<code>qcopt.irc(ts_out)</code> passes the search's Hessian only when its spec matches).</li>
+</ul>
+<h3 id="warnings">Warnings<a class="headerlink" href="#warnings" title="Permanent link">&para;</a></h3>
+<p><code>ProgramWarning(code, message, path)</code>: <code>code</code> is stable snake_case; <code>path</code> is the dotted
+settings key concerned, if any. Settings problems are errors, not warnings (rule 5), so
+warnings report what happened during a run (a fallback taken, a probe fired, slow
+convergence). Shared codes:</p>
+<table>
+<thead>
+<tr>
+<th>code</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>deprecated_key</code></td>
+<td>after a program's 1.0, an old key still accepted for a stated period; the message names the new one. Before 1.0 a program rejects old keys (<code>unknown_key</code>) instead</td>
+</tr>
+<tr>
+<td><code>resource_capped</code></td>
+<td>a resource request in the keywords (<code>threads</code>, <code>memory_gib</code>, ...) above what the runner granted; the program used the grant (it uses the smaller of request and grant, or the grant alone when nothing was requested)</td>
+</tr>
+<tr>
+<td><code>backend_fallback</code></td>
+<td>the calculation ran on another backend than first chosen (a GPU out of memory, so the CPU), which <code>backend: auto</code> allows; an explicit backend fails instead</td>
+</tr>
+<tr>
+<td><code>loosely_converged</code></td>
+<td>an iterative procedure (an SCF, response equations) missed its thresholds and was accepted under a relaxed rule (a stalled SCF accepted on an energy plateau, ORCA's continuation after "near convergence"). The message gives the residual reached and the rule that accepted it; <code>path</code> names the threshold missed (<code>scf.g_tol</code>), if it is a setting. Without this warning a success met its thresholds</td>
+</tr>
+</tbody>
+</table>
+<p>Programs define further codes in their own documentation.</p>
+<p>Shared error codes (kind <code>input</code>):</p>
+<table>
+<thead>
+<tr>
+<th>code</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>unknown_key</code></td>
+<td>not a setting of this program</td>
+</tr>
+<tr>
+<td><code>not_applicable</code></td>
+<td>a setting of another calculation type, or a session request outside the calctypes it was opened for. With kind <code>unsupported</code>, an optional output the program cannot give</td>
+</tr>
+<tr>
+<td><code>no_effect</code></td>
+<td>made irrelevant by the other values given</td>
+</tr>
+<tr>
+<td><code>not_modeled</code></td>
+<td>the structure's charge or multiplicity is one the method does not represent (GFN-FF given a radical, a neutral-only ML potential given an ion). The message names the property. A method never runs on, or silently ignores, a charge or multiplicity it cannot model</td>
+</tr>
+<tr>
+<td><code>unnamed_subprogram</code></td>
+<td>a calculation ran, through its context (<code>ctx.compute</code>, <code>ctx.session</code>), a program its input does not name among its subprograms (recursively); the message names it. Refused so that a run's identities cover every program it used</td>
+</tr>
+</tbody>
+</table>
+<p>Shared error codes of other kinds, which runners, schedulers and retrying workflows act
+on:</p>
+<table>
+<thead>
+<tr>
+<th>kind</th>
+<th>code</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>resource</code></td>
+<td><code>host_memory</code></td>
+<td>out of host memory (a failed allocation, or the plan's need above the grant); <code>details</code> as below</td>
+</tr>
+<tr>
+<td><code>resource</code></td>
+<td><code>device_memory</code></td>
+<td>out of GPU memory; <code>details</code> as below</td>
+</tr>
+<tr>
+<td><code>backend</code></td>
+<td><code>device_lost</code></td>
+<td>a GPU fault poisoned the device context (illegal address, launch failure, device assert, ECC error, launch timeout); nothing more can run in this process. A worker answers the request in flight with it and then exits; in process, the caller should not use the program again</td>
+</tr>
+<tr>
+<td><code>convergence</code></td>
+<td><code>scf_not_converged</code></td>
+<td>the SCF ended without meeting its thresholds (out of iterations, or stalled with no rule to accept it). The results hold the last iterate: its energy and, where the program gives them, its orbitals; the record holds what the program keeps of its history</td>
+</tr>
+<tr>
+<td><code>convergence</code></td>
+<td><code>response_not_converged</code></td>
+<td>the response equations (CPHF/CPKS, for a Hessian or a property) ended above their tolerance; the results reached are attached</td>
+</tr>
+<tr>
+<td><code>environment</code></td>
+<td><code>worker_died</code></td>
+<td>a worker process ended mid-request (a crash, a signal, an out-of-memory kill); set by the client, with the exit status and the tail of the worker's stderr in the message. A worker that exits on purpose answers the request in flight first (<code>device_lost</code>), so only later requests see <code>worker_died</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>ErrorInfo.details</code> holds structured facts about a failure as plain JSON, so a caller never
+parses the message. For <code>host_memory</code> and <code>device_memory</code> the keys are, each given when
+the program knows it, in the terms of the memory keyword (<code>memory_gib</code> for host memory,
+<code>device_memory_gib</code> for a device's):</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>required_gib</code></td>
+<td>the keyword's value (GiB) with which the calculation would fit: at least, when the program knows only that the failed allocation did not fit</td>
+</tr>
+<tr>
+<td><code>available_gib</code></td>
+<td>the keyword's value (GiB) the calculation ran with: the keyword as given, else the grant, else what the device had free</td>
+</tr>
+</tbody>
+</table>
+<p>These are what a caller sets, not raw needs. A program that budgets only part of its
+memory (a DFT program that keeps a share for its workspaces) converts its need: a
+3-index tensor of 1.25 GiB under a budget of 75% of <code>memory_gib</code> gives <code>required_gib</code>
+1.67. The raw need, where useful, goes under a program key beside them.</p>
+<div class="language-json highlight"><pre><span></span><code><span class="p">{</span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;resource&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;host_memory&quot;</span><span class="p">,</span>
+<span class="w"> </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RI-K needs at least 1.25 GiB for its 3-index exchange tensor, which takes memory_gib &gt;= 1.67; it ran with 1.5&quot;</span><span class="p">,</span>
+<span class="w"> </span><span class="nt">&quot;details&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;required_gib&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.67</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;available_gib&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.5</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;tensor_gib&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.25</span><span class="p">}}</span>
+</code></pre></div>
+<p>A dispatcher that resubmits with <code>memory_gib</code> (or <code>device_memory_gib</code>) set to
+<code>required_gib</code> gets past this failure; qc* itself still schedules nothing by memory.
+Programs may add their own keys beside these, and other codes may define theirs.</p>
+<h3 id="errors">Errors<a class="headerlink" href="#errors" title="Permanent link">&para;</a></h3>
+<p><code>ErrorInfo(kind, message, code, program, cause, details)</code>, on failed outputs only. Kinds:</p>
+<table>
+<thead>
+<tr>
+<th>kind</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>input</code></td>
+<td>settings or a structure the program cannot run as given</td>
+</tr>
+<tr>
+<td><code>unsupported</code></td>
+<td>a valid request the program does not implement, or a setting it cannot honour</td>
+</tr>
+<tr>
+<td><code>convergence</code></td>
+<td>an iterative procedure did not converge (results so far attached)</td>
+</tr>
+<tr>
+<td><code>numerical</code></td>
+<td>non-finite values, singular matrices</td>
+</tr>
+<tr>
+<td><code>resource</code></td>
+<td>not enough memory or another resource as set up</td>
+</tr>
+<tr>
+<td><code>backend</code></td>
+<td>the hardware backend failed</td>
+</tr>
+<tr>
+<td><code>program</code></td>
+<td>a subprogram failed; <code>cause</code> holds its error</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td>out of time (set by the runner)</td>
+</tr>
+<tr>
+<td><code>stopped</code></td>
+<td>the program stopped on request at one of its steps, its partial output attached (see <a href="#stopping">Stopping</a>)</td>
+</tr>
+<tr>
+<td><code>environment</code></td>
+<td>the program could not run: not installed, no licence, process died (set by the runner)</td>
+</tr>
+<tr>
+<td><code>internal</code></td>
+<td>a failure nobody anticipated: a bug (an exception other than <code>ProgramError</code>, a broken invariant, a crash) or, on the codec path, a failure no rule classifies (a reported failure, an unexplained exit, unreadable output). A failure a program or codec anticipates takes the kind that fits it</td>
+</tr>
+</tbody>
+</table>
+<p><code>code</code> refines a kind with a name callers can branch on: a shared code above, else the
+program's own. An optimizer's convergence failures keep their own codes (qcopt:
+<code>max_iter</code>, <code>energy_rose</code>, <code>not_first_order_saddle</code>, <code>irc_incomplete</code>); an SCF's and a
+response's are the shared <code>scf_not_converged</code> and <code>response_not_converged</code>, whichever
+program runs them.</p>
+<p>A failed calculation raises <code>ProgramError</code>, from every program's <code>compute</code> and every
+session call alike, carrying its <code>ErrorInfo</code> and the partial results; any other exception
+is a bug. A program whose result is one output attaches it whole,
+<code>ProgramError(out.error, output=out)</code>, so a trajectory's frames, record and resolved
+settings reach the caller as <code>exc.output</code>; a failed session step attaches its <code>frame</code>. A
+runner turns the exception into a failed <code>ProgramOutput</code> only where it needs data (a
+store, the outputs of a list, a worker's reply).</p>
+<p>A program reports any failure of a subprogram as kind <code>program</code>, whether the
+subprogram's plan refused its settings or its run failed. <code>program</code> names the
+subprogram, <code>cause</code> holds the subprogram's own <code>ErrorInfo</code>, and the message starts with
+the subprogram and calctype (<code>xtb (gradient): ...</code>). Callers follow <code>cause</code> to the first
+error that is not of kind <code>program</code> to learn what went wrong. A subprogram that fails for
+one task of a round (a session that will not open, a failed request) fails that task
+only. A Python callable standing in for a subprogram (qcopt's in-process evaluator) is
+reported the same way, with <code>program</code> None. Its <code>ProgramError</code> gives the cause; any other
+exception becomes a cause of kind <code>internal</code>, as qccompute treats a program's bug.</p>
+<h3 id="timings-and-provenance">Timings and provenance<a class="headerlink" href="#timings-and-provenance" title="Permanent link">&para;</a></h3>
+<p><code>execution.timings</code> holds seconds per phase (<code>total</code> for the whole call; a program with
+subprograms adds <code>subprograms</code>, the time inside them). <code>results.provenance</code> names the
+<code>program</code>, <code>program_version</code> and <code>program_commit</code>. <code>execution.identities</code> says which code
+made the results: <code>{program: numerics}</code> for the input's program and each subprogram it
+names, as the runner saw them when it ran (a program named with several specs joins its
+sorted, distinct identities with <code>;</code>). The runner sets it on every output it returns and
+the store keeps it with the run, so an output read back from a store names its code
+without a second lookup; a carried result keeps the identities that made it. An output a
+store holds names its run in <code>execution.store_run</code>, <code>"&lt;key&gt;/&lt;run&gt;"</code>: the store sets it on
+every output it returns, and a runner sets it on an output it has just stored; it is never
+stored itself, and it is None on an output no store holds. An output of a batch also has
+<code>timings["batch"]</code>, the whole batch's wall time (s), set by the runner; its <code>wall_time</code> is
+its own where the program can tell (a lockstep batch knows when each task finished), else
+the batch's.</p>
+<h3 id="progress-events">Progress events<a class="headerlink" href="#progress-events" title="Permanent link">&para;</a></h3>
+<p>A program reports what it is doing through its runner context, <code>ctx.progress(event)</code>, when
+the caller listens (it is None otherwise). An event is a small JSON object of the
+program's own (plain JSON values, in the units above, small enough to send every step),
+with one shared key: <code>event</code>, a snake_case name of what happened (<code>step</code>). Programs
+document their events. The runner adds <code>path</code>, the program names from the caller's input
+down to the program that emitted it; programs do not set it. Events are not results:
+nothing in them is stored, and no output depends on whether anyone listened.</p>
+<h3 id="stopping">Stopping<a class="headerlink" href="#stopping" title="Permanent link">&para;</a></h3>
+<p>A caller may ask a running calculation to stop at its next step (qccompute's
+<code>runner.stop(future)</code>), to keep what it has reached: a search's frames so far, to analyze
+now. The program sees the request as <code>ctx.stop_requested()</code>, checks it where it can end
+cleanly (an optimizer: before each step), and ends there: its output is a failure of kind
+<code>stopped</code> with the partial results, raised as for any failure
+(<code>ProgramError(out.error, output=out)</code>). The request covers the whole calculation: a
+program whose subprogram stopped stops too, with kind <code>stopped</code> rather than <code>program</code>. A
+program with no steps to stop at need not check, and runs to its end.</p>
+<p>A stopped output is where the caller chose to end the run, not what the input gives: a
+runner never stores one, and a store never reuses one.</p>
+<h2 id="saved-files">Saved files<a class="headerlink" href="#saved-files" title="Permanent link">&para;</a></h2>
+<p><code>save</code> writes a model as JSON, YAML or TOML. Indented JSON (the default, <code>indent=4</code>)
+keeps each innermost array, a list holding no lists or objects, on one line, so a
+structure's coordinates read as one row per atom:</p>
+<div class="language-json highlight"><pre><span></span><code><span class="nt">&quot;geometry&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">[</span><span class="mf">-8.601339697312277</span><span class="p">,</span><span class="w"> </span><span class="mf">-0.6368849812267334</span><span class="p">,</span><span class="w"> </span><span class="mf">0.7906010193844016</span><span class="p">],</span>
+<span class="w">    </span><span class="p">[</span><span class="mf">-6.3155913218934</span><span class="p">,</span><span class="w"> </span><span class="mf">0.4215960361624519</span><span class="p">,</span><span class="w"> </span><span class="mf">1.2240196532066823</span><span class="p">]</span>
+<span class="p">]</span>
+</code></pre></div>
+<p>An array field whose float64 size exceeds
+1 MiB (more than 131,072 numbers) goes to its own <code>.npy</code> file beside the saved file, named
+by the file's stem and the array's path in the document, and the document holds a pointer
+in its place:</p>
+<div class="language-json highlight"><pre><span></span><code><span class="nt">&quot;hessian&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;output.results.hessian.npy&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;shape&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">480</span><span class="p">,</span><span class="w"> </span><span class="mi">480</span><span class="p">],</span>
+<span class="w">            </span><span class="nt">&quot;dtype&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;float64&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;sha256&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">}</span>
+</code></pre></div>
+<p><code>sha256</code> is the digest of the <code>.npy</code> file's bytes. Path parts other than letters, digits,
+<code>_</code> and <code>-</code> are written as <code>%XX</code> (a structure role <code>qm.mm</code> gives
+<code>structures.qm%2Emm.geometry</code>). <code>open</code> reads every array back and checks its digest,
+shape and dtype, so models always hold arrays and no field is a file reference. <code>save</code>
+returns every file it wrote, the model's file first. Smaller arrays and free-form values
+(<code>extras</code>, <code>record</code>) stay in the document, where JSON and YAML keep every float exactly;
+TOML loses the sign of <code>-0.0</code>.</p>
+<p>A text in <code>files</code> whose UTF-8 size exceeds 1 MiB (a Molden or cube file, a long log) goes
+beside the saved file the same way: its UTF-8 bytes, named by the stem and its path in
+the document with no suffix added, and a pointer of its path and the file's sha256 in its
+place:</p>
+<div class="language-json highlight"><pre><span></span><code><span class="nt">&quot;files&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;orbitals.molden&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;output.results.files.orbitals%2Emolden&quot;</span><span class="p">,</span>
+<span class="w">                              </span><span class="nt">&quot;sha256&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">}}</span>
+</code></pre></div>
+<p><code>open</code> reads it back and checks the digest. Binary files stay in the document, base64
+encoded.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.tabs.link", "content.code.annotate", "content.code.copy", "announce.dismiss", "navigation.tabs", "navigation.instant", "navigation.instant.prefetch", "navigation.instant.preview", "navigation.instant.progress", "navigation.path", "navigation.sections", "navigation.top", "navigation.tracking", "search.suggest", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
