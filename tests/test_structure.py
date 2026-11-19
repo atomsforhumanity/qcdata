@@ -290,3 +290,63 @@ def test_connectivity_reordering():
         connectivity=[(2, 0, 1.0), (1, 0, 1.0)],
     )
     assert struct.connectivity == [(0, 1, 1.0), (0, 2, 1.0)]
+
+
+def test_with_geometry_is_a_validated_copy_at_new_positions():
+    from pydantic import ValidationError
+
+    s = Structure(
+        symbols=["O", "H", "H"],
+        geometry=[[0.0, 0.0, -0.13], [0.0, 1.49, 1.03], [0.0, -1.49, 1.03]],
+        charge=1,
+        multiplicity=2,
+        connectivity=[(0, 1, 1.0), (0, 2, 1.0)],
+        identifiers={"name": "water"},
+        extras={"note": "start"},
+    )
+    positions = s.geometry + 0.1
+    moved = s.with_geometry(positions)
+    assert np.array_equal(moved.geometry, positions)
+    assert moved.geometry is not positions
+    for name in ("symbols", "charge", "multiplicity", "connectivity", "identifiers"):
+        assert getattr(moved, name) == getattr(s, name)
+    assert moved.extras == {"note": "start"}
+    assert np.array_equal(s.geometry[0], [0.0, 0.0, -0.13])  # the original is unchanged
+    assert np.array_equal(s.with_geometry(positions.ravel()).geometry, positions)
+    with pytest.raises(ValidationError):
+        s.with_geometry(np.zeros((2, 3)))
+
+
+def test_an_input_at_a_new_geometry():
+    from qcdata import ProgramInput, Provenance, SinglePointData, calculation_key
+
+    water = Structure(
+        symbols=["O", "H", "H"],
+        geometry=[[0.0, 0.0, -0.13], [0.0, 1.49, 1.03], [0.0, -1.49, 1.03]],
+    )
+    inp = ProgramInput(
+        program="qcopt",
+        calctype="transition_state",
+        structure=water,
+        keywords={"convergence": {"max_iter": 50}},
+        subprograms=[{"program": "axtb", "calctype": "gradient"}],
+        structures={"environment": water.with_geometry(water.geometry + 5.0)},
+        given=SinglePointData(provenance=Provenance(program="axtb"), hessian=np.eye(9)),
+    )
+    positions = water.geometry * 1.01
+    moved = ProgramInput.from_spec(
+        inp, inp.structure.with_geometry(positions), structures=inp.structures
+    )
+    assert np.array_equal(moved.structure.geometry, positions)
+    assert moved.keywords == inp.keywords and moved.subprograms == inp.subprograms
+    assert moved.structures == inp.structures
+    assert moved.given is None  # results at the old geometry are not carried over
+    fresh = ProgramInput(
+        program="qcopt",
+        calctype="transition_state",
+        structure=Structure(symbols=water.symbols, geometry=positions),
+        keywords={"convergence": {"max_iter": 50}},
+        subprograms=[{"program": "axtb", "calctype": "gradient"}],
+        structures=inp.structures,
+    )
+    assert calculation_key(moved) == calculation_key(fresh)

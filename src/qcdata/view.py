@@ -356,7 +356,7 @@ def generate_subprograms_string(subprograms: list[ProgramSpec]) -> str:
         }
         items.append(
             f"<li><strong>{html.escape(spec.program)} "
-            f"({spec.calctype.value})</strong>"
+            f"({spec.calctype})</strong>"
             + generate_dictionary_string(
                 {key: html.escape(value) for key, value in details.items()}
             )
@@ -460,7 +460,7 @@ def generate_output_table(*results: ProgramOutput) -> str:
             if res.execution.wall_time is not None
             else "No timing data"
         }</td>
-            <td>{structured.calctype.name if structured else ""}</td>
+            <td>{structured.calctype if structured else ""}</td>
             <td>{html.escape(res.input_data.program)}</td>
             <td>{
             f"{res.results.provenance.program} {res.results.provenance.program_version or ''}"
@@ -703,9 +703,7 @@ def program_outputs(
                     **(conformer_rmsd_kwargs or {}),
                 )
                 conformers = [result.results.structures[i] for i in keep_indices]
-                energies_rel = result.results.conformer_energies_relative
-                if energies_rel.size:
-                    energies_rel = energies_rel[keep_indices]
+                energies_rel = result.results.conformer_energies_relative[keep_indices]
             else:
                 conformers = result.results.structures
                 energies_rel = result.results.conformer_energies_relative
@@ -715,7 +713,9 @@ def program_outputs(
                 f"Conformer {i}" for i in range(len(conformers))
             ]
             subtitles = ["Rel Energy: Unknown"] + [
-                f"Rel Energy: +{re * constants.HARTREE_TO_KCAL_PER_MOL:.3f} kcal/mol"
+                "Rel Energy: Unknown"
+                if np.isnan(re)
+                else f"Rel Energy: +{re * constants.HARTREE_TO_KCAL_PER_MOL:.3f} kcal/mol"
                 for re in energies_rel
             ]
             conf_viewer = generate_structure_viewer_html(

@@ -6,9 +6,158 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.24.0] - 2026-11-19
+
+The final release of the 0.24.0 alphas: their entries below make up its changes. Since 0.24.0a8:
+
 ### Changed
 
-- Moved documentation from `qcdata.docs.atomsforhumanity.org` to `qcdata.docs.afh.org`.
+- The conventions say a `hessian` result holds the gradient where the program gives it from the same run; a program that gives it only on request documents how to ask.
+- The install lines name the final releases.
+
+## [0.24.0a8] - 2026-11-17
+
+### Fixed
+
+- An input made with `model_copy(update={"calctype": "..."})` holds a plain string, since pydantic doesn't validate updates; qcdata no longer reads `.calctype.value`, so such an input serializes and builds outputs.
+
+### Changed
+
+- The install lines give minimum versions of the alpha set instead of exact pins.
+
+
+## [0.24.0a7] - 2026-11-17
+
+### Added
+
+- `ErrorKind.stopped`: a program stopped on request at a step, with its partial results. A runner never stores a stopped output, and a store never reuses one. The conventions get a "Stopping" section.
+- Shared `convergence` codes `scf_not_converged` (results hold the last iterate) and `response_not_converged`, and the shared warning `loosely_converged` for a result accepted under a relaxed rule.
+
+### Changed
+
+- **Breaking:** `ErrorInfo.details` `required_gib` and `available_gib` are in the memory keyword's terms: the `memory_gib` (`device_memory_gib`) with which the calculation would fit, and the one it ran with. A raw need goes under a program key.
+- The conventions state that `results.hessian` is the full Cartesian second derivative at the input geometry, never projected; a program whose code projects undoes it or refuses.
+- `Orbitals` accepts a None Fermi level for a spin whose occupations sum to zero under smearing.
+- Faster import: the version is written at build time (`_version.py` is generated, not tracked); yaml, toml and difflib load on use; the concrete `ProgramOutput[...]` classes are made on first lookup.
+- Docs: how to make a variant of an input (`model_validate`), and why `model_copy(update=)` doesn't validate.
+
+
+## [0.24.0a6] - 2026-11-17
+
+### Changed
+
+- Conventions (no code changes): the shared input code `unnamed_subprogram`; `execution.store_run` names a stored run on every output a store holds, also one a runner has just stored; `timings["batch"]`, a batch's wall time; progress events (`ctx.progress`, the shared key `event`, the runner's `path`). The `ExecutionInfo` docstrings say the same.
+
+
+## [0.24.0a5] - 2026-11-17
+
+### Changed
+
+- **Breaking:** the basis set moved from `Orbitals.basis` to `Wavefunction.basis`. It is present whenever coefficients or an AO matrix are, and only then. `Orbitals.with_convention` is removed: `Wavefunction.with_convention` converts coefficients and matrices together, and also an overlap without coefficients. `overlap` and `core_hamiltonian` imply only the basis set; a `hamiltonian` needs the coefficients.
+- **Breaking:** `Ecp.core_electrons` (required) is the number of electrons an ECP replaces. It must agree with `Orbitals.core_electrons` on every ECP atom.
+- **Breaking:** `calculation_key` leaves out the resource keyword `device_memory_gib`, like `threads` and `memory_gib`, so inputs that set it get new keys.
+- **Breaking (conventions):** a program with no convergence settings accepts an `accuracy` target, as keyword or session request, and records it as met: `{"target": ..., "thresholds": {}, "estimate": {<each target>: 0.0}}`. It no longer refuses the keyword as `no_effect`.
+- Indented JSON saves put each innermost array on one line: a 718-frame IRC of 26 atoms saves as 4.2 MB instead of 8.8 MB, with the same save and open times.
+
+### Added
+
+- `ErrorInfo.details` (JSON) and `ProgramError.of(..., details=)`. The conventions define `required_gib` and `available_gib` for `host_memory` and `device_memory`.
+- `save()` writes texts in `files` over 1 MiB beside the saved file, and `open` reads them back (`array_files.read_text`, `ArraySink(text_files=True)`).
+
+### Fixed
+
+- The `core_hamiltonian` docs: tr(P h) equals the energy's `one_electron` at the SCF's last input density, and with `Orbitals.density()` only to the SCF residual.
+
+
+## [0.24.0a4] - 2026-11-17
+
+### Added
+
+- `ExecutionInfo.identities`: `{program: numerics}` for the input's program and every subprogram, set by the runner and stored with the run, so every output says which code made it.
+- The shared keyword `accuracy`: an object of `Accuracy` targets (energy, gradient, hessian), the default target of `compute` and of session requests that give none. `Accuracy.from_keywords(keywords)` reads it the same way in every program.
+- `qcdata.array_files`, public (was `qcdata._array_files`), with `POINTER_KEYS` and an API page.
+
+### Changed
+
+- **Breaking:** `SinglePointData.scf_dipole_moment` and `scf_quadrupole_moment` are `dipole_moment` and `quadrupole_moment`: the moments of the method's charge distribution, whatever the method. No aliases.
+- **Breaking:** `qcdata._array_files` is `qcdata.array_files`.
+- Keywords hold plain JSON: a pydantic model given in `ProgramSpec` or `ProgramInput` keywords is stored as its JSON form, so an input saves, reloads and keys the same.
+- `Request.accuracy` replaces the input's `accuracy` keyword for that request.
+- `internal` means a failure nobody anticipated; an anticipated failure takes the kind that fits it.
+
+
+## [0.24.0a3] - 2026-11-17
+
+### Added
+
+- `ExecutionInfo.store_run`: `"<key>/<run>"` on an output read from a store (set by the store's `get`), None for a fresh calculation.
+- `Structure.with_geometry(positions)`: a validated copy at new positions. `ProgramInput.from_spec(inp, inp.structure.with_geometry(x))` is the way to make an input at a new geometry.
+- Conventions: the wavefunction outputs by name (`orbitals`, `overlap`, `hamiltonian`, `core_hamiltonian`), what each implies, and how a program refuses one it can't give (`unsupported`, `not_applicable`).
+
+### Changed
+
+- **Breaking:** only the top-level document carries `qcdata_version`, and empty `extras` are left out of dumps. Loading still accepts stamps at any depth. `ProgramOutput` and `Frame` publish their fields' serialization schema.
+- **Breaking:** qcdata requires pydantic 2.12 or later.
+- `__eq__` compares fields directly: about 160 times faster for large arrays, and arrays in free-form fields compare. Objects of different classes are unequal.
+- `OptimizationData.frames` holds one frame per structure evaluated, starting structure first; `final_structure` and `final_energy` are the last frame's.
+- `Request.outputs` no longer offers `density`.
+
+### Removed
+
+- **Breaking:** every compatibility loader. `ProgramOutput` and `Frame` no longer accept `data` for `results`; `OptimizationData` and `ScanData` no longer accept `trajectory`; a saved `ProgramOutput` is no longer accepted as a `Frame` (use `Frame.from_output`); `ConformerSearchData` no longer builds frames from bare structures and energy arrays; `SinglePointData` no longer accepts the pre-0.24 frequency fields, even when empty.
+
+
+## [0.24.0a2] - 2026-11-17
+
+### Added
+
+- `ProgramErrors`, the group raised when some of several calculations failed (a runner's list, a session's `compute_many`). It holds each failure's `ProgramError` and every result in request order (`results`), and pickles. Programs' sessions raise it with only qcdata imported (`return ProgramErrors.check(frames)`).
+- `ExecutionInfo.cpu_model`, `devices` and `libc`: the run's environment. Results agree across environments to a program's stated round-off, and bitwise only within one.
+
+### Changed
+
+- **Breaking:** `save()` is lossless by default (`exclude_unset=False`). A container filled after construction, such as a program's `record`, was silently dropped before. Pass `exclude_unset=True` for compact files.
+- **Breaking:** `calculation_key(inp)` takes the input only; program identities are recorded per stored run instead. Every key from 0.24.0a1 changes.
+
+## [0.24.0a1] - 2026-11-17
+
+The first alpha of the redesigned qc* stack. qcdata is data only: inputs, outputs, the
+shared parts of a calculation call, the calculation key, and the save format. Breaking
+changes come without compatibility shims.
+
+### Added
+
+- `qcdata.calculation_key(inp, context)`: the `k1` key that says when two inputs are the same calculation. It hashes a canonical form of the input as given (sorted keys, normalized numbers, defaults left out, coordinates rounded to 1e-10 bohr, files and array fields by their sha256, subprograms recursively), leaving out only `extras`, structure identifiers and the `threads` and `memory_gib` keywords, plus a context of strings (program versions or numerics epochs). Golden keys in the tests keep it stable.
+- `save()` writes array fields over 1 MiB as `.npy` files beside the saved file, with a pointer (path, shape, dtype, sha256), and returns every file it wrote; `open()` reads them back and checks them. Models always hold arrays.
+- The shared parts of a calculation call: `Request`, `Accuracy` (cross-program targets in Eh, Eh/bohr and Eh/bohr²), `ProgramError`, `Lineage` and `lineage_key`. `ProgramError` is what a program's `compute` and its session calls raise for a failed calculation; it carries the error, the partial results, the failed frame or a whole failed output (`output=`), and pickles.
+- `ProgramInput.given`: results already known at the input's structure, which a program may start from. It is part of the calculation key.
+- On every output and frame: `warnings` (`ProgramWarning`), `record`, and on failure `error` (`ErrorInfo`, `ErrorKind`). On `ProgramOutput`: `resolved` (`Resolved`, with `deferred`). `ProgramOutput.failure(input, error)`. `ExecutionInfo.timings` (with `subprograms`), `threads`, `peak_memory_gib` and `peak_device_memory_gib`; `Provenance.program_commit`.
+- On `SinglePointData`: `energy_components`, `scf_iterations`, `scf_s_squared`, `scf_quadrupole_moment` (Buckingham's traceless tensor), `polarizability`, `atomic_charges_kind`, `bond_orders` with `bond_orders_kind`, `vibrational_analysis`, `thermochemistry`, `shell_populations` with `shell_atoms` and `shell_angular_momenta`, `atomic_spin_populations` with its kind, `atomic_dipoles` and `atomic_quadrupoles`.
+- Wavefunctions (design: `docs/design/wavefunctions.md`):
+  - `Orbitals` is the one home of orbital levels: energies, `occupations_a` and `occupations_b` (each 0..1), `kind` (`OrbitalKind`), `electronic_temperature`, `fermi_level_a/_b` and `core_electrons`. Basis and coefficients are optional, together.
+  - `BasisSet` of `Shell`s with an explicit `AOConvention`, and ECPs (`Ecp`, `EcpTerm`).
+  - `Wavefunction` AO matrices `overlap`, `hamiltonian_a/_b` and `core_hamiltonian`; `Wavefunction.with_convention` converts the orbitals and every matrix with its variance.
+- `qcdata.INITIAL_CHAIN`, the `structures` role holding a path optimization's chain.
+- Free-form fields (`extras`, `record`, `keywords`, `Resolved.settings`) may hold numpy arrays and scalars.
+
+### Changed
+
+- **Breaking:** `Wavefunction.scf_eigenvalues_a/_b` and `scf_occupations_a/_b` are removed; the levels live in `Wavefunction.orbitals`, which is required.
+- **Breaking:** `SinglePointData.freqs_wavenumber`, `normal_modes_cartesian`, `gibbs_free_energy` and `quadrupole_kind` are removed. Frequencies and modes live in `vibrational_analysis`, free energies in `thermochemistry`.
+- **Breaking:** `BasisSet.transform` takes a required `kind` (`coefficients`, `operator` or `density`).
+- **Breaking:** outputs and frames check per-atom results and the electron count against their structure.
+- **Breaking:** `save()` returns the list of files written. qcdata requires pydantic 2.7 or later.
+- **Breaking:** `ConformerSearchData.energies` and its relatives have one value per frame, `nan` where no energy is known.
+- Model-valued defaults are default factories, which makes structures and frames about 2-3 µs faster to build.
+- Documentation moved to `qcdata.docs.afh.org`, and it deploys only on final version tags.
+
+### Removed
+
+- **Breaking:** `ProgramOutput.data`, `OptimizationData.trajectory`, `ScanData.trajectory` and `return_result()`. Read `.results`, `.frames`, `.points`, or the field you need.
+
+### Fixed
+
+- `ConformerSearchData.save("x.xyz")` and `PathOptimizationData.save("x.xyz")` write structures, not JSON. Every result holding frames shares one implementation of `structures`, `energies`, `to_xyz()` and `save`.
 
 ## [0.23.1] - 2026-10-23
 
@@ -775,7 +924,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - `SinglePointComputedProperties`
   - `Wavefunction`
 
-[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.23.1...HEAD
+[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.24.0...HEAD
+[0.24.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.24.0
 [0.23.1]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.23.1
 [0.23.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.23.0
 [0.22.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.22.0

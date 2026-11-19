@@ -89,3 +89,33 @@ input_data = ProgramInput.from_spec(
 This validates a new input while preserving all specification fields and recursive
 children. The original specification is unchanged. Additional structures are optional
 and are supplied explicitly when binding.
+
+## An input at a new geometry
+
+```python
+moved = ProgramInput.from_spec(inp, inp.structure.with_geometry(positions))
+```
+
+`Structure.with_geometry` validates the new positions (bohr) against the atoms and keeps
+the charge, multiplicity, connectivity and identifiers; `from_spec` keeps the program,
+model, keywords, subprograms and files. `given` is left out, because its results belong to
+the old geometry; pass `structures=inp.structures` to keep other roles. Avoid
+`model_copy(update=...)`, which skips validation.
+
+## A variant of an input
+
+To change anything else (another calctype at the same geometry, other keywords), dump
+the input, change the values and validate a new one:
+
+```python
+hessian_inp = ProgramInput.model_validate(inp.model_dump() | {"calctype": "hessian"})
+```
+
+`model_validate` checks and converts the new values as for any new input: `"hessian"`
+becomes `CalcType.hessian`, and a value that does not fit is refused. The variant equals
+an input built directly with those values and has the same calculation key.
+
+Pydantic's `model_copy(update=...)` does not validate, as pydantic documents: the copy
+holds whatever it was given, so `calctype` stays the plain string `"hessian"` (code that
+reads `inp.calctype.value` fails on it) and nothing checks that the new values fit the
+rest of the input. Don't use it to make inputs.

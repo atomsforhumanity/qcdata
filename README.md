@@ -13,10 +13,11 @@ Data structures for quantum chemistry inputs and results, with Jupyter visualiza
 These packages work together to make quantum chemistry fast, structured, and interoperable.
 
 - [qcref](https://github.com/atomsforhumanity/qcref) - Reference data for computational chemistry: CODATA physical constants, conversion factors, a periodic table, and solvent properties, each value with its source.
-- [qcdata](https://github.com/atomsforhumanity/qcdata) - Data structures for quantum chemistry inputs and results, with Jupyter visualizations. [Documentation](https://qcdata.docs.afh.org)
+- [qcdata](https://github.com/atomsforhumanity/qcdata) - Data structures for quantum chemistry inputs and results, with Jupyter visualizations. [Documentation](https://qcdata.docs.afh.org/)
 - [qcinf](https://github.com/atomsforhumanity/qcinf) - Cheminformatics algorithms and structure utilities for [qcdata](https://github.com/atomsforhumanity/qcdata) structures.
-- [qccodec](https://github.com/atomsforhumanity/qccodec) - Translates [qcdata](https://github.com/atomsforhumanity/qcdata) inputs into native program inputs and parses program outputs back into qcdata objects, one codec per program.
-- [qccompute](https://github.com/atomsforhumanity/qccompute) - Runs quantum chemistry programs on [qcdata](https://github.com/atomsforhumanity/qcdata) inputs using [qccodec](https://github.com/atomsforhumanity/qccodec) codecs and returns structured results. [Documentation](https://qccompute.docs.afh.org)
+- [qccompute](https://github.com/atomsforhumanity/qccompute) - Runs programs on [qcdata](https://github.com/atomsforhumanity/qcdata) inputs, one calculation or many, in this process or in workers, with an optional store, and returns structured results. [Documentation](https://qccompute.docs.afh.org/)
+- [qccodec](https://github.com/atomsforhumanity/qccodec) - The optional add-on for external programs (ORCA, Psi4, xtb, CREST, ...): writes their native inputs, runs them and parses their outputs, registering each as a program qccompute runs. [Documentation](https://qccodec.docs.afh.org/)
+- [qcstore](https://github.com/atomsforhumanity/qcstore) - Keeps results under their calculation key: immutable runs, tags, and an optional index.
 - [BigChem](https://github.com/mtzgroup/bigchem) - Distributed execution of qccompute calculations across clusters of computers or the cloud.
 - [ChemCloud](https://github.com/mtzgroup/chemcloud-client) - A [web application](https://github.com/mtzgroup/chemcloud-server) and [Python client](https://github.com/mtzgroup/chemcloud-client) that expose a BigChem cluster securely over the internet.
 
@@ -26,11 +27,19 @@ These packages work together to make quantum chemistry fast, structured, and int
 python -m pip install qcdata
 ```
 
+installs it. With the visualizations (`view` extra), or with the packages that run programs
+and store results:
+
+```bash
+python -m pip install "qcdata[view]" qcinf
+python -m pip install qcdata "qccompute[qccodec]" qccodec qcstore
+```
+
 ## Quickstart
 
 `qcdata` is built around a simple mental model: `Input` objects define quantum chemistry calculations, a `ProgramOutput` object captures each execution, and `Data` objects hold the structured output values.
 
-All `qcdata` objects can be serialized and saved to disk by calling `.save("filename.json")` and loaded from disk by calling `.open("filename.json")`. `qcdata` supports `json`, `yaml`, and `toml` file formats. Binary data will be automatically base64 encoded and decoded when saving and loading.
+All `qcdata` objects can be serialized and saved to disk by calling `.save("filename.json")` and loaded from disk by calling `.open("filename.json")`. `qcdata` supports `json`, `yaml`, and `toml` file formats. Binary data will be automatically base64 encoded and decoded when saving and loading. Arrays larger than 1 MiB (a big Hessian, orbital coefficients) are written to `.npy` files beside the saved file, and texts in `files` larger than 1 MiB to files of their own; `.open()` reads them back and `.save()` returns every file it wrote.
 
 ### Input Objects
 
@@ -137,15 +146,25 @@ new_input_dict = prog_input.model_dump()
 new_input_dict["keywords"]["maxiter"] = 300
 # Instantiate a new object
 new_prog_input = ProgramInput.model_validate(new_input_dict)
+# The same input as a Hessian
+hessian_input = ProgramInput.model_validate(prog_input.model_dump() | {"calctype": "hessian"})
+```
+
+Don't use pydantic's `model_copy(update=...)` to make a variant: it does not validate the new values, so a `calctype` given as `"hessian"` stays a plain string instead of becoming `CalcType.hessian`.
+
+To make an input at a new geometry, move its structure with `with_geometry` (a validated copy at new positions, in bohr) and bind the input's specification to it. `given` results, which belong to the old geometry, are left out.
+
+```python
+moved = ProgramInput.from_spec(prog_input, prog_input.structure.with_geometry(positions))
 ```
 
 ### Saved package version
 
-Every model exposes a read-only `qcdata_version`, automatically included in JSON, YAML, and TOML, including nested objects. It identifies the installed qcdata package that last wrote the representation, not a formal schema version or the calculation producer's version. Researchers can inspect it before choosing which qcdata version to install.
+Every model exposes a read-only `qcdata_version`, written at the top level of every JSON, YAML, and TOML document (nested objects carry none, and empty `extras` are left out). It identifies the installed qcdata package that last wrote the representation, not a formal schema version or the calculation producer's version. Researchers can inspect it before choosing which qcdata version to install.
 
 Opening a file accepts its saved stamp; saving it again writes the currently installed version. Files without a stamp remain readable. XYZ exports include `qcdata_version=...` in each structure's comment line. QCSchema exports omit this qcdata-specific metadata.
 
-By default, `save()` and `json_dumps()` use `exclude_unset=True` for compact files: fields omitted during construction are excluded, while explicitly supplied values are retained even if they equal their defaults. The computed `qcdata_version` stamp is still included. Pass `exclude_unset=False` to include unset/default-valued fields. `save()` also omits `None` values by default. A full `model_dump()` followed by reconstruction marks the dumped fields as explicitly set, so this workflow may produce larger files.
+By default, `save()` is lossless (`exclude_unset=False`), while `json_dumps()` uses `exclude_unset=True` for compact output: fields omitted during construction are excluded, while explicitly supplied values are retained even if they equal their defaults. The `qcdata_version` stamp is still included. `save()` also omits `None` values by default. A full `model_dump()` followed by reconstruction marks the dumped fields as explicitly set, so this workflow may produce larger files.
 
 ### ProgramOutput
 
@@ -219,17 +238,17 @@ Then in a Jupyter notebook import the `qcdata` view module and call `view.view(.
 
 Seamless visualizations for `ProgramOutput` objects make results analysis easy!
 
-![Optimization Viewer](./docs/assets/optimization_viewer.png)
+![Optimization Viewer](https://raw.githubusercontent.com/atomsforhumanity/qcdata/next/docs/assets/optimization_viewer.png)
 
 Single point calculations display their results in a table.
 
-![Single Point Viewer](./docs/assets/single_point_viewer.png)
+![Single Point Viewer](https://raw.githubusercontent.com/atomsforhumanity/qcdata/next/docs/assets/single_point_viewer.png)
 
 If you want to use the HTML generated by the viewer to build your own dashboards use the functions inside of `qcdata.view.py` that begin with the word `generate_` to create HTML you can insert into any dashboard.
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, the pre-commit workflow, running tests, and the release process.
+See [CONTRIBUTING.md](https://github.com/atomsforhumanity/qcdata/blob/master/CONTRIBUTING.md) for development setup, the pre-commit workflow, running tests, and the release process.
 
 ## Support
 

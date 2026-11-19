@@ -172,3 +172,6 @@ run.out
 
 # Fake files for testing
 fake*.py
+
+# Written by the build (pyproject.toml: tool.hatch.build.hooks.version)
+src/qcdata/_version.py

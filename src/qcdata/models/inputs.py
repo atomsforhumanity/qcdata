@@ -2,19 +2,25 @@
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 from pydantic import (
+    BaseModel,
     FieldSerializationInfo,
     field_serializer,
     field_validator,
     model_validator,
 )
 
+from ..helper_types import FreeDict
 from .base_models import CalcType, Files, Model
 from .structure import Structure
 
+if TYPE_CHECKING:
+    from .data import SinglePointData
+
 __all__ = [
+    "INITIAL_CHAIN",
     "FileInput",
     "ProgramInput",
     "ProgramSpec",
@@ -46,6 +52,26 @@ class FileInput(Files):
         return obj
 
 
+def _json_models(value: Any) -> Any:
+    """A free-form value with each pydantic model in it dumped as JSON, nulls left out.
+
+    Dumped through `BaseModel.model_dump`, so a qcdata model carries no version stamp.
+    Returns ``value`` itself when it holds no model.
+    """
+    if isinstance(value, BaseModel):
+        return BaseModel.model_dump(value, mode="json", exclude_none=True)
+    if isinstance(value, dict):
+        items = {k: _json_models(v) for k, v in value.items()}
+        changed = any(items[k] is not v for k, v in value.items())
+        return items if changed else value
+    if isinstance(value, list | tuple):
+        new = [_json_models(v) for v in value]
+        if all(a is b for a, b in zip(new, value, strict=True)):
+            return value
+        return new if isinstance(value, list) else tuple(new)
+    return value
+
+
 class ProgramSpec(FileInput):
     """A recursive program specification, independent of structures.
 
@@ -56,7 +82,10 @@ class ProgramSpec(FileInput):
         program: The requested executor (distinct from result data provenance).
         calctype: The type of calculation to perform.
         model: The scientific model, or None for programs without one.
-        keywords: Program keywords, excluding model and calculation type.
+        keywords: Program keywords, excluding model and calculation type. Plain
+            JSON: a pydantic model given anywhere in them (an `Accuracy`) is stored
+            as its JSON form without nulls, so the input and its calculation key are
+            the same before and after a save.
         subprograms: Child specifications, with one child per calculation type.
         files: Native input files for this program.
         cmdline_args: Command line arguments for this program.
@@ -65,8 +94,14 @@ class ProgramSpec(FileInput):
 
     calctype: CalcType
     model: Model | None = None
-    keywords: dict[str, Any] = {}
+    keywords: FreeDict = {}
     subprograms: list["ProgramSpec"] = []
+
+    @field_validator("keywords")
+    @classmethod
+    def _models_as_json(cls, keywords: dict[str, Any]) -> dict[str, Any]:
+        """Store any pydantic model in the keywords, at any depth, as its JSON form."""
+        return _json_models(keywords)
 
     @field_validator("subprograms")
     @classmethod
@@ -77,7 +112,7 @@ class ProgramSpec(FileInput):
         for child in subprograms:
             if child.calctype in seen:
                 raise ValueError(
-                    f"Duplicate subprogram calculation type '{child.calctype.value}': "
+                    f"Duplicate subprogram calculation type '{child.calctype}': "
                     "each sibling must have a unique calctype."
                 )
             seen.add(child.calctype)
@@ -88,7 +123,7 @@ class ProgramSpec(FileInput):
         self, calctype: CalcType, _info: FieldSerializationInfo
     ) -> str:
         """Serialize CalcType to string."""
-        return calctype.value
+        return str(calctype)
 
     def get_subprogram(self, calctype: CalcType | str) -> "ProgramSpec":
         """Return an immediate child by CalcType or string value.
@@ -104,8 +139,8 @@ class ProgramSpec(FileInput):
         )
 
 
-# Role in ``ProgramInput.structures`` holding the starting chain of a path optimization.
 INITIAL_CHAIN = "initial_chain"
+"""Role in ``ProgramInput.structures`` holding the starting chain of a path optimization."""
 # Calculation types whose subject is a chain of structures rather than one structure.
 CHAIN_CALCTYPES = frozenset({CalcType.path_optimization})
 
@@ -119,12 +154,29 @@ class ProgramInput(ProgramSpec):
     this by calculation type, so ``structure`` is always set for every other one; use
     ``require_structure()`` where a type checker needs to know that.
 
+    Make a variant by validating changed values,
+    ``ProgramInput.model_validate(inp.model_dump() | {"calctype": "hessian"})``, or at a
+    new geometry with ``from_spec``. Pydantic's ``model_copy(update=...)`` does not
+    validate: it would leave ``calctype`` a plain string.
+
     Attributes:
         structure: The primary/start/reference structure; None only for chain
             calculation types (``path_optimization``).
         structures: Additional complete structures identified by role, such as a
             QM/MM environment, or a list of structures for a role that holds several
             in order, such as ``"initial_chain"``.
+        given: Results already known at ``structure``, for the program to start
+            from: an optimizer or IRC takes a given Hessian as its starting Hessian; an
+            SCF starts from a given wavefunction. Starting points, never results: a
+            program does not report a given value as its own. A record of what is
+            known, not a request: a program uses the fields it can, records each one
+            used in its resolved settings (``"given"``), and leaves the rest alone, so
+            ``given=frame.results`` works as it stands. It refuses the input
+            (``not_applicable``) when it can use none of the fields, or when a field
+            it would use does not fit (another basis). ``provenance`` names only the
+            producing program and version; checking the model is the caller's, which
+            knows the producing input. Part of the input, so part of a stored
+            calculation's key.
 
     Example:
         ```python
@@ -148,6 +200,34 @@ class ProgramInput(ProgramSpec):
 
     structure: Structure | None = None
     structures: dict[str, Structure | list[Structure]] = {}
+    given: "SinglePointData | None" = None
+
+    @model_validator(mode="after")
+    def _check_given(self) -> Self:
+        """Given results belong to ``structure``: the same atoms, in its shapes.
+
+        A given wavefunction may come from another charge or multiplicity (a guess),
+        so its electrons are not checked.
+        """
+        if self.given is None:
+            return self
+        if self.structure is None:
+            raise ValueError(
+                "given results belong to a structure; this input has none."
+            )
+        n = len(self.structure.symbols)
+        shapes = {"gradient": (n, 3), "hessian": (3 * n, 3 * n)}
+        for name, shape in shapes.items():
+            value = getattr(self.given, name)
+            if value is not None and value.shape != shape:
+                raise ValueError(
+                    f"given.{name} has shape {value.shape}; the structure's {n} atoms "
+                    f"need {shape}."
+                )
+        from .data import _check_fits_structure
+
+        _check_fits_structure(self.given, self.structure, electrons=False)
+        return self
 
     @model_validator(mode="after")
     def _check_structures_for_calctype(self) -> Self:
@@ -155,13 +235,13 @@ class ProgramInput(ProgramSpec):
         if self.calctype in CHAIN_CALCTYPES:
             if self.structure is not None:
                 raise ValueError(
-                    f"A {self.calctype.value} input takes its structures from "
+                    f"A {self.calctype} input takes its structures from "
                     f"structures[{INITIAL_CHAIN!r}]; leave structure out."
                 )
             chain = self.structures.get(INITIAL_CHAIN)
             if not isinstance(chain, list) or len(chain) < 2:
                 raise ValueError(
-                    f"A {self.calctype.value} input needs structures"
+                    f"A {self.calctype} input needs structures"
                     f"[{INITIAL_CHAIN!r}]: a list of at least two structures, "
                     "endpoints included, in order."
                 )
@@ -171,7 +251,7 @@ class ProgramInput(ProgramSpec):
                     "same atoms in the same order."
                 )
         elif self.structure is None:
-            raise ValueError(f"A {self.calctype.value} input requires a structure.")
+            raise ValueError(f"A {self.calctype} input requires a structure.")
         return self
 
     def require_structure(self) -> Structure:
@@ -186,7 +266,7 @@ class ProgramInput(ProgramSpec):
         """
         if self.structure is None:
             raise ValueError(
-                f"This {self.calctype.value} input has no single structure; its "
+                f"This {self.calctype} input has no single structure; its "
                 f"structures are in structures[{INITIAL_CHAIN!r}]."
             )
         return self.structure
@@ -201,8 +281,7 @@ class ProgramInput(ProgramSpec):
         chain = self.structures.get(INITIAL_CHAIN)
         if not isinstance(chain, list):
             raise ValueError(
-                f"This {self.calctype.value} input has no structures"
-                f"[{INITIAL_CHAIN!r}]."
+                f"This {self.calctype} input has no structures[{INITIAL_CHAIN!r}]."
             )
         return chain
 

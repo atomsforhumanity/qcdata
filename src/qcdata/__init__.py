@@ -1,6 +1,7 @@
 """Pydantic data models for quantum chemistry inputs, outputs, and structures."""
 
 from ._version import __version__ as __version__
+from .key import calculation_key
 from .models import *  # noqa: F403
 from .models.utils import to_multi_xyz
 from .utils import json_dumps
@@ -28,6 +29,7 @@ __all__ = [  # noqa: F405
     "OutputBase",
     "Wavefunction",
     "ProgramSpec",
+    "INITIAL_CHAIN",
     "Inputs",
     "InputType",
     "Data",
@@ -37,5 +39,41 @@ __all__ = [  # noqa: F405
     "StructuredDataType",
     "json_dumps",
     "to_multi_xyz",
+    "calculation_key",
     "LengthUnit",
+    # How a calculation went
+    "ErrorKind",
+    "ErrorInfo",
+    "ProgramWarning",
+    "Resolved",
+    # One step of a session
+    "Accuracy",
+    "Lineage",
+    "Request",
+    "ProgramError",
+    "ProgramErrors",
+    "lineage_key",
+    # Vibrations and thermochemistry
+    "VibrationalAnalysis",
+    "Thermochemistry",
+    "ThermoTerm",
+    "Projection",
+    "RotorType",
+    "EntropyModel",
+    "EnthalpyModel",
+    # Basis sets and orbitals
+    "Orbitals",
+    "OrbitalKind",
+    "OrbitalSpin",
+    "BasisSet",
+    "Shell",
+    "Ecp",
+    "EcpTerm",
+    "AOConvention",
+    "SphericalOrder",
+    "CartesianOrder",
+    "CartesianNormalization",
+    "DEFAULT_AO_CONVENTION",
+    "PYSCF_CONVENTION",
+    "MOLDEN_CONVENTION",
 ]

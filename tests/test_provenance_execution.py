@@ -139,7 +139,7 @@ def test_nested_execution_and_provenance_roundtrip(
     output = ProgramOutput(
         input_data=prog_input_factory("scan"),
         success=True,
-        results=ScanData(provenance=Provenance(program="scan-driver"), points=[opt]),
+        results=ScanData(provenance=Provenance(program="qcopt"), points=[opt]),
         execution=ExecutionInfo(
             scratch_dir="/tmp/scan",
             wall_time=5,
@@ -155,7 +155,7 @@ def test_nested_execution_and_provenance_roundtrip(
     assert reopened == output
     assert pickle.loads(pickle.dumps(output)) == output
     assert ProgramOutput.model_validate_json(output.model_dump_json()) == output
-    assert reopened.results.provenance.program == "scan-driver"
+    assert reopened.results.provenance.program == "qcopt"
     opt = reopened.results.points[0]
     step = opt.results.frames[0]
     assert opt.results.provenance.program == "geometric"
@@ -183,3 +183,43 @@ def test_execution_defaults_to_empty(file_input):
     )
     assert isinstance(output.execution, ExecutionInfo)
     assert output.execution.wall_time is None
+
+
+def test_store_run_marks_an_output_read_from_a_store(file_input, tmp_path):
+    ran = ProgramOutput(
+        input_data=file_input,
+        results=FileData(provenance=Provenance(program="terachem")),
+        success=True,
+    )
+    assert ran.execution.store_run is None
+    ran.save(tmp_path / "ran.json")
+    assert (
+        "store_run" not in json.loads((tmp_path / "ran.json").read_text())["execution"]
+    )
+    hit = ran.model_copy(
+        update={"execution": ExecutionInfo(store_run="k1:3f9a/20261117T120000-1")}
+    )
+    assert hit != ran
+    hit.save(tmp_path / "hit.json")
+    reopened = ProgramOutput.open(tmp_path / "hit.json")
+    assert reopened.execution.store_run == "k1:3f9a/20261117T120000-1"
+
+
+def test_identities_say_which_code_made_an_output(file_input, tmp_path):
+    ran = ProgramOutput(
+        input_data=file_input,
+        results=FileData(provenance=Provenance(program="xtb")),
+        success=True,
+    )
+    assert ran.execution.identities == {}
+    identities = {
+        "xtb": "6.7.1 sha256:1b4e" + "0" * 60,
+        "axtb": "axtb-gfn2:3;axtb-gxtb:1",
+    }
+    made = ran.model_copy(update={"execution": ExecutionInfo(identities=identities)})
+    made.save(tmp_path / "made.json")
+    saved = json.loads((tmp_path / "made.json").read_text())["execution"]
+    assert saved["identities"] == identities
+    assert ProgramOutput.open(tmp_path / "made.json").execution.identities == identities
+    with pytest.raises(ValidationError):
+        ExecutionInfo(identities={"xtb": 6.71})

@@ -1,80 +1,59 @@
-import copy
-
 import numpy as np
 import pytest
 from pydantic import ValidationError
 
-from qcdata import ConformerSearchData
+from qcdata import ConformerSearchData, Frame, Provenance, SinglePointData
+
+PROVENANCE = Provenance(program="qcdata-test-suite")
 
 
-def test_energies_size(water):
-    """Test that the number of energies matches the number of conformers"""
-    w1 = water
-    w2 = copy.deepcopy(water)
-
-    # No energies is fine
-    ConformerSearchData(
-        provenance={"program": "qcdata-test-suite"},
-        conformers=[w1, w2],
-    )
-
-    # No energies is fine
-    ConformerSearchData(
-        provenance={"program": "qcdata-test-suite"},
-        rotamers=[w1, w2],
-    )
-
-    with pytest.raises(ValidationError):
-        ConformerSearchData(
-            provenance={"program": "qcdata-test-suite"},
-            conformers=[w1, w2],
-            conformer_energies=[-1.0],
+def _frames(structure, energies):
+    return [
+        Frame(
+            success=True,
+            structure=structure,
+            results=SinglePointData(provenance=PROVENANCE, energy=energy),
         )
+        for energy in energies
+    ]
 
+
+def test_conformers_are_frames_not_bare_structures(water):
+    """The form before frames (structures plus an energies array) is not accepted."""
+    with pytest.raises(ValidationError):
+        ConformerSearchData(provenance=PROVENANCE, conformers=[water, water])
     with pytest.raises(ValidationError):
         ConformerSearchData(
-            provenance={"program": "qcdata-test-suite"},
-            rotamers=[w1, w2],
-            rotamer_energies=[-1.0, -2.0, -3.0],
+            provenance=PROVENANCE,
+            conformers=_frames(water, [-1.0, -2.0]),
+            conformer_energies=[-1.0, -2.0],
         )
 
 
 def test_relative_energies(water):
-    w1 = water
-    w2 = copy.deepcopy(water)
-    w3 = copy.deepcopy(water)
-
-    # No energies returns empty array
+    # Unknown energies are nan, one per conformer
     csr = ConformerSearchData(
-        provenance={"program": "qcdata-test-suite"},
-        conformers=[w1, w2, w3],
+        provenance=PROVENANCE, conformers=_frames(water, [None, None, None])
     )
-
-    np.testing.assert_array_equal(csr.conformer_energies_relative, np.array([]))
+    assert np.isnan(csr.conformer_energies_relative).tolist() == [True] * 3
 
     # Energies are relative to the lowest energy
     csr = ConformerSearchData(
-        provenance={"program": "qcdata-test-suite"},
-        conformers=[w1, w2, w3],
-        conformer_energies=[-1.0, -2.0, -3.0],
+        provenance=PROVENANCE, conformers=_frames(water, [-1.0, -2.0, -3.0])
     )
     np.testing.assert_array_equal(
         csr.conformer_energies_relative, np.array([0.0, 1.0, 2.0])
     )
 
-    # No energies returns empty array
+    # No conformers, no conformer energies; unknown rotamer energies are nan
     csr = ConformerSearchData(
-        provenance={"program": "qcdata-test-suite"},
-        rotamers=[w1, w2, w3],
+        provenance=PROVENANCE, rotamers=_frames(water, [None, None, None])
     )
-
     np.testing.assert_array_equal(csr.conformer_energies_relative, np.array([]))
+    assert np.isnan(csr.rotamer_energies_relative).tolist() == [True] * 3
 
-    # Energies are relative to the lowest energy
     csr = ConformerSearchData(
-        provenance={"program": "qcdata-test-suite"},
-        rotamers=[w1, w2, w3],
-        rotamer_energies=[-1.0, -2.0, -3.0],
+        provenance=PROVENANCE, rotamers=_frames(water, [-1.0, -2.0, -3.0])
     )
     np.testing.assert_array_equal(
         csr.rotamer_energies_relative, np.array([0.0, 1.0, 2.0])
@@ -82,16 +61,8 @@ def test_relative_energies(water):
 
 
 def test_conformer_search_results_sorting(water):
-    w1 = water
-    w2 = copy.deepcopy(water)
-    w3 = copy.deepcopy(water)
-
-    csr = ConformerSearchData(
-        provenance={"program": "qcdata-test-suite"},
-        conformers=[w1, w2, w3],
-        conformer_energies=[-1.0, -2.0, -3.0],
-    )
-
-    assert csr.structures == [w3, w2, w1]
+    frames = _frames(water, [-1.0, -2.0, -3.0])
+    csr = ConformerSearchData(provenance=PROVENANCE, conformers=frames)
     assert [f.results.energy for f in csr.conformers] == [-3.0, -2.0, -1.0]
     assert csr.conformer_energies.tolist() == [-3.0, -2.0, -1.0]
+    assert csr.structures == [water, water, water]

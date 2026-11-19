@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 import numpy as np
-from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 from qcdata.helper_types import (
     SerializableMatrix,
@@ -18,8 +17,16 @@ from qcdata.helper_types import (
 
 from .base_models import CalcType, Files, OutputBase, Provenance, QCDataBaseModel
 from .inputs import ProgramInput
+from .orbitals import (
+    _ELECTRON_COUNT_TOLERANCE,
+    AOConvention,
+    BasisSet,
+    OrbitalKind,
+    Orbitals,
+)
 from .structure import Structure
 from .utils import to_multi_xyz
+from .vibrations import Thermochemistry, VibrationalAnalysis
 
 if TYPE_CHECKING:
     from .outputs import ProgramOutput
@@ -54,41 +61,167 @@ class FileData(Files):
     provenance: Provenance
 
 
+#: The AO matrices of a `Wavefunction`; each is an operator, nao x nao.
+_AO_MATRICES = ("overlap", "hamiltonian_a", "hamiltonian_b", "core_hamiltonian")
+
+
 class Wavefunction(QCDataBaseModel):
-    """The wavefunction for a single point calculation.
+    """The wavefunction of a single point calculation: its orbitals and AO matrices.
+
+    The SCF density is not stored: it is C n C^T of the returned orbitals
+    (`Orbitals.density`). The orbitals' coefficients and the AO matrices come only on
+    request, and all of them are indexed by the AOs of one basis set, `basis`: it is
+    present whenever any of them is, and only then. An overlap alone therefore ships the
+    basis set and no coefficients. `with_convention` converts the coefficients and every
+    matrix together.
 
     Attributes:
-        scf_eigenvalues_a: The SCF alpha-spin orbital eigenvalues.
-        scf_eigenvalues_b: The SCF beta-spin orbital eigenvalues.
-        scf_occupations_a: The SCF alpha-spin orbital occupations.
-        scf_occupations_b: The SCF beta-spin orbital occupations.
+        orbitals: The orbital levels and, on request, the orbitals' coefficients.
+        basis: The basis set that the coefficients and every AO matrix share (its
+            centers refer to the structure's atoms), in AO order and with its
+            `AOConvention`; present whenever coefficients or an AO matrix are.
+        overlap: The AO overlap matrix S the program used, with its own screening.
+        hamiltonian_a: The Fock or Kohn-Sham matrix, or the tight-binding Hamiltonian
+            (Eh), of alpha electrons or of both spins for restricted orbitals: the
+            operator of one build at the SCF's last input (a density, or charges and
+            multipole moments), however that input was mixed. The canonical orbitals
+            are its fresh generalized eigenvectors with the returned S,
+            H C = S C diag(energies). It is built from the last input, not from the
+            returned orbitals' density, which is one step ahead; the two differ by the
+            SCF residual. It holds everything in the SCF operator (exchange-correlation
+            on the final grid, nonlocal correlation, a continuum solvent's operator)
+            and nothing that does not depend on the density (dispersion, a solvent's
+            CDS term). Requesting it changes no other number.
+        hamiltonian_b: The beta Hamiltonian (Eh) of unrestricted orbitals.
+        core_hamiltonian: Every density-independent one-electron term of the run (Eh):
+            the kinetic energy, the attraction of nuclei with charges
+            Z - core_electrons, the ECPs, and external point charges and fields where a
+            program supports them. tr((P_a + P_b) h), with P the density of the SCF's
+            last input, is the energy's ``one_electron`` component; with
+            `Orbitals.density`, the density a reader has, the two agree to the SCF
+            residual, so compare them at SCF tolerance, not at round-off.
     """
 
-    scf_eigenvalues_a: SerializableVector | None = None
-    scf_eigenvalues_b: SerializableVector | None = None
-    scf_occupations_a: SerializableVector | None = None
-    scf_occupations_b: SerializableVector | None = None
+    orbitals: Orbitals
+    basis: BasisSet | None = None
+    overlap: SerializableMatrix | None = None
+    hamiltonian_a: SerializableMatrix | None = None
+    hamiltonian_b: SerializableMatrix | None = None
+    core_hamiltonian: SerializableMatrix | None = None
 
-    @field_validator(
-        "scf_eigenvalues_a",
-        "scf_eigenvalues_b",
-        "scf_occupations_a",
-        "scf_occupations_b",
-    )
-    @classmethod
-    def to_numpy(
-        cls, val: np.ndarray | None, _info: ValidationInfo
-    ) -> np.ndarray | None:
-        """Ensure orbital eigenvalues and occupations are stored as numpy arrays.
+    @model_validator(mode="after")
+    def _check_ao_arrays(self) -> Self:
+        """Coefficients and AO matrices come with the basis set; H comes with S."""
+        orbitals, basis = self.orbitals, self.basis
+        present = [name for name in _AO_MATRICES if getattr(self, name) is not None]
+        if orbitals.coefficients_a is not None:
+            present.insert(0, "orbitals.coefficients_a")
+        if basis is None:
+            if present:
+                raise ValueError(
+                    f"{', '.join(present)} need the basis set they are indexed by: "
+                    "Wavefunction.basis"
+                )
+            return self
+        if not present:
+            raise ValueError(
+                "basis comes with the arrays it indexes: orbital coefficients or an AO "
+                "matrix (overlap, hamiltonian_a, core_hamiltonian)"
+            )
+        nao = basis.nao
+        for name in ("coefficients_a", "coefficients_b"):
+            c = getattr(orbitals, name)
+            if c is not None and c.shape[0] != nao:
+                raise ValueError(
+                    f"orbitals.{name} must have one row per AO of the basis set "
+                    f"({nao}), not shape {c.shape}"
+                )
+        for name in _AO_MATRICES:
+            matrix = getattr(self, name)
+            if matrix is not None and matrix.shape != (nao, nao):
+                raise ValueError(
+                    f"{name} must be nao x nao = {(nao, nao)}, not {matrix.shape}"
+                )
+        core = orbitals.core_electrons
+        disagree = {
+            e.center: e.core_electrons
+            for e in basis.ecp
+            if (
+                (core[e.center] if core is not None and e.center < len(core) else 0)
+                != e.core_electrons
+            )
+        }
+        if disagree:
+            raise ValueError(
+                "orbitals.core_electrons must agree with the ECPs on every ECP atom: "
+                f"the ECPs replace {disagree} (atom: electrons), but core_electrons is "
+                f"{core}"
+            )
+        if self.hamiltonian_a is None:
+            if self.hamiltonian_b is not None:
+                raise ValueError("hamiltonian_b needs hamiltonian_a")
+            return self
+        if self.overlap is None:
+            raise ValueError(
+                "a hamiltonian comes with the overlap its orbitals are eigenvectors in"
+            )
+        if orbitals.coefficients_a is None:
+            raise ValueError(
+                "a hamiltonian comes with the orbitals that are its eigenvectors: "
+                "orbitals.coefficients_a"
+            )
+        if orbitals.kind != OrbitalKind.canonical:
+            raise ValueError(
+                "a hamiltonian's eigenvectors are canonical orbitals, not "
+                f"{orbitals.kind.value} ones"
+            )
+        if orbitals.restricted and self.hamiltonian_b is not None:
+            raise ValueError(
+                "restricted orbitals have one hamiltonian: no hamiltonian_b"
+            )
+        if not orbitals.restricted and self.hamiltonian_b is None:
+            raise ValueError("unrestricted orbitals need hamiltonian_b too")
+        return self
+
+    def with_convention(self, convention: AOConvention) -> Wavefunction:
+        """The same wavefunction with its AOs in another convention.
+
+        Each array changes with its variance (`BasisSet.transform`): coefficients scale
+        by s per AO index and the AO matrices, all operators, by 1 / (s_mu s_nu). The
+        orbital levels are shared, not copied.
 
         Args:
-            val: The eigenvalue or occupation vector, or None if not provided.
-            _info: Pydantic validation context (unused).
+            convention: The target AO convention.
 
         Returns:
-            The value as a numpy array, or None if it was not provided.
+            A new wavefunction whose basis set has the target convention.
+
+        Raises:
+            ValueError: If the wavefunction has no basis set (only orbital levels).
         """
-        return np.asarray(val) if val is not None else None
+        basis = self.basis
+        if basis is None:
+            raise ValueError(
+                "with_convention() needs the basis set, and this wavefunction has only "
+                "orbital levels: programs return the basis set with the coefficients or "
+                "an AO matrix, on request"
+            )
+        update: dict[str, Any] = {
+            "basis": basis.model_copy(update={"ao_convention": convention})
+        }
+        orbitals = self.orbitals
+        coefficients = {
+            name: basis.transform(c, convention, kind="coefficients")
+            for name in ("coefficients_a", "coefficients_b")
+            if (c := getattr(orbitals, name)) is not None
+        }
+        if coefficients:
+            update["orbitals"] = orbitals.model_copy(update=coefficients)
+        for name in _AO_MATRICES:
+            matrix = getattr(self, name)
+            if matrix is not None:
+                update[name] = basis.transform(matrix, convention, kind="operator")
+        return self.model_copy(update=update)
 
 
 class CalcInfoData(BaseModel):
@@ -115,35 +248,76 @@ class SinglePointData(FileData, CalcInfoData):
     Attributes:
         energy: The electronic energy of the structure in `Hartrees`.
         gradient: The gradient of the structure in `Hartrees/Bohr`.
-        hessian: The hessian of the structure in `Hartrees/Bohr^2`.
+        hessian: The full Cartesian second derivative of the energy at the input
+            geometry (Eh/bohr^2), 3N x 3N, never projected. Away from a stationary point
+            the gradient gives rotations a part in it, which projection would lose.
+            Projection belongs to `vibrational_analysis`, which records it.
         nuclear_repulsion_energy: The nuclear repulsion energy of the structure in
             Hartrees.
 
         wavefunction: Wavefunction data from the calculation.
 
-        freqs_wavenumber: Harmonic vibrational frequencies in wavenumbers (cm^-1),
-            negative for imaginary modes.
-        normal_modes_cartesian: n_vibmodes x n_atoms x 3 array of normal modes, one per
-            entry of ``freqs_wavenumber`` and in the same order. Each mode is a
-            Cartesian displacement (not mass-weighted) scaled to unit length, in the
-            input structure's frame and atom order; it is dimensionless. The sign of a
-            mode is arbitrary. Multiplying a mode by the square root of each atom's
-            mass and normalizing gives the eigenvector of the mass-weighted Hessian.
-        gibbs_free_energy: Gibbs free energy (i.e. thermochemical analysis) in Hartrees
-            of a system where translation / rotation / vibration degrees of freedom are
-            approximated using ideal gas / rigid rotor / harmonic oscillator
-            respectively.
-        scf_dipole_moment: The x, y, z component of the dipole moment of the structure
-            in units of e a0 (NOT Debye!).
+        dipole_moment: The x, y, z components of the dipole moment (e bohr, not
+            Debye) of the method's charge distribution, electrons and nuclei, whatever
+            the method: an SCF density, a force field's or tight-binding model's
+            charges (GFN-FF's EEQ charges), an ML potential's prediction.
+        quadrupole_moment: 3 x 3 quadrupole moment (e bohr^2) of the method's charge
+            distribution, electrons and nuclei, about the coordinate origin, whatever
+            the method: Buckingham's traceless tensor
+            (1/2) sum q (3 r_i r_j - r^2 delta_ij). Programs with another form convert
+            to it.
         atomic_charges: Partial charge on each atom in units of e, ordered like the
             structure's atoms. The partitioning scheme (Mulliken, Lowdin, CM5, ...)
-            is the program's; parsers record it in ``extras`` when it is not the
-            program's default.
+            is the program's; `atomic_charges_kind` names it.
+        atomic_charges_kind: The partitioning scheme of `atomic_charges`:
+            ``mulliken``, ``lowdin``, ``eeq``, ``eeqbc``, ``cm5``, ``hirshfeld``, ...
+        atomic_spin_populations: Alpha minus beta electrons on each atom (e), ordered
+            like the structure's atoms, in the partition `atomic_spin_populations_kind`
+            names.
+        atomic_spin_populations_kind: The partitioning scheme of
+            `atomic_spin_populations`, from the values of `atomic_charges_kind`;
+            required with them.
+        atomic_dipoles: n_atoms x 3: each atom's electronic dipole moment (e bohr)
+            about its own nucleus, mu_A = -sum_{mu on A} (P D^A)_mu,mu with
+            P = P_a + P_b and D^A_nu,mu = <nu| r - R_A |mu>, the integrals about the
+            atom of the column AO. Electrons only: no nuclear charge.
+        atomic_quadrupoles: n_atoms x 3 x 3: each atom's electronic quadrupole moment
+            (e bohr^2) about its own nucleus, in Buckingham's traceless form
+            (3/2) M - (1/2) tr(M) I, with M_ij = -sum_{mu on A} (P Q^A_ij)_mu,mu and
+            Q^A_ij the integrals of (r - R_A)_i (r - R_A)_j, as for `atomic_dipoles`.
+        shell_populations: Electrons in each shell of the basis set,
+            sum_{mu in shell} (P S)_mu,mu with P = P_a + P_b, indexed like
+            ``wavefunction.basis.shells``. Populations, not charges, which
+            depend on method-specific reference occupations.
+        shell_atoms: The atom (0-based) of each shell of `shell_populations`, so they
+            stand without a basis set; required with them.
+        shell_angular_momenta: The angular momentum l of each shell of
+            `shell_populations`; required with them.
         point_charge_gradient: n_charges x 3 gradient of the energy with respect
             to the positions of external point charges, in `Hartrees/Bohr`, ordered
             like the point charges given to the calculation (QM/MM electrostatic
             embedding).
 
+        energy_components: Terms of the energy (Hartrees) that add up to `energy`: a
+            partition, never overlapping terms. Standard keys are listed in the
+            conventions (``nuclear_repulsion``, ``one_electron``, ``coulomb``,
+            ``exchange``, ``xc``, ``vv10``, ``dispersion``, ``solvation_electrostatic``,
+            ``solvation_cds``, ...); what a component contains is the program's (a
+            tight-binding ``electronic`` term is not a DFT one). A hierarchy of
+            sub-terms, if a program has one, belongs in the output's ``record``.
+        scf_iterations: Number of SCF iterations of the final SCF.
+        scf_s_squared: Expectation value of S^2 of the SCF reference (dimensionless);
+            S(S+1) for a pure spin state, so the excess is the spin contamination.
+        polarizability: 3 x 3 static dipole polarizability (e^2 bohr^2 / Hartree).
+        bond_orders: n_atoms x n_atoms bond orders, in the form `bond_orders_kind`
+            names.
+        bond_orders_kind: ``mayer`` (sum (PS)_mn (PS)_nm over the AOs of two atoms,
+            what xtb prints as "Wiberg"), ``wiberg`` (in an orthogonalized basis), ...
+        vibrational_analysis: The harmonic analysis of the Hessian with the choices
+            behind it (masses, projection, symmetry), when the program made one: the
+            home of frequencies and normal modes.
+        thermochemistry: Ideal-gas thermochemistry, one entry per temperature and
+            standard state: the home of free energies.
     """
 
     energy: float | None = None
@@ -153,25 +327,51 @@ class SinglePointData(FileData, CalcInfoData):
 
     wavefunction: Wavefunction | None = None
 
-    freqs_wavenumber: list[float] = []
-    normal_modes_cartesian: SerializableTensor3D | None = None
-    gibbs_free_energy: float | None = None
-
-    scf_dipole_moment: list[float] | None = None
+    dipole_moment: list[float] | None = None
+    quadrupole_moment: SerializableMatrix | None = None
 
     atomic_charges: SerializableVector | None = None
+    atomic_charges_kind: str | None = None
+    atomic_spin_populations: SerializableVector | None = None
+    atomic_spin_populations_kind: str | None = None
+    atomic_dipoles: SerializableMatrix | None = None
+    atomic_quadrupoles: SerializableTensor3D | None = None
+    shell_populations: SerializableVector | None = None
+    shell_atoms: list[int] | None = None
+    shell_angular_momenta: list[int] | None = None
     point_charge_gradient: SerializableMatrix | None = None
 
-    @field_validator("normal_modes_cartesian")
+    energy_components: dict[str, float] = {}
+    scf_iterations: int | None = None
+    scf_s_squared: float | None = None
+    polarizability: SerializableMatrix | None = None
+    bond_orders: SerializableMatrix | None = None
+    bond_orders_kind: str | None = None
+
+    vibrational_analysis: VibrationalAnalysis | None = None
+    thermochemistry: list[Thermochemistry] = []
+
+    @field_validator("quadrupole_moment", "polarizability")
     @classmethod
-    def _validate_normal_modes_cartesian_shape(
-        cls, v: SerializableNDArray | None, info: ValidationInfo
+    def _validate_three_by_three(
+        cls, v: SerializableNDArray | None
     ) -> np.ndarray | None:
+        """Validate a Cartesian tensor is 3 x 3."""
         if v is not None:
-            freqs = info.data.get("freqs_wavenumber")
-            n_normal_modes = len(freqs) if freqs else len(v)
-            return np.asarray(v).reshape(n_normal_modes, -1, 3)
-        return v
+            return np.asarray(v, dtype=float).reshape(3, 3)
+        return None
+
+    @field_validator("bond_orders")
+    @classmethod
+    def _validate_bond_orders_shape(
+        cls, v: SerializableNDArray | None
+    ) -> np.ndarray | None:
+        """Validate bond orders are square."""
+        if v is not None:
+            v = np.asarray(v, dtype=float)
+            n = int(round(np.sqrt(v.size)))
+            return v.reshape((n, n))
+        return None
 
     @field_validator("gradient")
     @classmethod
@@ -183,15 +383,78 @@ class SinglePointData(FileData, CalcInfoData):
             return np.asarray(v).reshape(-1, 3)
         return None
 
-    @field_validator("atomic_charges")
+    @field_validator("atomic_charges", "atomic_spin_populations", "shell_populations")
     @classmethod
-    def _validate_atomic_charges_shape(
-        cls, v: SerializableNDArray | None
-    ) -> np.ndarray | None:
-        """Validate atomic charges are one value per atom."""
+    def _validate_vector_shape(cls, v: SerializableNDArray | None) -> np.ndarray | None:
+        """Validate per-atom and per-shell values are vectors."""
         if v is not None:
             return np.asarray(v, dtype=float).reshape(-1)
         return None
+
+    @field_validator("atomic_dipoles")
+    @classmethod
+    def _validate_atomic_dipoles_shape(
+        cls, v: SerializableNDArray | None
+    ) -> np.ndarray | None:
+        """Validate atomic dipoles are n_atoms x 3."""
+        if v is not None:
+            return np.asarray(v, dtype=float).reshape(-1, 3)
+        return None
+
+    @field_validator("atomic_quadrupoles")
+    @classmethod
+    def _validate_atomic_quadrupoles_shape(
+        cls, v: SerializableNDArray | None
+    ) -> np.ndarray | None:
+        """Validate atomic quadrupoles are n_atoms x 3 x 3."""
+        if v is not None:
+            return np.asarray(v, dtype=float).reshape(-1, 3, 3)
+        return None
+
+    @model_validator(mode="after")
+    def _check_populations(self) -> Self:
+        """Kinds come with their values; shells are described like the basis set's."""
+        if (self.atomic_spin_populations is None) != (
+            self.atomic_spin_populations_kind is None
+        ):
+            raise ValueError(
+                "atomic_spin_populations and atomic_spin_populations_kind come "
+                "together: both or neither"
+            )
+        shell_fields = (
+            self.shell_populations,
+            self.shell_atoms,
+            self.shell_angular_momenta,
+        )
+        if all(f is None for f in shell_fields):
+            return self
+        if any(f is None for f in shell_fields):
+            raise ValueError(
+                "shell_populations, shell_atoms and shell_angular_momenta come "
+                "together: all or none"
+            )
+        assert self.shell_populations is not None  # for mypy: checked above
+        assert self.shell_atoms is not None and self.shell_angular_momenta is not None
+        n = self.shell_populations.shape[0]
+        if len(self.shell_atoms) != n or len(self.shell_angular_momenta) != n:
+            raise ValueError(
+                "shell_atoms and shell_angular_momenta need one value per shell of "
+                f"shell_populations ({n})"
+            )
+        if min(self.shell_atoms, default=0) < 0:
+            raise ValueError("shell_atoms must be atom indices >= 0")
+        if min(self.shell_angular_momenta, default=0) < 0:
+            raise ValueError("shell_angular_momenta must be >= 0")
+        basis = self.wavefunction.basis if self.wavefunction else None
+        if basis is not None and (
+            self.shell_atoms != [s.center for s in basis.shells]
+            or self.shell_angular_momenta != [s.angular_momentum for s in basis.shells]
+        ):
+            raise ValueError(
+                "shell_populations are indexed like wavefunction.basis.shells: "
+                "shell_atoms and shell_angular_momenta must match its shells"
+            )
+        return self
 
     @field_validator("point_charge_gradient")
     @classmethod
@@ -215,9 +478,63 @@ class SinglePointData(FileData, CalcInfoData):
             return v.reshape((n, n))
         return None
 
-    def return_result(self, calctype: CalcType) -> float | SerializableNDArray | None:
-        """Return the primary result of the calculation."""
-        return getattr(self, calctype.value)
+
+def _check_fits_structure(
+    results: SinglePointData, structure: Structure, *, electrons: bool
+) -> None:
+    """Raise unless per-atom results and the wavefunction fit the structure.
+
+    Args:
+        results: Results at the structure.
+        structure: The structure they belong to.
+        electrons: Also check that the orbitals hold the structure's electrons,
+            sum(Z - core_electrons) - charge.
+
+    Raises:
+        ValueError: If they do not fit.
+    """
+    n = len(structure.symbols)
+    shapes = {
+        "atomic_spin_populations": (n,),
+        "atomic_dipoles": (n, 3),
+        "atomic_quadrupoles": (n, 3, 3),
+    }
+    for name, shape in shapes.items():
+        value = getattr(results, name)
+        if value is not None and value.shape != shape:
+            raise ValueError(
+                f"{name} has shape {value.shape}; the structure's {n} atoms need {shape}"
+            )
+    if results.shell_atoms and max(results.shell_atoms) >= n:
+        raise ValueError(
+            f"shell_atoms names atom {max(results.shell_atoms)}; the structure has "
+            f"{n} atoms"
+        )
+    if results.wavefunction is None:
+        return
+    orbitals = results.wavefunction.orbitals
+    core = orbitals.core_electrons
+    if core is not None and len(core) != n:
+        raise ValueError(
+            f"the orbitals' core_electrons list {len(core)} atoms; the structure has {n}"
+        )
+    basis = results.wavefunction.basis
+    if basis is not None:
+        centers = [s.center for s in basis.shells] + [e.center for e in basis.ecp]
+        if max(centers, default=0) >= n:
+            raise ValueError(
+                f"the wavefunction's basis set has functions on atom {max(centers)}; "
+                f"the structure has {n} atoms"
+            )
+    if not electrons:
+        return
+    expected = sum(structure.atomic_numbers) - sum(core or ()) - structure.charge
+    held = float(orbitals.occupations_a.sum() + orbitals.occupations_b.sum())
+    if abs(held - expected) > _ELECTRON_COUNT_TOLERANCE:
+        raise ValueError(
+            f"the orbitals hold {held:.10g} electrons, but the structure's nuclei, "
+            f"charge and the orbitals' core electrons leave {expected}"
+        )
 
 
 class Frame(OutputBase):
@@ -240,11 +557,7 @@ class Frame(OutputBase):
     @model_validator(mode="before")
     @classmethod
     def _from_program_output(cls, value: Any) -> Any:
-        """Accept a ProgramOutput, or its saved form, as a frame.
-
-        Trajectories saved before frames existed hold one ProgramOutput per step; the
-        step's structure is its input's structure.
-        """
+        """Accept a ProgramOutput as a frame, at its input's structure."""
         from .outputs import ProgramOutput
 
         if isinstance(value, ProgramOutput):
@@ -254,30 +567,22 @@ class Frame(OutputBase):
                 "logs": value.logs,
                 "traceback": value.traceback,
                 "execution": value.execution,
+                "warnings": value.warnings,
+                "error": value.error,
+                "record": value.record,
                 "structure": value.input_data.structure,
             }
-        if isinstance(value, dict) and "data" in value and "results" not in value:
-            warnings.warn(
-                "'data' has been renamed to 'results'. Please update your code accordingly.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            value = {**value, "results": value["data"]}
-            del value["data"]
-        if isinstance(value, dict) and "input_data" in value:
-            value = dict(value)
-            input_data = value.pop("input_data")
-            if "structure" not in value:
-                value["structure"] = (
-                    input_data["structure"]
-                    if isinstance(input_data, dict)
-                    else input_data.structure
-                )
         return value
+
+    @model_validator(mode="after")
+    def _check_results_fit(self) -> Self:
+        """Per-atom results and the orbitals' electrons fit the frame's structure."""
+        _check_fits_structure(self.results, self.structure, electrons=True)
+        return self
 
     @classmethod
     def from_output(cls, output: ProgramOutput[Any, Any]) -> Self:
-        """Record a child calculation's output as a step, at its input's structure.
+        """Record a subprogram's output as a step, at its input's structure.
 
         Raises:
             ValidationError: The output's results are not `SinglePointData`, or its
@@ -286,8 +591,28 @@ class Frame(OutputBase):
         return cls.model_validate(output)
 
 
+def _frame_energies(frames: list[Frame]) -> np.ndarray:
+    """The energy of each frame in Hartree, `np.nan` where none was computed."""
+    return np.array(
+        [np.nan if f.results.energy is None else f.results.energy for f in frames],
+        dtype=float,
+    )
+
+
+def _relative(energies: np.ndarray) -> np.ndarray:
+    """Energies above the lowest known one; all `np.nan` when none is known."""
+    if np.isnan(energies).all():
+        return energies
+    return energies - np.nanmin(energies)
+
+
 class _FrameSeries:
-    """Reading a sequence of frames: structures, energies, xyz, and saving."""
+    """Reading a sequence of frames: structures, energies, xyz, and saving.
+
+    Every result holding frames reads the same way; ``_series`` names its frames: an
+    optimization's steps, a path's points, a path optimization's final path, a
+    conformer search's conformers.
+    """
 
     def _series(self) -> list[Frame]:
         raise NotImplementedError  # pragma: no cover
@@ -300,13 +625,7 @@ class _FrameSeries:
     @property
     def energies(self) -> np.ndarray:
         """The energy of each frame in Hartree, `np.nan` where none was computed."""
-        return np.array(
-            [
-                frame.results.energy if frame.results.energy is not None else np.nan
-                for frame in self._series()
-            ],
-            dtype=float,
-        )
+        return _frame_energies(self._series())
 
     def to_xyz(self) -> str:
         """Return the frames as a multi-structure `xyz` string."""
@@ -316,10 +635,10 @@ class _FrameSeries:
         self,
         filepath: Path | str,
         exclude_none: bool = True,
-        exclude_unset: bool = True,
+        exclude_unset: bool = False,
         indent: int = 4,
         **kwargs: Any,
-    ) -> None:
+    ) -> list[Path]:
         """Save to a file; a `.xyz` extension writes the frames' structures.
 
         Args:
@@ -330,28 +649,15 @@ class _FrameSeries:
             indent: The number of spaces to use for indentation in JSON and YAML
                 files. Ignored for `.xyz` files.
             **kwargs: Additional keyword arguments to pass to the json serializer.
+
+        Returns:
+            Every file written, as `QCDataBaseModel.save` returns them.
         """
         filepath = Path(filepath)
         if filepath.suffix == ".xyz":
             filepath.write_text(self.to_xyz())
-            return
-        super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)  # type: ignore[misc]
-
-
-def _renamed(payload: Any, old: str, new: str) -> Any:
-    """Move a payload's deprecated field name to its new one, with a warning."""
-    if not isinstance(payload, dict) or old not in payload:
-        return payload
-    if new in payload:
-        raise ValueError(f"Provide only {new!r}; {old!r} is its deprecated name.")
-    warnings.warn(
-        f"'{old}' has been renamed to '{new}'. Please update your code accordingly.",
-        FutureWarning,
-        stacklevel=4,
-    )
-    payload = dict(payload)
-    payload[new] = payload.pop(old)
-    return payload
+            return [filepath]
+        return super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)  # type: ignore[misc]
 
 
 def _check_same_atoms(structures: list[Structure], what: str) -> None:
@@ -364,57 +670,30 @@ class OptimizationData(_FrameSeries, FileData, CalcInfoData):
     """Computed data for an optimization (may be for a minimum or transition state).
 
     Attributes:
-        frames: One `Frame` per optimizer step: its structure and what was computed
-            there. Formerly `trajectory`, which is still accepted when constructing
-            or loading and readable as a deprecated property.
-        energies: `@property` The energy of each step.
-        structures: `@property` The structure of each step.
-        final_structure: `@property` The final, optimized structure.
+        frames: One `Frame` per structure evaluated, in order, the starting structure
+            first: its structure and what was computed there. An optimization of n
+            steps has n + 1 frames.
+        energies: `@property` The energy of each frame.
+        structures: `@property` The structure of each frame.
+        final_structure: `@property` The last frame's structure: the optimized one
+            when the optimization succeeded, else the last one evaluated.
+        final_energy: `@property` The last frame's energy.
     """
 
     frames: list[Frame] = []
-
-    @model_validator(mode="before")
-    @classmethod
-    def _migrate_trajectory(cls, payload: Any) -> Any:
-        """Accept the former field name ``trajectory`` for ``frames``."""
-        return _renamed(payload, "trajectory", "frames")
-
-    @property
-    def trajectory(self) -> list[Frame]:
-        """Deprecated name for `frames`."""
-        warnings.warn(
-            ".trajectory has been renamed to .frames. Please update your code "
-            "accordingly.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        return self.frames
 
     def _series(self) -> list[Frame]:
         return self.frames
 
     @property
     def final_structure(self) -> Structure | None:
-        """The last evaluated structure, or None when there are no steps."""
+        """The last frame's structure (the optimized one after a success), or None."""
         return self.frames[-1].structure if self.frames else None
 
     @property
     def final_energy(self) -> float | None:
-        """The final step's energy, None for no steps, or `np.nan` if unavailable."""
+        """The last frame's energy, None without frames, `np.nan` if not computed."""
         return self.energies[-1] if self.frames else None
-
-    def return_result(self, calctype: CalcType) -> Structure | None:
-        """Return the primary result of the optimization.
-
-        Args:
-            calctype: The calculation type. Unused; an optimization's primary result
-                is always its final structure.
-
-        Returns:
-            The final structure, or None if there are no frames.
-        """
-        return self.final_structure
 
     def __repr_args__(self) -> list[tuple[str, str]]:
         """Custom repr to avoid printing the entire collection of objects."""
@@ -481,10 +760,6 @@ class PathData(_FrameSeries, FileData):
         barrier = float(energies[self.ts_index] - energies[end])
         return None if np.isnan(barrier) else barrier
 
-    def return_result(self, calctype: CalcType) -> list[Structure]:
-        """Return the primary result: the structures along the path."""
-        return self.structures
-
     def __repr_args__(self) -> list[tuple[str, str]]:
         """Avoid printing every frame."""
         return [
@@ -493,10 +768,12 @@ class PathData(_FrameSeries, FileData):
         ]
 
 
-class PathOptimizationData(FileData):
+class PathOptimizationData(_FrameSeries, FileData):
     """Computed data for a path optimization (NEB, string, growing string, ...).
 
-    Like an optimization's frames, but each step is a whole path.
+    Like an optimization's frames, but each step is a whole path. The shared reading
+    interface (``structures``, ``energies``, ``to_xyz``, ``save("*.xyz")``) reads the
+    final path.
 
     Attributes:
         paths: The path at each iteration, the optimized one last.
@@ -507,85 +784,38 @@ class PathOptimizationData(FileData):
 
     paths: list[PathData] = []
 
+    def _series(self) -> list[Frame]:
+        return self.final_path.frames if self.final_path else []
+
     @property
     def final_path(self) -> PathData | None:
         """The optimized (last) path, or None when there are no iterations."""
         return self.paths[-1] if self.paths else None
-
-    @property
-    def structures(self) -> list[Structure]:
-        """The structures of the final path."""
-        return self.final_path.structures if self.final_path else []
-
-    @property
-    def energies(self) -> np.ndarray:
-        """The energies of the final path's frames, in Hartree."""
-        return self.final_path.energies if self.final_path else np.array([])
-
-    def to_xyz(self) -> str:
-        """Return the final path as a multi-structure `xyz` string."""
-        return to_multi_xyz(self.structures)
-
-    def return_result(self, calctype: CalcType) -> PathData | None:
-        """Return the primary result: the final path."""
-        return self.final_path
 
     def __repr_args__(self) -> list[tuple[str, str]]:
         """Avoid printing every path."""
         return [("paths", f"[{len(self.paths)} paths]")]
 
 
-class ConformerSearchData(FileData):
+class ConformerSearchData(_FrameSeries, FileData):
     """Data from a conformer search calculation.
 
     Conformers and rotamers are `Frame`s, sorted by energy (lowest first; frames
-    without an energy last). Constructing or loading with lists of structures and
-    separate energy arrays (``conformer_energies``, ``rotamer_energies``), the form
-    before frames, still works: each structure becomes a frame with its energy.
+    without an energy last). The shared reading interface (``structures``, ``energies``, ``to_xyz``,
+    ``save("*.xyz")``) reads the conformers.
 
     Attributes:
         conformers: The conformers found, each with what was computed for it.
         rotamers: The rotamers found, each with what was computed for it.
         structures: `@property` The conformers' structures.
-        energies: `@property` The conformers' energies.
-        conformer_energies: `@property` The conformers' energies in Hartree.
-        rotamer_energies: `@property` The rotamers' energies in Hartree.
+        energies: `@property` The conformers' energies in Hartree, one per conformer,
+            `np.nan` where none was computed.
+        conformer_energies: `@property` The same as ``energies``.
+        rotamer_energies: `@property` The rotamers' energies, read the same way.
     """
 
     conformers: list[Frame] = []
     rotamers: list[Frame] = []
-
-    @model_validator(mode="before")
-    @classmethod
-    def _frames_from_structures(cls, payload: Any) -> Any:
-        """Turn structures plus an energies array into frames."""
-        if not isinstance(payload, dict):
-            return payload
-        payload = dict(payload)
-        provenance = payload.get("provenance")
-        for kind in ("conformers", "rotamers"):
-            items = list(payload.get(kind, []))
-            energies = payload.pop(f"{kind[:-1]}_energies", None)
-            energies = [] if energies is None else list(np.asarray(energies).ravel())
-            if energies and len(energies) != len(items):
-                raise ValueError(
-                    f"The number of {kind[:-1]} energies must match the number of "
-                    f"{kind}."
-                )
-            if not items or not _is_structure(items[0]):
-                continue
-            payload[kind] = [
-                {
-                    "success": True,
-                    "structure": item,
-                    "results": {
-                        "provenance": provenance,
-                        "energy": float(energies[i]) if energies else None,
-                    },
-                }
-                for i, item in enumerate(items)
-            ]
-        return payload
 
     @model_validator(mode="after")
     def _sort_by_energy(self) -> Self:
@@ -596,58 +826,28 @@ class ConformerSearchData(FileData):
             )
         return self
 
-    @staticmethod
-    def _energies(frames: list[Frame]) -> np.ndarray:
-        """Energies of frames; empty when none has one, `np.nan` where one is missing."""
-        if all(f.results.energy is None for f in frames):
-            return np.array([])
-        return np.array(
-            [np.nan if f.results.energy is None else f.results.energy for f in frames],
-            dtype=float,
-        )
+    def _series(self) -> list[Frame]:
+        return self.conformers
 
     @property
     def conformer_energies(self) -> np.ndarray:
-        """The conformers' energies in Hartree, lowest first; empty if unknown."""
-        return self._energies(self.conformers)
+        """The conformers' energies in Hartree, lowest first; `np.nan` if unknown."""
+        return self.energies
 
     @property
     def rotamer_energies(self) -> np.ndarray:
-        """The rotamers' energies in Hartree, lowest first; empty if unknown."""
-        return self._energies(self.rotamers)
-
-    @property
-    def structures(self) -> list[Structure]:
-        """The conformers' structures, lowest energy first."""
-        return [frame.structure for frame in self.conformers]
-
-    @property
-    def energies(self) -> np.ndarray:
-        """The conformers' energies in Hartree, lowest first (shared interface)."""
-        return self.conformer_energies
-
-    def to_xyz(self) -> str:
-        """Return the conformers as a multi-structure `xyz` string."""
-        return to_multi_xyz(self.structures)
+        """The rotamers' energies in Hartree, lowest first; `np.nan` if unknown."""
+        return _frame_energies(self.rotamers)
 
     @property
     def conformer_energies_relative(self) -> np.ndarray:
-        """The relative energies for each conformer in the search."""
-        energies = self.conformer_energies
-        return energies - np.nanmin(energies) if energies.size else energies
+        """Each conformer's energy above the lowest, in Hartree; `np.nan` if unknown."""
+        return _relative(self.conformer_energies)
 
     @property
     def rotamer_energies_relative(self) -> np.ndarray:
-        """The relative energies for each rotamer in the search."""
-        energies = self.rotamer_energies
-        return energies - np.nanmin(energies) if energies.size else energies
-
-
-def _is_structure(item: Any) -> bool:
-    """Whether an item is a structure (or its dict), not a frame."""
-    if isinstance(item, Structure):
-        return True
-    return isinstance(item, dict) and "symbols" in item and "structure" not in item
+        """Each rotamer's energy above the lowest, in Hartree; `np.nan` if unknown."""
+        return _relative(self.rotamer_energies)
 
 
 class ScanData(FileData, CalcInfoData):
@@ -659,27 +859,9 @@ class ScanData(FileData, CalcInfoData):
         structures: The Structure objects for each step of the scan.
         points: One constrained optimization per scan point, as its full
             `ProgramOutput` (each point's input carries its own constraint value).
-            Formerly `trajectory`, still accepted and readable as deprecated.
     """
 
     points: list[ProgramOutput[ProgramInput, OptimizationData]] = []
-
-    @model_validator(mode="before")
-    @classmethod
-    def _migrate_trajectory(cls, payload: Any) -> Any:
-        """Accept the former field name ``trajectory`` for ``points``."""
-        return _renamed(payload, "trajectory", "points")
-
-    @property
-    def trajectory(self) -> list[ProgramOutput[ProgramInput, OptimizationData]]:
-        """Deprecated name for `points`."""
-        warnings.warn(
-            ".trajectory has been renamed to .points. Please update your code "
-            "accordingly.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        return self.points
 
     @property
     def energies(self) -> np.ndarray:
@@ -720,10 +902,10 @@ class ScanData(FileData, CalcInfoData):
         self,
         filepath: Path | str,
         exclude_none: bool = True,
-        exclude_unset: bool = True,
+        exclude_unset: bool = False,
         indent: int = 4,
         **kwargs: Any,
-    ) -> None:
+    ) -> list[Path]:
         """Save a ScanData to a file.
 
         Args:
@@ -736,6 +918,9 @@ class ScanData(FileData, CalcInfoData):
                 files. Ignored for `.xyz` files.
             **kwargs: Additional keyword arguments to pass to the json serializer.
 
+        Returns:
+            Every file written, as `QCDataBaseModel.save` returns them.
+
         Note:
             If the filepath has a `.xyz` extension, each scan point's final structure is saved to a
             multi-structure `xyz` file.
@@ -743,8 +928,8 @@ class ScanData(FileData, CalcInfoData):
         filepath = Path(filepath)
         if filepath.suffix == ".xyz":
             filepath.write_text(self.to_xyz())
-            return
-        super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)
+            return [filepath]
+        return super().save(filepath, exclude_none, exclude_unset, indent, **kwargs)
 
 
 StructuredData = (

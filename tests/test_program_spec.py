@@ -273,6 +273,36 @@ def test_output_generic_registration():
     for input_type, data_type in pairs:
         cls = ProgramOutput[input_type, data_type]
         assert getattr(outputs, cls.__name__) is cls
+    with pytest.raises(AttributeError):
+        outputs.ProgramOutput_unknown  # noqa: B018
+
+
+def test_a_fresh_process_unpickles_an_output(recursive_input):
+    """Pickle finds an output's class by name before the process has made it."""
+    import subprocess
+    import sys
+
+    output = ProgramOutput(
+        input_data=recursive_input,
+        results=ConformerSearchData(provenance={"program": "workflow"}),
+        success=False,
+        traceback="test failure",
+    )
+    code = (
+        "import pickle, sys; out = pickle.loads(sys.stdin.buffer.read()); "
+        "print(type(out).__name__, out.input_data.program)"
+    )
+    done = subprocess.run(
+        [sys.executable, "-c", code],
+        input=pickle.dumps(output),
+        capture_output=True,
+        check=True,
+    )
+    assert done.stdout.decode().split() == [
+        "ProgramOutput[ProgramInput,",
+        "ConformerSearchData]",
+        "workflow",
+    ]
 
 
 @pytest.mark.parametrize(
@@ -323,3 +353,32 @@ def test_data_type_lookup():
         assert get_data_type(CalcType(calctype)) is data_type
     with pytest.raises(ValueError):
         get_data_type("not-a-calculation")
+
+
+def test_a_variant_of_an_input_is_validated(water):
+    """The documented way to vary an input converts and checks the new values."""
+    from qcdata import calculation_key
+
+    inp = ProgramInput(
+        program="test",
+        calctype="gradient",
+        structure=water,
+        model={"method": "gfn2"},
+        keywords={"accuracy": {"energy": 1e-6}},
+    )
+    variant = ProgramInput.model_validate(inp.model_dump() | {"calctype": "hessian"})
+    assert variant.calctype is CalcType.hessian
+    direct = ProgramInput(
+        program="test",
+        calctype="hessian",
+        structure=water,
+        model={"method": "gfn2"},
+        keywords={"accuracy": {"energy": 1e-6}},
+    )
+    assert variant == direct
+    assert calculation_key(variant) == calculation_key(direct)
+    with pytest.raises(ValidationError):
+        ProgramInput.model_validate(inp.model_dump() | {"calctype": "not_a_calctype"})
+    # model_copy does not validate (pydantic's documented behavior)
+    copied = inp.model_copy(update={"calctype": "hessian"})
+    assert not isinstance(copied.calctype, CalcType)
