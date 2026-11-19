@@ -27,22 +27,13 @@ These packages work together to make quantum chemistry fast, structured, and int
 python -m pip install qcdata
 ```
 
-installs the stable release. This README describes the next release, which is in alpha;
-install it with minimum versions (`--prerelease=allow` lets the resolver take pre-releases):
+installs it. With the visualizations (`view` extra), or with the packages that run programs
+and store results:
 
 ```bash
-uv pip install --prerelease=allow "qcdata>=0.24.0a8"
+python -m pip install "qcdata[view]" qcinf
+python -m pip install qcdata "qccompute[qccodec]" qccodec qcstore
 ```
-
-With the visualizations (`view` extra), or with the packages that run programs and store
-results:
-
-```bash
-uv pip install --prerelease=allow "qcdata[view]>=0.24.0a8" "qcinf>=0.6.0a2"
-uv pip install --prerelease=allow "qcdata>=0.24.0a8" "qccompute[qccodec]>=0.23.0a6" "qccodec>=0.22.0a5" "qcstore>=0.1.0a4"
-```
-
-The alpha's documentation is at [qcdata.docs.afh.org/next](https://qcdata.docs.afh.org/next/); the site root documents the stable release.
 
 ## Quickstart
 

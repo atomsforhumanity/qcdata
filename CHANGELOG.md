@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [unreleased]
 
+## [0.24.0] - 2026-11-19
+
+The final release of the 0.24.0 alphas: their entries below make up its changes. Since 0.24.0a8:
+
+### Changed
+
+- The conventions say a `hessian` result holds the gradient where the program gives it from the same run; a program that gives it only on request documents how to ask.
+- The install lines name the final releases.
+
 ## [0.24.0a8] - 2026-11-17
 
 ### Fixed
@@ -915,7 +924,8 @@ changes come without compatibility shims.
   - `SinglePointComputedProperties`
   - `Wavefunction`
 
-[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.23.1...HEAD
+[unreleased]: https://github.com/atomsforhumanity/qcdata/compare/0.24.0...HEAD
+[0.24.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.24.0
 [0.23.1]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.23.1
 [0.23.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.23.0
 [0.22.0]: https://github.com/atomsforhumanity/qcdata/releases/tag/0.22.0
